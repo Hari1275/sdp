@@ -146,34 +146,38 @@ model Task {
 
 // GPS Session Model for Tracking Sessions
 model GPSSession {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  mrId        String    @db.ObjectId
-  mr          User      @relation(fields: [mrId], references: [id])
-  checkInTime DateTime
-  checkOutTime DateTime?
-  totalHours  Float?    // Calculated field
-  totalKms    Float?    // Calculated field
-  status      SessionStatus @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  checkIn   DateTime
+  checkOut  DateTime?
+  startLat  Float?
+  startLng  Float?
+  endLat    Float?
+  endLng    Float?
+  totalKm   Float?   @default(0)
+  createdAt DateTime @default(now())
+
+  gpsLogs   GPSLog[]
   
-  // Relations
-  gpsLogs GPSLog[]
-  
+  @@index([userId])
+  @@index([checkIn])
   @@map("gps_sessions")
 }
 
-// GPS Log Model for Individual GPS Points
 model GPSLog {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  sessionId   String     @db.ObjectId
-  session     GPSSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  latitude    Float
-  longitude   Float
-  accuracy    Float?     // GPS accuracy in meters
-  speed       Float?     // Speed in km/h
-  timestamp   DateTime   @default(now())
-  
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId String   @db.ObjectId
+  session   GPSSession @relation(fields: [sessionId], references: [id])
+  latitude  Float
+  longitude Float
+  timestamp DateTime @default(now())
+  accuracy  Float?   // GPS accuracy in meters
+  speed     Float?   // Speed in km/h
+  altitude  Float?   // Altitude in meters
+
+  @@index([sessionId])
+  @@index([timestamp])
   @@map("gps_logs")
 }
 
