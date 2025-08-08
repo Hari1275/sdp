@@ -143,8 +143,7 @@ export async function GET(request: NextRequest) {
         },
         _count: {
           select: {
-            businessEntries: true,
-            tasks: true
+            businessEntries: true
           }
         }
       },

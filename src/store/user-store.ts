@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { apiGet, apiPost, apiPut, apiDelete, extractPaginatedData } from '@/lib/api-client';
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api-client';
 
 type User = {
   id: string;
@@ -141,7 +141,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       // Refresh users list
       await get().fetchUsers();
-      return result;
     } catch (error) {
       console.error('Error creating user:', error);
       throw error;

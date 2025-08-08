@@ -15,7 +15,7 @@ import { updateTaskSchema, UpdateTaskInput } from '@/lib/validations';
 // GET /api/tasks/[id] - Get individual task
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   let user;
 
@@ -35,7 +35,7 @@ export async function GET(
       return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Find task with full details
     const task = await prisma.task.findUnique({
@@ -113,7 +113,7 @@ export async function GET(
 
     return successResponse(task);
   } catch (error) {
-    logError(error, `GET /api/tasks/${params.id}`, user?.id);
+    logError(error, `GET /api/tasks/${(await params).id}`, user?.id);
     return errorResponse('INTERNAL_ERROR', 'Failed to fetch task', 500);
   }
 }
@@ -121,7 +121,7 @@ export async function GET(
 // PUT /api/tasks/[id] - Update task details
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   let user;
 
@@ -146,7 +146,7 @@ export async function PUT(
       return errorResponse('FORBIDDEN', 'Only Lead MR and Admin can update tasks', 403);
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Validate input
@@ -290,7 +290,7 @@ export async function PUT(
 
     return successResponse(updatedTask, 'Task updated successfully');
   } catch (error) {
-    logError(error, `PUT /api/tasks/${params.id}`, user?.id);
+    logError(error, `PUT /api/tasks/${(await params).id}`, user?.id);
     return errorResponse('INTERNAL_ERROR', 'Failed to update task', 500);
   }
 }
@@ -298,7 +298,7 @@ export async function PUT(
 // DELETE /api/tasks/[id] - Delete task
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   let user;
 
@@ -323,7 +323,7 @@ export async function DELETE(
       return errorResponse('FORBIDDEN', 'Only Lead MR and Admin can delete tasks', 403);
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Find existing task
     const existingTask = await prisma.task.findUnique({
@@ -360,7 +360,7 @@ export async function DELETE(
 
     return successResponse(null, 'Task deleted successfully');
   } catch (error) {
-    logError(error, `DELETE /api/tasks/${params.id}`, user?.id);
+    logError(error, `DELETE /api/tasks/${(await params).id}`, user?.id);
     return errorResponse('INTERNAL_ERROR', 'Failed to delete task', 500);
   }
 }

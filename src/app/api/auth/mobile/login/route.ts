@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { comparePasswords } from '@/lib/password'
 import { sign } from 'jsonwebtoken'
@@ -19,7 +19,19 @@ const loginSchema = z.object({
 type LoginRequest = z.infer<typeof loginSchema>
 
 // Generate JWT token for mobile authentication
-function generateMobileToken(user: any) {
+interface UserForToken {
+  id: string
+  username: string
+  email?: string | null
+  name: string
+  role: string
+  status: string
+  regionId?: string | null
+  leadMrId?: string | null
+  phone?: string | null
+}
+
+function generateMobileToken(user: UserForToken) {
   const payload = {
     id: user.id,
     username: user.username,
@@ -138,6 +150,7 @@ export async function POST(request: NextRequest) {
     const token = generateMobileToken(user)
 
     // Prepare user data (without password)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user
     const userData = {
       ...userWithoutPassword,

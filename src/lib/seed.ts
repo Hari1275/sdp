@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { UserRole, BusinessType, TaskStatus, Priority, SessionStatus } from '@prisma/client'
+import { UserRole, BusinessType, TaskStatus, Priority } from '@prisma/client'
 import { hashPassword } from './password'
 
 export async function seedDatabase() {

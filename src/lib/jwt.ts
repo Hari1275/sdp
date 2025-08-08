@@ -5,13 +5,13 @@ import { prisma } from './prisma'
 interface MobileTokenPayload extends JwtPayload {
   id: string
   username: string
-  email: string
+  email?: string | null
   name: string
   role: string
   status: string
-  regionId?: string
-  leadMrId?: string
-  phone?: string
+  regionId?: string | null
+  leadMrId?: string | null
+  phone?: string | null
 }
 
 export class JWTError extends Error {
@@ -144,7 +144,19 @@ export function refreshMobileToken(payload: MobileTokenPayload): string {
 }
 
 // Generate new mobile token
-export function generateMobileToken(user: any): string {
+interface UserTokenData {
+  id: string
+  username: string
+  email?: string | null
+  name: string
+  role: string
+  status: string
+  regionId?: string | null
+  leadMrId?: string | null
+  phone?: string | null
+}
+
+export function generateMobileToken(user: UserTokenData): string {
   const payload: MobileTokenPayload = {
     id: user.id,
     username: user.username,

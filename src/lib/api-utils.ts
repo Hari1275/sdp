@@ -316,7 +316,8 @@ export function parseQueryParams(request: NextRequest) {
 // Health check helper
 export async function checkDatabaseHealth() {
   try {
-    await prisma.$queryRaw`SELECT 1`
+    // Use a simple query to check database connectivity
+    await prisma.user.findFirst({ take: 1 })
     return { status: 'healthy', message: 'Database connection successful' }
   } catch (error) {
     return { status: 'unhealthy', message: 'Database connection failed', error }

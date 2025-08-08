@@ -24,9 +24,12 @@ type User = {
   phone: string | null;
   role: 'MR' | 'LEAD_MR' | 'ADMIN';
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  regionId: string | null;
   region?: { id: string; name: string } | null;
+  leadMrId: string | null;
   leadMr?: { id: string; name: string } | null;
   createdAt: Date;
+  updatedAt: Date;
   _count: {
     clients: number;
     assignedTasks: number;

@@ -14,8 +14,10 @@ import {
 } from '@/lib/api-utils';
 import { createUserSchema, CreateUserInput } from '@/lib/validations';
 
-// GET /api/users - List users with filtering and pagination
+// GET /api/users - List users with role-based filtering
 export async function GET(request: NextRequest) {
+  let user;
+  
   try {
     // Rate limiting
     if (!rateLimit(request)) {
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Authentication
-    const user = await getAuthenticatedUser(request);
+    user = await getAuthenticatedUser(request);
     if (!user) {
       return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
@@ -132,6 +134,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/users - Create new user (Admin only)
 export async function POST(request: NextRequest) {
+  let user;
+  
   try {
     // Rate limiting
     if (!rateLimit(request)) {
@@ -143,7 +147,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Authentication
-    const user = await getAuthenticatedUser(request);
+    user = await getAuthenticatedUser(request);
     if (!user) {
       return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }

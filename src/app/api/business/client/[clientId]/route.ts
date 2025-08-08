@@ -13,7 +13,7 @@ import {
 // GET /api/business/client/[clientId] - Get business entries for specific client
 export async function GET(
   request: NextRequest,
-  { params }: { params: { clientId: string } }
+  { params }: { params: Promise<{ clientId: string }> }
 ) {
   let user;
 
@@ -33,7 +33,7 @@ export async function GET(
       return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
 
-    const { clientId } = params;
+    const { clientId } = await params;
     const { page, limit } = parseQueryParams(request);
     const { searchParams } = new URL(request.url);
     const dateFrom = searchParams.get('dateFrom');
@@ -87,17 +87,17 @@ export async function GET(
 
     // Date range filtering
     if (dateFrom || dateTo) {
-      whereClause.createdAt = {};
+      whereClause.createdAt = {} as Record<string, Date>;
       if (dateFrom) {
         try {
-          whereClause.createdAt.gte = new Date(dateFrom);
+          (whereClause.createdAt as Record<string, Date>).gte = new Date(dateFrom);
         } catch {
           return errorResponse('VALIDATION_ERROR', 'Invalid dateFrom format. Use ISO date format.');
         }
       }
       if (dateTo) {
         try {
-          whereClause.createdAt.lte = new Date(dateTo);
+          (whereClause.createdAt as Record<string, Date>).lte = new Date(dateTo);
         } catch {
           return errorResponse('VALIDATION_ERROR', 'Invalid dateTo format. Use ISO date format.');
         }
@@ -178,7 +178,7 @@ export async function GET(
 
     return successResponse(response);
   } catch (error) {
-    logError(error, `GET /api/business/client/${params.clientId}`, user?.id);
+    logError(error, `GET /api/business/client/${(await params).clientId}`, user?.id);
     return errorResponse('INTERNAL_ERROR', 'Failed to fetch client business entries', 500);
   }
 }

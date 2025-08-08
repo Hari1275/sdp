@@ -161,7 +161,7 @@ export function UserForm() {
         });
       }
       closeUserSheet();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: selectedUser ? "Failed to update user" : "Failed to create user",

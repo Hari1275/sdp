@@ -1,7 +1,19 @@
-import { User, UserRole } from '@prisma/client'
+import { UserRole } from '@prisma/client'
 
 // Extended user type for authenticated requests
-export interface AuthenticatedUser extends User {
+export interface AuthenticatedUser {
+  id: string
+  username: string
+  name: string
+  email?: string | null
+  phone?: string | null
+  role: UserRole
+  status: string
+  regionId?: string | null
+  leadMrId?: string | null
+  createdAt: Date
+  updatedAt: Date
+  lastLoginAt?: Date | null
   region?: {
     id: string
     name: string

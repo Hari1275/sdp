@@ -4,10 +4,9 @@ import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 
 interface HydrationSafeSelectProps {
   value?: string;

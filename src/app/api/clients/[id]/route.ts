@@ -74,8 +74,7 @@ export async function GET(
         },
         _count: {
           select: {
-            businessEntries: true,
-            tasks: true
+            businessEntries: true
           }
         }
       }
@@ -296,8 +295,7 @@ export async function DELETE(
         id: true,
         _count: {
           select: {
-            businessEntries: true,
-            tasks: true
+            businessEntries: true
           }
         }
       }
@@ -308,10 +306,10 @@ export async function DELETE(
     }
 
     // Check if client has associated data
-    if (existingClient._count.businessEntries > 0 || existingClient._count.tasks > 0) {
+    if (existingClient._count.businessEntries > 0) {
       return errorResponse(
         'CLIENT_HAS_DATA',
-        'Cannot delete client with existing business entries or tasks',
+        'Cannot delete client with existing business entries',
         400
       );
     }

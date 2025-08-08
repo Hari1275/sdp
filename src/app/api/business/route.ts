@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
 
-    const { page, limit, search } = parseQueryParams(request);
+    const { page, limit } = parseQueryParams(request)
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get('clientId');
     const mrId = searchParams.get('mrId');
@@ -92,12 +92,12 @@ export async function GET(request: NextRequest) {
 
     // Date range filtering
     if (dateFrom || dateTo) {
-      whereClause.createdAt = {};
+      whereClause.createdAt = {} as Record<string, Date>;
       if (dateFrom) {
-        whereClause.createdAt.gte = new Date(dateFrom);
+        (whereClause.createdAt as Record<string, Date>).gte = new Date(dateFrom);
       }
       if (dateTo) {
-        whereClause.createdAt.lte = new Date(dateTo);
+        (whereClause.createdAt as Record<string, Date>).lte = new Date(dateTo);
       }
     }
 
@@ -232,7 +232,10 @@ export async function POST(request: NextRequest) {
 
     // Create business entry
     const newBusinessEntry = await prisma.businessEntry.create({
-      data: businessData,
+      data: {
+        ...businessData,
+        mrId: client.mrId
+      },
       select: {
         id: true,
         amount: true,

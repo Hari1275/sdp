@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
         // Allow token refresh even for expired tokens, but not for invalid tokens
         if (error.code === 'TOKEN_EXPIRED') {
           // Extract payload manually for expired token
-          const jwt = require('jsonwebtoken')
+          const { decode } = await import('jsonwebtoken')
           try {
-            payload = jwt.decode(currentToken)
-          } catch (decodeError) {
+            payload = decode(currentToken)
+          } catch {
             return errorResponse(
               'INVALID_TOKEN',
               'Cannot refresh invalid token',
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!payload || !payload.id) {
+    if (!payload || typeof payload === 'string' || !payload.id) {
       return errorResponse(
         'INVALID_TOKEN_PAYLOAD',
         'Invalid token data',
@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
     const newToken = generateMobileToken(user)
 
     // Prepare user data (without password)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user
     const userData = {
       ...userWithoutPassword,

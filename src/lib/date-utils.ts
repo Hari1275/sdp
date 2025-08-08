@@ -16,7 +16,7 @@ export const formatDateSafe = (date: Date | string | number, formatStr: string =
   // Client-side: use date-fns for better formatting
   try {
     return format(new Date(date), formatStr);
-  } catch (error) {
+  } catch {
     // Fallback to basic formatting if date-fns fails
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',

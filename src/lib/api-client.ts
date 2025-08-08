@@ -78,7 +78,7 @@ export function extractPaginatedData<T>(response: unknown): T[] {
     response.data &&
     typeof response.data === 'object'
   ) {
-    const data = response.data as any;
+    const data = response.data as Record<string, unknown>;
     
     // Check for nested data structure (paginated response)
     if ('data' in data && Array.isArray(data.data)) {
@@ -106,7 +106,7 @@ export function extractSingleData<T>(response: unknown): T | null {
     response.success &&
     'data' in response
   ) {
-    return (response as any).data;
+    return (response as { success: boolean; data: T }).data;
   }
   
   console.error('Unexpected API response structure:', response);
@@ -117,7 +117,7 @@ export function extractSingleData<T>(response: unknown): T | null {
  * Make a GET request and return the data safely
  */
 export async function apiGet<T>(url: string): Promise<T[]> {
-  const result = await safeApiCall<any>(url);
+  const result = await safeApiCall<unknown>(url);
   
   if (!result.success) {
     console.error('API GET failed:', result.error);

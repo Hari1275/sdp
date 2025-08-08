@@ -16,12 +16,12 @@ const taskCompletionSchema = z.object({
   notes: z.string().max(500, 'Completion notes must not exceed 500 characters').optional()
 }).optional();
 
-type TaskCompletionInput = z.infer<typeof taskCompletionSchema>;
+// type TaskCompletionInput = z.infer<typeof taskCompletionSchema>;
 
 // PUT /api/tasks/[id]/complete - Mark task as completed
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   let user;
 
@@ -41,7 +41,7 @@ export async function PUT(
       return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     // Validate input (optional completion data)
     try {
@@ -184,7 +184,7 @@ export async function PUT(
       'Task marked as completed successfully'
     );
   } catch (error) {
-    logError(error, `PUT /api/tasks/${params.id}/complete`, user?.id);
+    logError(error, `PUT /api/tasks/${(await params).id}/complete`, user?.id);
     return errorResponse('INTERNAL_ERROR', 'Failed to complete task', 500);
   }
 }
@@ -192,7 +192,7 @@ export async function PUT(
 // POST /api/tasks/[id]/complete - Alternative endpoint for task completion
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Redirect to PUT method for consistency
   return PUT(request, { params });

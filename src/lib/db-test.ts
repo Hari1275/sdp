@@ -327,8 +327,8 @@ export async function testUniqueConstraints() {
       })
       console.log('❌ Username uniqueness constraint failed')
       return { success: false, message: 'Username uniqueness constraint failed' }
-    } catch (error: any) {
-      if (error.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         console.log('✅ Username uniqueness constraint working')
       }
     }
@@ -342,8 +342,8 @@ export async function testUniqueConstraints() {
       })
       console.log('❌ Region name uniqueness constraint failed')
       return { success: false, message: 'Region name uniqueness constraint failed' }
-    } catch (error: any) {
-      if (error.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         console.log('✅ Region name uniqueness constraint working')
       }
     }
@@ -363,8 +363,8 @@ export async function testUniqueConstraints() {
       })
       console.log('❌ Client uniqueness constraint failed')
       return { success: false, message: 'Client uniqueness constraint failed' }
-    } catch (error: any) {
-      if (error.code === 'P2002') {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         console.log('✅ Client uniqueness constraint working')
       }
     }
@@ -405,7 +405,13 @@ export async function cleanupTestData() {
 
 // Comprehensive database test
 export async function runComprehensiveTest() {
-  const results = {
+  const results: {
+    connection: { success: boolean; message: string; error?: unknown },
+    models: { success: boolean; message: string; data?: unknown },
+    relationships: { success: boolean; message: string; error?: unknown },
+    constraints: { success: boolean; message: string; error?: unknown },
+    cleanup: { success: boolean; message: string; error?: unknown }
+  } = {
     connection: await testDatabaseConnection(),
     models: { success: false, message: '', data: null },
     relationships: { success: false, message: '' },

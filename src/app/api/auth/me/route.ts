@@ -110,8 +110,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Prepare response data (without password)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user
-    const responseData = {
+    const responseData: Record<string, unknown> = {
       user: {
         ...userWithoutPassword,
         statistics: {
@@ -140,7 +141,7 @@ export async function GET(request: NextRequest) {
       data: responseData
     })
 
-  } catch (error) {
+    } catch (error) {
     console.error('Get current user error:', error)
 
     return NextResponse.json({

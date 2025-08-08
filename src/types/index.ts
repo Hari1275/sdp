@@ -1,5 +1,5 @@
 // Core API Response Types
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   success: boolean
   data?: T
   message?: string
@@ -239,7 +239,7 @@ export interface MapDataPoint {
   longitude: number
   type: 'client' | 'mr' | 'gps_log'
   status?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 // Dashboard Types
@@ -269,11 +269,11 @@ export interface DateRange {
   to: Date
 }
 
-export interface TableColumn<T = any> {
+export interface TableColumn<T = unknown> {
   key: keyof T
   title: string
   sortable?: boolean
-  render?: (value: any, row: T) => React.ReactNode
+  render?: (value: unknown, row: T) => React.ReactNode
 }
 
 // Navigation Types
@@ -294,7 +294,7 @@ export interface FormError {
 export interface APIError {
   code: string
   message: string
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 }
 
 // Search and Filter Types
@@ -304,5 +304,5 @@ export interface SearchParams {
   limit?: number
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
-  [key: string]: any
+  [key: string]: unknown
 }

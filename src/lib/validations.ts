@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { UserRole, UserStatus, BusinessType, TaskStatus, Priority, Status } from '@prisma/client'
+import { UserRole, BusinessType, TaskStatus, Priority, UserStatus } from '@prisma/client'
 
 // User validation schemas
 export const createUserSchema = z.object({
@@ -78,8 +78,9 @@ export const createTaskSchema = z.object({
 })
 
 export const updateTaskSchema = createTaskSchema.partial().omit({ 
-  regionId: true, 
-  assigneeId: true 
+  regionId: true 
+}).extend({
+  status: z.nativeEnum(TaskStatus).optional()
 })
 
 export const updateTaskStatusSchema = z.object({
