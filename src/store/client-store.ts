@@ -422,6 +422,8 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   fetchBusinessHistory: async (clientId: string, filters = {}) => {
     set({ isLoading: true, error: null });
     try {
+      console.log('[ClientStore] Starting fetchBusinessHistory for client:', clientId);
+      
       const queryParams = new URLSearchParams();
       
       // Add filters
@@ -431,18 +433,53 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         }
       });
 
-      const response = await fetch(`/api/clients/${clientId}/business?${queryParams.toString()}`);
+      const url = `/api/clients/${clientId}/business?${queryParams.toString()}`;
+      console.log('[ClientStore] Fetching business history from:', url);
+      
+      const response = await fetch(url);
+      console.log('[ClientStore] Business history response status:', response.status, response.statusText);
+      
       const result = await response.json();
+      console.log('[ClientStore] Business history response data:', result);
 
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to fetch business history');
+        // Check if it's an authentication error
+        if (response.status === 401) {
+          console.warn('[ClientStore] Authentication failed for business history. User may not be logged in.');
+          // Set empty business history instead of error for auth issues
+          set({ 
+            businessHistory: {
+              client: { id: clientId, name: 'Unknown' },
+              businessEntries: [],
+              pagination: { page: 1, limit: 10, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
+              statistics: { totalAmount: 0, averageAmount: 0, totalEntries: 0, minAmount: 0, maxAmount: 0, growthRate: 0 },
+              trends: { monthlyData: [] },
+              recentActivity: { last30Days: 0, last7Days: 0 }
+            }, 
+            isLoading: false 
+          });
+          return;
+        }
+        throw new Error(result.message || `Failed to fetch business history (${response.status})`);
       }
 
+      console.log('[ClientStore] Setting business history data');
       set({ businessHistory: result.data, isLoading: false });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      console.error('[ClientStore] fetchBusinessHistory error:', errorMessage);
       set({ 
-        error: error instanceof Error ? error.message : 'An error occurred',
-        isLoading: false 
+        error: errorMessage,
+        isLoading: false,
+        // Set empty business history on error to prevent modal from breaking
+        businessHistory: {
+          client: { id: clientId, name: 'Unknown' },
+          businessEntries: [],
+          pagination: { page: 1, limit: 10, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
+          statistics: { totalAmount: 0, averageAmount: 0, totalEntries: 0, minAmount: 0, maxAmount: 0, growthRate: 0 },
+          trends: { monthlyData: [] },
+          recentActivity: { last30Days: 0, last7Days: 0 }
+        }
       });
     }
   },

@@ -71,11 +71,17 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
   const { fetchBusinessHistory, businessHistory, isLoading } = useClientStore();
   
   useEffect(() => {
+    console.log('[ClientDetailsModal] Modal state changed:', { open, client: !!client, clientId: client?.id });
     if (open && client) {
+      console.log('[ClientDetailsModal] Fetching business history for client:', client.id);
       // Fetch business history when modal opens
       fetchBusinessHistory(client.id);
     }
   }, [open, client, fetchBusinessHistory]);
+  
+  useEffect(() => {
+    console.log('[ClientDetailsModal] Business history updated:', { businessHistory, isLoading });
+  }, [businessHistory, isLoading]);
 
   if (!client) return null;
 
@@ -87,7 +93,15 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        console.log('[ClientDetailsModal] Dialog onOpenChange called:', isOpen);
+        if (!isOpen) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
@@ -152,7 +166,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                       <div>
                         <div className="text-sm font-medium">Location</div>
                         <div className="text-sm text-muted-foreground">
-                          {client.area.name}, {client.region.name}
+                          {client.area?.name || 'Unknown Area'}, {client.region?.name || 'Unknown Region'}
                         </div>
                       </div>
                     </div>
@@ -161,7 +175,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                       <User className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <div className="text-sm font-medium">Marketing Representative</div>
-                        <div className="text-sm text-muted-foreground">{client.mr.name}</div>
+                        <div className="text-sm text-muted-foreground">{client.mr?.name || 'Unknown MR'}</div>
                       </div>
                     </div>
                   </div>
@@ -379,7 +393,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                   <div>
                     <div className="text-sm font-medium mb-2">Region & Area</div>
                     <div className="text-sm text-muted-foreground">
-                      {client.area.name}, {client.region.name}
+                      {client.area?.name || 'Unknown Area'}, {client.region?.name || 'Unknown Region'}
                     </div>
                   </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Client } from '@/types';
 import { useClientStore } from '@/store/client-store';
 import { Badge } from '@/components/ui/badge';
@@ -77,8 +77,10 @@ const getBusinessTypeColor = (businessType: string) => {
 const ActionsCell = ({ client }: { client: Client }) => {
   const { openClientSheet, deleteClient } = useClientStore();
   const [showDetails, setShowDetails] = useState(false);
+  
+  console.log('[ActionsCell] Rendering for client:', client.id, 'showDetails:', showDetails);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (window.confirm(`Are you sure you want to delete ${client.name}?`)) {
       try {
         await deleteClient(client.id);
@@ -86,14 +88,44 @@ const ActionsCell = ({ client }: { client: Client }) => {
         console.error('Delete failed:', error);
       }
     }
-  };
+  }, [client.id, client.name, deleteClient]);
 
-  const openMaps = () => {
+  const openMaps = useCallback(() => {
     if (client.latitude && client.longitude) {
       const url = `https://www.google.com/maps?q=${client.latitude},${client.longitude}`;
       window.open(url, '_blank');
     }
-  };
+  }, [client.latitude, client.longitude]);
+
+  const handleViewDetails = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('[ActionsCell] View Details clicked for client:', client.id, client.name, 'current showDetails:', showDetails);
+    setShowDetails(true);
+  }, [client.id, client.name, showDetails]);
+
+  const handleCloseModal = useCallback(() => {
+    console.log('[ActionsCell] Closing modal for client:', client.id);
+    setShowDetails(false);
+  }, [client.id]);
+
+  const handleEditClient = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openClientSheet(client);
+  }, [client, openClientSheet]);
+
+  const handleOpenMaps = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openMaps();
+  }, [openMaps]);
+
+  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleDelete();
+  }, [handleDelete]);
 
   return (
     <>
@@ -106,17 +138,17 @@ const ActionsCell = ({ client }: { client: Client }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => setShowDetails(true)}>
+          <DropdownMenuItem onClick={handleViewDetails}>
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openClientSheet(client)}>
+          <DropdownMenuItem onClick={handleEditClient}>
             <Edit className="mr-2 h-4 w-4" />
             Edit Client
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {client.latitude && client.longitude && (
-            <DropdownMenuItem onClick={openMaps}>
+            <DropdownMenuItem onClick={handleOpenMaps}>
               <ExternalLink className="mr-2 h-4 w-4" />
               Open in Maps
             </DropdownMenuItem>
@@ -124,7 +156,7 @@ const ActionsCell = ({ client }: { client: Client }) => {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-red-600"
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
@@ -135,19 +167,13 @@ const ActionsCell = ({ client }: { client: Client }) => {
       <ClientDetailsModal 
         client={client}
         open={showDetails}
-        onClose={() => setShowDetails(false)}
+        onClose={handleCloseModal}
       />
     </>
   );
 };
 
 export function ClientTable({ clients, isLoading, searchQuery }: ClientTableProps) {
-  const [isClient, setIsClient] = useState(false);
-  
-  // Ensure we're on the client side to prevent hydration issues
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // Enhanced safety checks with multiple fallbacks
   const safeClients = React.useMemo(() => {
@@ -258,9 +284,6 @@ export function ClientTable({ clients, isLoading, searchQuery }: ClientTableProp
             const clientMRName = client.mr?.name || 'Unknown MR';
             const clientBusinessCount = client._count?.businessEntries || 0;
             const clientCreatedAt = client.createdAt ? new Date(client.createdAt) : new Date();
-            
-            // Only format date on client side to prevent hydration issues
-            const formattedDate = isClient ? formatDistanceToNow(clientCreatedAt, { addSuffix: true }) : 'Loading...';
             
             return (
             <TableRow key={client.id || Math.random()}>

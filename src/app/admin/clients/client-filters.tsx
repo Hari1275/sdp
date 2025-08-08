@@ -66,15 +66,17 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
   );
 
   const handleFilterChange = (key: keyof FilterType, value: string | undefined) => {
-    const newFilters = { ...localFilters, [key]: value || undefined };
+    // Convert 'all' value to undefined for clearing filters
+    const processedValue = value === 'all' ? undefined : value;
+    const newFilters = { ...localFilters, [key]: processedValue };
     
     // Clear area if region is changed
-    if (key === 'regionId' && value !== localFilters.regionId) {
+    if (key === 'regionId' && processedValue !== localFilters.regionId) {
       newFilters.areaId = undefined;
     }
     
     setLocalFilters(newFilters);
-    onFiltersChange({ [key]: value || undefined });
+    onFiltersChange({ [key]: processedValue });
   };
 
   const getActiveFiltersCount = () => {
@@ -183,14 +185,14 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
                 Business Type
               </Label>
               <Select
-                value={localFilters.businessType || ''}
+                value={localFilters.businessType || 'all'}
                 onValueChange={(value) => handleFilterChange('businessType', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All business types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All business types</SelectItem>
+                  <SelectItem value="all">All business types</SelectItem>
                   {businessTypes.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       {type.label}
@@ -207,14 +209,14 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
                 Region
               </Label>
               <Select
-                value={localFilters.regionId || ''}
+                value={localFilters.regionId || 'all'}
                 onValueChange={(value) => handleFilterChange('regionId', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All regions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All regions</SelectItem>
+                  <SelectItem value="all">All regions</SelectItem>
                   {regions.map((region) => (
                     <SelectItem key={region.value} value={region.value}>
                       {region.label}
@@ -231,7 +233,7 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
                 Area
               </Label>
               <Select
-                value={localFilters.areaId || ''}
+                value={localFilters.areaId || 'all'}
                 onValueChange={(value) => handleFilterChange('areaId', value)}
                 disabled={!localFilters.regionId}
               >
@@ -239,7 +241,7 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
                   <SelectValue placeholder={localFilters.regionId ? "Select area" : "Select region first"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All areas</SelectItem>
+                  <SelectItem value="all">All areas</SelectItem>
                   {filteredAreas.map((area) => (
                     <SelectItem key={area.value} value={area.value}>
                       {area.label}
@@ -256,14 +258,14 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
                 Marketing Representative
               </Label>
               <Select
-                value={localFilters.mrId || ''}
+                value={localFilters.mrId || 'all'}
                 onValueChange={(value) => handleFilterChange('mrId', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All MRs" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All MRs</SelectItem>
+                  <SelectItem value="all">All MRs</SelectItem>
                   {mrs.map((mr) => (
                     <SelectItem key={mr.value} value={mr.value}>
                       {mr.label}
