@@ -1,0 +1,264 @@
+// This is your Prisma schema file for SDP Ayurveda Dashboard
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// User Model with Role-based Access
+model User {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  username     String    @unique
+  email        String?   @unique
+  password     String
+  name         String
+  phone        String?
+  role         UserRole  @default(MR)
+  status       UserStatus @default(ACTIVE)
+  regionId     String?   @db.ObjectId
+  region       Region?   @relation(fields: [regionId], references: [id])
+  leadMrId     String?   @db.ObjectId
+  leadMr       User?     @relation("LeadMRRelation", fields: [leadMrId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teamMembers  User[]    @relation("LeadMRRelation")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
+  
+  // Relations
+  clients         Client[]
+  businessEntries BusinessEntry[]
+  assignedTasks   Task[]           @relation("TaskAssignee")
+  createdTasks    Task[]           @relation("TaskCreator")
+  gpsSessions     GPSSession[]
+  
+  @@map("users")
+}
+
+// Region Model for Geographic Data
+model Region {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique
+  description String?
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  areas  Area[]
+  users  User[]
+  tasks  Task[]
+  clients Client[]
+  
+  @@map("regions")
+}
+
+// Area Model for Sub-regions
+model Area {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  regionId    String   @db.ObjectId
+  region      Region   @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  clients Client[]
+  tasks   Task[]
+  
+  @@unique([name, regionId])
+  @@map("areas")
+}
+
+// Client Model for Healthcare Facilities
+model Client {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  phone          String?
+  businessType   BusinessType
+  areaId         String         @db.ObjectId
+  area           Area           @relation(fields: [areaId], references: [id])
+  regionId       String         @db.ObjectId
+  region         Region         @relation(fields: [regionId], references: [id])
+  latitude       Float
+  longitude      Float
+  address        String?
+  notes          String?
+  mrId           String         @db.ObjectId
+  mr             User           @relation(fields: [mrId], references: [id])
+  status         Status         @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  // Relations
+  businessEntries BusinessEntry[]
+  
+  // Prevent duplicates by name + location + area
+  @@unique([name, latitude, longitude, areaId])
+  @@map("clients")
+}
+
+// Business Entry Model for Transaction Recording
+model BusinessEntry {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount    Float
+  notes     String?
+  clientId  String   @db.ObjectId
+  client    Client   @relation(fields: [clientId], references: [id])
+  mrId      String   @db.ObjectId
+  mr        User     @relation(fields: [mrId], references: [id])
+  latitude  Float
+  longitude Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("business_entries")
+}
+
+// Task Model for Task Management
+model Task {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  regionId    String     @db.ObjectId
+  region      Region     @relation(fields: [regionId], references: [id])
+  areaId      String?    @db.ObjectId
+  area        Area?      @relation(fields: [areaId], references: [id])
+  assigneeId  String     @db.ObjectId
+  assignee    User       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdById String     @db.ObjectId
+  createdBy   User       @relation("TaskCreator", fields: [createdById], references: [id])
+  status      TaskStatus @default(PENDING)
+  priority    Priority   @default(MEDIUM)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  @@map("tasks")
+}
+
+// GPS Session Model for Tracking Sessions
+model GPSSession {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  mrId        String    @db.ObjectId
+  mr          User      @relation(fields: [mrId], references: [id])
+  checkInTime DateTime
+  checkOutTime DateTime?
+  totalHours  Float?    // Calculated field
+  totalKms    Float?    // Calculated field
+  status      SessionStatus @default(ACTIVE)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  gpsLogs GPSLog[]
+  
+  @@map("gps_sessions")
+}
+
+// GPS Log Model for Individual GPS Points
+model GPSLog {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId   String     @db.ObjectId
+  session     GPSSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  latitude    Float
+  longitude   Float
+  accuracy    Float?     // GPS accuracy in meters
+  speed       Float?     // Speed in km/h
+  timestamp   DateTime   @default(now())
+  
+  @@map("gps_logs")
+}
+
+// Notification Model for In-App Messaging
+model Notification {
+  id        String            @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  message   String
+  type      NotificationType  @default(INFO)
+  targetRole UserRole?
+  targetUserId String?        @db.ObjectId
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  
+  @@map("notifications")
+}
+
+// Daily Summary Model for Performance Tracking
+model DailySummary {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  mrId         String   @db.ObjectId
+  date         DateTime @db.Date
+  totalVisits  Int      @default(0)
+  totalBusiness Float   @default(0)
+  totalKms     Float    @default(0)
+  totalHours   Float    @default(0)
+  checkInCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([mrId, date])
+  @@map("daily_summaries")
+}
+
+// Enums
+enum UserRole {
+  MR
+  LEAD_MR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum BusinessType {
+  CLINIC
+  MEDICAL_STORE
+  HOSPITAL
+  PHARMACY
+  HEALTHCARE_CENTER
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  INTERRUPTED
+}
+
+enum NotificationType {
+  INFO
+  TASK_ASSIGNMENT
+  TASK_UPDATE
+  SYSTEM_ALERT
+  WARNING
+}

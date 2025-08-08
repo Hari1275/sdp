@@ -1,0 +1,434 @@
+{
+  "timestamp": "2025-08-07T12:01:18.683Z",
+  "endpointCategories": {
+    "userManagement": {
+      "totalEndpoints": 5,
+      "implementedEndpoints": 0,
+      "issues": [],
+      "score": 0,
+      "endpoints": [
+        {
+          "endpoint": "GET /api/users",
+          "fileExists": false,
+          "filePath": "src/app/api/GET /users/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "GET"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "POST /api/users",
+          "fileExists": false,
+          "filePath": "src/app/api/POST /users/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "POST"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "PUT /api/users/[id]",
+          "fileExists": false,
+          "filePath": "src/app/api/PUT /users/[id]/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "PUT"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "DELETE /api/users/[id]",
+          "fileExists": false,
+          "filePath": "src/app/api/DELETE /users/[id]/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "DELETE"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "GET /api/users/[id]/team",
+          "fileExists": false,
+          "filePath": "src/app/api/GET /users/[id]/team/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "GET"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        }
+      ]
+    },
+    "clientManagement": {
+      "totalEndpoints": 5,
+      "implementedEndpoints": 0,
+      "issues": [],
+      "score": 0,
+      "endpoints": [
+        {
+          "endpoint": "GET /api/clients",
+          "fileExists": false,
+          "filePath": "src/app/api/GET /clients/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "GET"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "POST /api/clients",
+          "fileExists": false,
+          "filePath": "src/app/api/POST /clients/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "POST"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "PUT /api/clients/[id]",
+          "fileExists": false,
+          "filePath": "src/app/api/PUT /clients/[id]/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "PUT"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "DELETE /api/clients/[id]",
+          "fileExists": false,
+          "filePath": "src/app/api/DELETE /clients/[id]/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "DELETE"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "GET /api/clients/search",
+          "fileExists": false,
+          "filePath": "src/app/api/GET /clients/search/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "GET"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        }
+      ]
+    },
+    "businessEntry": {
+      "totalEndpoints": 3,
+      "implementedEndpoints": 0,
+      "issues": [],
+      "score": 0,
+      "endpoints": [
+        {
+          "endpoint": "GET /api/business",
+          "fileExists": false,
+          "filePath": "src/app/api/GET /business/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "GET"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "POST /api/business",
+          "fileExists": false,
+          "filePath": "src/app/api/POST /business/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "POST"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "GET /api/business/client/[clientId]",
+          "fileExists": false,
+          "filePath": "src/app/api/GET /business/client/[clientId]/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "GET"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        }
+      ]
+    },
+    "taskManagement": {
+      "totalEndpoints": 5,
+      "implementedEndpoints": 0,
+      "issues": [],
+      "score": 0,
+      "endpoints": [
+        {
+          "endpoint": "GET /api/tasks",
+          "fileExists": false,
+          "filePath": "src/app/api/GET /tasks/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "GET"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "POST /api/tasks",
+          "fileExists": false,
+          "filePath": "src/app/api/POST /tasks/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "POST"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "PUT /api/tasks/[id]",
+          "fileExists": false,
+          "filePath": "src/app/api/PUT /tasks/[id]/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "PUT"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "PUT /api/tasks/[id]/complete",
+          "fileExists": false,
+          "filePath": "src/app/api/PUT /tasks/[id]/complete/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "PUT"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "DELETE /api/tasks/[id]",
+          "fileExists": false,
+          "filePath": "src/app/api/DELETE /tasks/[id]/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "DELETE"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        }
+      ]
+    },
+    "geographicData": {
+      "totalEndpoints": 4,
+      "implementedEndpoints": 0,
+      "issues": [],
+      "score": 0,
+      "endpoints": [
+        {
+          "endpoint": "GET /api/regions",
+          "fileExists": false,
+          "filePath": "src/app/api/GET /regions/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "GET"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "POST /api/regions",
+          "fileExists": false,
+          "filePath": "src/app/api/POST /regions/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "POST"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "GET /api/areas",
+          "fileExists": false,
+          "filePath": "src/app/api/GET /areas/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "GET"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        },
+        {
+          "endpoint": "POST /api/areas",
+          "fileExists": false,
+          "filePath": "src/app/api/POST /areas/route.ts",
+          "implementedMethods": [],
+          "requiredMethods": [
+            "POST"
+          ],
+          "issues": [
+            "File does not exist",
+            "Endpoint not implemented"
+          ],
+          "score": 0
+        }
+      ]
+    }
+  },
+  "overallScore": 0,
+  "criticalIssues": [
+    "Missing endpoint: GET /api/users",
+    "Missing endpoint: POST /api/users",
+    "Missing endpoint: PUT /api/users/[id]",
+    "Missing endpoint: DELETE /api/users/[id]",
+    "Missing endpoint: GET /api/users/[id]/team",
+    "Missing endpoint: GET /api/clients",
+    "Missing endpoint: POST /api/clients",
+    "Missing endpoint: PUT /api/clients/[id]",
+    "Missing endpoint: DELETE /api/clients/[id]",
+    "Missing endpoint: GET /api/clients/search",
+    "Missing endpoint: GET /api/business",
+    "Missing endpoint: POST /api/business",
+    "Missing endpoint: GET /api/business/client/[clientId]",
+    "Missing endpoint: GET /api/tasks",
+    "Missing endpoint: POST /api/tasks",
+    "Missing endpoint: PUT /api/tasks/[id]",
+    "Missing endpoint: PUT /api/tasks/[id]/complete",
+    "Missing endpoint: DELETE /api/tasks/[id]",
+    "Missing endpoint: GET /api/regions",
+    "Missing endpoint: POST /api/regions",
+    "Missing endpoint: GET /api/areas",
+    "Missing endpoint: POST /api/areas"
+  ],
+  "warnings": [
+    "GET /api/users: File does not exist",
+    "GET /api/users: Endpoint not implemented",
+    "POST /api/users: File does not exist",
+    "POST /api/users: Endpoint not implemented",
+    "PUT /api/users/[id]: File does not exist",
+    "PUT /api/users/[id]: Endpoint not implemented",
+    "DELETE /api/users/[id]: File does not exist",
+    "DELETE /api/users/[id]: Endpoint not implemented",
+    "GET /api/users/[id]/team: File does not exist",
+    "GET /api/users/[id]/team: Endpoint not implemented",
+    "GET /api/clients: File does not exist",
+    "GET /api/clients: Endpoint not implemented",
+    "POST /api/clients: File does not exist",
+    "POST /api/clients: Endpoint not implemented",
+    "PUT /api/clients/[id]: File does not exist",
+    "PUT /api/clients/[id]: Endpoint not implemented",
+    "DELETE /api/clients/[id]: File does not exist",
+    "DELETE /api/clients/[id]: Endpoint not implemented",
+    "GET /api/clients/search: File does not exist",
+    "GET /api/clients/search: Endpoint not implemented",
+    "GET /api/business: File does not exist",
+    "GET /api/business: Endpoint not implemented",
+    "POST /api/business: File does not exist",
+    "POST /api/business: Endpoint not implemented",
+    "GET /api/business/client/[clientId]: File does not exist",
+    "GET /api/business/client/[clientId]: Endpoint not implemented",
+    "GET /api/tasks: File does not exist",
+    "GET /api/tasks: Endpoint not implemented",
+    "POST /api/tasks: File does not exist",
+    "POST /api/tasks: Endpoint not implemented",
+    "PUT /api/tasks/[id]: File does not exist",
+    "PUT /api/tasks/[id]: Endpoint not implemented",
+    "PUT /api/tasks/[id]/complete: File does not exist",
+    "PUT /api/tasks/[id]/complete: Endpoint not implemented",
+    "DELETE /api/tasks/[id]: File does not exist",
+    "DELETE /api/tasks/[id]: Endpoint not implemented",
+    "GET /api/regions: File does not exist",
+    "GET /api/regions: Endpoint not implemented",
+    "POST /api/regions: File does not exist",
+    "POST /api/regions: Endpoint not implemented",
+    "GET /api/areas: File does not exist",
+    "GET /api/areas: Endpoint not implemented",
+    "POST /api/areas: File does not exist",
+    "POST /api/areas: Endpoint not implemented"
+  ],
+  "recommendations": [
+    "🚨 CRITICAL: Less than 80% of endpoints are implemented. This is not production-ready.",
+    "🔴 CRITICAL: Fix all critical issues before production deployment.",
+    "🟡 WARNING: Multiple issues detected. Review and fix warnings for better production stability.",
+    "📂 userManagement: Score below 70%. Requires significant improvement.",
+    "📂 clientManagement: Score below 70%. Requires significant improvement.",
+    "📂 businessEntry: Score below 70%. Requires significant improvement.",
+    "📂 taskManagement: Score below 70%. Requires significant improvement.",
+    "📂 geographicData: Score below 70%. Requires significant improvement."
+  ]
+}
