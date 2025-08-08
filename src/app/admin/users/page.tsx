@@ -1,18 +1,18 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useUserStore } from '@/store/user-store';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { UserFormDynamic } from '@/components/portal-safe';
 import { ClientOnly } from '@/components/client-only';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Users, UserCheck, UserX, Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function UserManagementPage() {
-  const { users, fetchUsers, openUserSheet, isSheetOpen } = useUserStore();
+  const { users, isLoading, error, fetchUsers, openUserSheet, isSheetOpen } = useUserStore();
 
   useEffect(() => {
     fetchUsers();
@@ -29,6 +29,25 @@ export default function UserManagementPage() {
     }
   }, [isSheetOpen, fetchUsers]);
 
+  // Calculate user statistics
+  const userStats = useMemo(() => {
+    const totalUsers = users.length;
+    const activeUsers = users.filter(user => user.status === 'ACTIVE').length;
+    const inactiveUsers = users.filter(user => user.status === 'INACTIVE').length;
+    const adminUsers = users.filter(user => user.role === 'ADMIN').length;
+    const leadMrUsers = users.filter(user => user.role === 'LEAD_MR').length;
+    const mrUsers = users.filter(user => user.role === 'MR').length;
+
+    return {
+      totalUsers,
+      activeUsers,
+      inactiveUsers,
+      adminUsers,
+      leadMrUsers,
+      mrUsers
+    };
+  }, [users]);
+
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
@@ -44,6 +63,61 @@ export default function UserManagementPage() {
         </Button>
       </div>
 
+      {/* User Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{userStats.totalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              All users in the system
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <UserCheck className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{userStats.activeUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              {userStats.totalUsers > 0 ? Math.round((userStats.activeUsers / userStats.totalUsers) * 100) : 0}% of total users
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inactive Users</CardTitle>
+            <UserX className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{userStats.inactiveUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              {userStats.totalUsers > 0 ? Math.round((userStats.inactiveUsers / userStats.totalUsers) * 100) : 0}% of total users
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Admins</CardTitle>
+            <Shield className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{userStats.adminUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              {userStats.leadMrUsers} Lead MRs, {userStats.mrUsers} MRs
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>User List</CardTitle>
@@ -54,7 +128,26 @@ export default function UserManagementPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
           }>
-            <DataTable columns={columns} data={users} />
+            {isLoading ? (
+              <div className="flex items-center justify-center h-48">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Loading users...</p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center h-48">
+                <div className="text-center">
+                  <p className="text-sm text-red-600 mb-2">Error loading users</p>
+                  <p className="text-xs text-muted-foreground mb-4">{error}</p>
+                  <Button onClick={() => fetchUsers()} variant="outline" size="sm">
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <DataTable columns={columns} data={users} />
+            )}
           </ClientOnly>
         </CardContent>
       </Card>

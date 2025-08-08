@@ -313,6 +313,13 @@ export function parseQueryParams(request: NextRequest) {
   }
 }
 
+// Object ID validation helper
+export function validateObjectId(id: string): boolean {
+  // MongoDB ObjectId validation pattern
+  const objectIdPattern = /^[0-9a-fA-F]{24}$/
+  return typeof id === 'string' && objectIdPattern.test(id)
+}
+
 // Health check helper
 export async function checkDatabaseHealth() {
   try {

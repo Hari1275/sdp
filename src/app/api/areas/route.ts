@@ -16,8 +16,9 @@ import { z } from 'zod';
 // Validation schemas
 const createAreaSchema = z.object({
   name: z.string().min(2).max(100),
-  regionId: z.string().uuid(),
-  description: z.string().optional()
+  regionId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid region ID format'),
+  description: z.string().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE')
 });
 
 // GET /api/areas - List areas
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest) {
         name: true,
         description: true,
         regionId: true,
+        status: true,
         createdAt: true,
         updatedAt: true,
         region: {
@@ -177,6 +179,7 @@ export async function POST(request: NextRequest) {
         name: true,
         description: true,
         regionId: true,
+        status: true,
         createdAt: true,
         updatedAt: true,
         region: {

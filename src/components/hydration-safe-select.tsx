@@ -50,7 +50,7 @@ export function HydrationSafeSelect({
 
   return (
     <Select 
-      value={value} 
+      value={value || defaultValue} 
       onValueChange={onValueChange} 
       defaultValue={defaultValue}
       disabled={disabled}

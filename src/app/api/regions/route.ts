@@ -16,7 +16,8 @@ import { z } from 'zod';
 // Validation schemas
 const createRegionSchema = z.object({
   name: z.string().min(2).max(100),
-  description: z.string().optional()
+  description: z.string().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE')
 });
 
 
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         description: true,
+        status: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -147,6 +149,7 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true,
         description: true,
+        status: true,
         createdAt: true,
         updatedAt: true,
         _count: {

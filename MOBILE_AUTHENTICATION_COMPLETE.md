@@ -1,11 +1,11 @@
-# 🎉 Mobile Authentication Implementation Complete
+#  Mobile Authentication Implementation Complete
 
 ## ✅ SUCCESS: JWT Authentication for Mobile Apps
 
 The SDP Ayurveda Dashboard API now **fully supports mobile app authentication** using JWT tokens alongside the existing web session authentication.
 
 ---
-
+baseurl: https://sdp-mocha.vercel.app
 ## 📱 New Mobile Authentication Endpoints
 
 ### 1. **Mobile Login**
@@ -479,7 +479,7 @@ class MobileApiClient {
 - **CORS**: 🟢 **CONFIGURED & WORKING**
 - **Documentation**: 🟢 **COMPLETE**
 
-**Happy Mobile Development! 🎉**
+**Happy Mobile Development! **
 
 ---
 

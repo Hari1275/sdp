@@ -291,6 +291,7 @@ export function UserForm() {
                     <FormLabel>Role *</FormLabel>
                     <FormControl>
                       <HydrationSafeSelect
+                        value={field.value}
                         onValueChange={handleRoleChange}
                         defaultValue={field.value}
                         placeholder="Select role"
@@ -313,6 +314,7 @@ export function UserForm() {
                     <FormLabel>Status *</FormLabel>
                     <FormControl>
                       <HydrationSafeSelect
+                        value={field.value}
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                         placeholder="Select status"
@@ -336,6 +338,7 @@ export function UserForm() {
                   <FormLabel>Region</FormLabel>
                   <FormControl>
                     <HydrationSafeSelect
+                      value={field.value}
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                       placeholder="Select region"
@@ -362,6 +365,7 @@ export function UserForm() {
                     <FormLabel>Lead MR</FormLabel>
                     <FormControl>
                       <HydrationSafeSelect
+                        value={field.value}
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                         placeholder="Select lead MR"
