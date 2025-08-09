@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-utils';
 
 // GET /api/public/areas - List areas (public endpoint for forms)
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('[PublicAreas] Fetching areas...');
     

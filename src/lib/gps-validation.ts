@@ -246,7 +246,7 @@ export function validateGPSErrorData(errorData: {
   userId: string;
   errorType: string;
   errorMessage: string;
-  errorData?: any;
+  errorData?: Record<string, unknown>;
   timestamp?: Date;
 }): SessionValidationResult {
   const errors: string[] = [];
@@ -287,7 +287,7 @@ export function validateGPSErrorData(errorData: {
       if (serialized.length > 10000) {
         warnings.push('Error data is very large (>10KB)');
       }
-    } catch (e) {
+    } catch {
       errors.push('Error data is not serializable');
     }
   }
@@ -359,35 +359,35 @@ export function validateAnalyticsQuery(queryData: {
  * @param coordinate Raw coordinate data
  * @returns Sanitized coordinate
  */
-export function sanitizeCoordinate(coordinate: any): Coordinate | null {
+export function sanitizeCoordinate(coordinate: Record<string, unknown>): Coordinate | null {
   try {
     const sanitized: Coordinate = {
-      latitude: parseFloat(coordinate.latitude || coordinate.lat),
-      longitude: parseFloat(coordinate.longitude || coordinate.lng || coordinate.lon)
+      latitude: parseFloat(String(coordinate.latitude || coordinate.lat)),
+      longitude: parseFloat(String(coordinate.longitude || coordinate.lng || coordinate.lon))
     };
 
     // Add optional fields
     if (coordinate.accuracy !== undefined) {
-      sanitized.accuracy = parseFloat(coordinate.accuracy);
+      sanitized.accuracy = parseFloat(String(coordinate.accuracy));
     }
     
     if (coordinate.speed !== undefined) {
-      sanitized.speed = parseFloat(coordinate.speed);
+      sanitized.speed = parseFloat(String(coordinate.speed));
     }
     
     if (coordinate.altitude !== undefined) {
-      sanitized.altitude = parseFloat(coordinate.altitude);
+      sanitized.altitude = parseFloat(String(coordinate.altitude));
     }
     
     if (coordinate.timestamp) {
-      sanitized.timestamp = new Date(coordinate.timestamp);
+      sanitized.timestamp = new Date(coordinate.timestamp as string | number | Date);
     }
 
     // Validate the sanitized coordinate
     const validation = validateCoordinate(sanitized);
     return validation.isValid ? sanitized : null;
     
-  } catch (error) {
+  } catch {
     return null;
   }
 }

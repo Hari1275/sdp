@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { validateCoordinateData, sanitizeCoordinate } from '@/lib/gps-validation';
-import { calculateTotalDistance, filterByAccuracy, compressGPSData } from '@/lib/gps-utils';
+import { sanitizeCoordinate } from '@/lib/gps-validation';
+import { calculateTotalDistance, filterByAccuracy } from '@/lib/gps-utils';
 
 interface BatchUploadStats {
   totalReceived: number;
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { sessionId, coordinates, compressed = false, syncToken } = body;
+    const { sessionId, coordinates, syncToken } = body;
 
     // Validate basic request structure
     if (!sessionId || !Array.isArray(coordinates)) {
@@ -117,8 +117,7 @@ export async function POST(request: NextRequest) {
         const result = await processCoordinateChunk(
           chunk,
           sessionId,
-          lastCoordinate,
-          compressed
+          lastCoordinate
         );
         
         stats.totalProcessed += result.processed;
@@ -232,24 +231,23 @@ export async function POST(request: NextRequest) {
 
 // Helper function to process coordinate chunks
 async function processCoordinateChunk(
-  coordinates: any[],
+  coordinates: Array<Record<string, unknown>>,
   sessionId: string,
-  lastCoordinate: any,
-  compressed: boolean
+  lastCoordinate: { latitude: number; longitude: number; timestamp: Date } | null
 ): Promise<{
   processed: number;
   skipped: number;
   distanceAdded: number;
   errors: string[];
   warnings: string[];
-  lastCoordinate: any;
+  lastCoordinate: { latitude: number; longitude: number; timestamp: Date } | null;
 }> {
   const result = {
     processed: 0,
     skipped: 0,
     distanceAdded: 0,
-    errors: [],
-    warnings: [],
+    errors: [] as string[],
+    warnings: [] as string[],
     lastCoordinate: lastCoordinate
   };
 
@@ -259,7 +257,7 @@ async function processCoordinateChunk(
     const coord = sanitizeCoordinate(coordinates[i]);
     if (coord) {
       // Add index for tracking
-      (coord as any).originalIndex = i;
+      (coord as unknown as Record<string, unknown>).originalIndex = i;
       sanitizedCoords.push(coord);
     } else {
       result.skipped++;
@@ -309,8 +307,7 @@ async function processCoordinateChunk(
   try {
     // Batch insert GPS logs
     const insertResult = await prisma.gPSLog.createMany({
-      data: gpsLogsToCreate,
-      skipDuplicates: true
+      data: gpsLogsToCreate
     });
 
     result.processed = insertResult.count;

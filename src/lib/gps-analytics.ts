@@ -2,7 +2,7 @@
  * GPS analytics utilities for performance metrics and reporting
  */
 
-import { calculateDistance, calculateTotalDistance, Coordinate } from './gps-utils';
+// GPS analytics utilities - distance calculations are handled in gps-utils
 
 export interface GPSPerformanceMetrics {
   totalKm: number;

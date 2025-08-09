@@ -119,7 +119,7 @@ export default function ClientManagementPage() {
     });
 
     return result;
-  }, [clients, filters]);
+  }, [clients, filters, error, isLoading, searchQuery]);
 
   const handleExport = async (format: 'csv' | 'excel') => {
     try {

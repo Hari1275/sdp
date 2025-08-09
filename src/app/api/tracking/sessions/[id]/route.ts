@@ -97,7 +97,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
 
     // Prepare response data
-    const responseData: any = {
+    const responseData: Record<string, unknown> = {
       ...summary,
       user: gpsSession.user,
       status: gpsSession.checkOut ? 'completed' : 'active'
@@ -215,7 +215,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // Prepare update data
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (body.totalKm !== undefined) {
       updateData.totalKm = parseFloat(body.totalKm);
@@ -353,7 +353,7 @@ function calculateSpeedVariance(speeds: number[]): number {
   return Math.round(Math.sqrt(variance) * 100) / 100;
 }
 
-function calculateMovingTime(gpsLogs: any[]): number {
+function calculateMovingTime(gpsLogs: Array<{ timestamp: Date; speed: number | null }>): number {
   if (gpsLogs.length < 2) return 0;
   
   let movingTimeMinutes = 0;
@@ -372,7 +372,7 @@ function calculateMovingTime(gpsLogs: any[]): number {
   return Math.round(movingTimeMinutes * 10) / 10;
 }
 
-function calculateRouteOptimization(gpsLogs: any[]): number {
+function calculateRouteOptimization(gpsLogs: Array<{ latitude: number; longitude: number }>): number {
   if (gpsLogs.length < 2) return 100;
   
   // Simple route optimization score based on directness

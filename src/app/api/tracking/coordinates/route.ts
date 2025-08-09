@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
 
     // Sanitize and filter coordinates
     const sanitizedCoords = coordinates
-      .map((coord: any) => sanitizeCoordinate(coord))
-      .filter((coord: any) => coord !== null);
+      .map((coord: Record<string, unknown>) => sanitizeCoordinate(coord))
+      .filter((coord: Record<string, unknown> | null): coord is Record<string, unknown> => coord !== null);
 
     if (sanitizedCoords.length === 0) {
       return NextResponse.json(
@@ -100,8 +100,7 @@ export async function POST(request: NextRequest) {
     try {
       // Insert GPS logs
       const result = await prisma.gPSLog.createMany({
-        data: gpsLogsToCreate,
-        skipDuplicates: true // In case of timestamp conflicts
+        data: gpsLogsToCreate
       });
 
       processedCount = result.count;
@@ -196,16 +195,16 @@ export async function POST(request: NextRequest) {
 
     // Add warnings if any
     if (validation.warnings.length > 0) {
-      (response as any).warnings = validation.warnings;
+      (response as Record<string, unknown>).warnings = validation.warnings;
     }
 
     if (errors.length > 0) {
-      (response as any).processingErrors = errors;
+      (response as Record<string, unknown>).processingErrors = errors;
     }
 
     // Add filtering info if coordinates were filtered
     if (coordinates.length > filteredCoords.length) {
-      (response as any).filteringInfo = {
+      (response as Record<string, unknown>).filteringInfo = {
         originalCount: coordinates.length,
         validCount: sanitizedCoords.length,
         processedCount: filteredCoords.length,
@@ -280,17 +279,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query conditions
-    const whereConditions: any = { sessionId };
+    const whereConditions: Record<string, unknown> = { sessionId };
+    const timestampCondition: Record<string, unknown> = {};
 
     if (startTime) {
-      whereConditions.timestamp = { gte: new Date(startTime) };
+      timestampCondition.gte = new Date(startTime);
     }
 
     if (endTime) {
-      whereConditions.timestamp = {
-        ...whereConditions.timestamp,
-        lte: new Date(endTime)
-      };
+      timestampCondition.lte = new Date(endTime);
+    }
+
+    if (Object.keys(timestampCondition).length > 0) {
+      whereConditions.timestamp = timestampCondition;
     }
 
     // Get GPS logs

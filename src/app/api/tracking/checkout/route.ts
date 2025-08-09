@@ -200,19 +200,19 @@ export async function POST(request: NextRequest) {
 
     // Add warnings if any
     if (validation.warnings.length > 0) {
-      (response as any).warnings = validation.warnings;
+      (response as Record<string, unknown>).warnings = validation.warnings;
     }
 
     // Add location data if available
     if (gpsSession.startLat && gpsSession.startLng) {
-      (response as any).startLocation = {
+      (response as Record<string, unknown>).startLocation = {
         latitude: gpsSession.startLat,
         longitude: gpsSession.startLng
       };
     }
 
     if (endCoord) {
-      (response as any).endLocation = {
+      (response as Record<string, unknown>).endLocation = {
         latitude: endCoord.latitude,
         longitude: endCoord.longitude
       };

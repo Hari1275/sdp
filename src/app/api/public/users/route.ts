@@ -1,17 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { successResponse, errorResponse, parseQueryParams } from '@/lib/api-utils';
+import { successResponse, errorResponse } from '@/lib/api-utils';
 
 // GET /api/public/users - List users (public endpoint for forms)
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     console.log('[PublicUsers] Fetching users...');
     
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(_request.url);
     const role = searchParams.get('role');
     
     // Build where clause
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       status: 'ACTIVE' // Only active users
     };
     

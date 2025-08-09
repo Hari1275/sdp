@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils'
 import { calculateDistance } from '@/lib/gps-utils';
 
 interface LiveSessionData {
@@ -29,13 +28,10 @@ interface LiveSessionData {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getAuthenticatedUser(request);
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!user) {
+      return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
 
     const { searchParams } = new URL(request.url);
@@ -44,13 +40,13 @@ export async function GET(request: NextRequest) {
     const region = searchParams.get('region');
 
     // Determine access permissions
-    let targetUserIds: string[] = [session.user.id];
+    let targetUserIds: string[] = [user.id];
     
     if (userId) {
       // Specific user requested
-      const canAccessOtherUsers = session.user.role === 'ADMIN' || session.user.role === 'LEAD_MR';
+      const canAccessOtherUsers = user.role === 'ADMIN' || user.role === 'LEAD_MR';
       
-      if (userId !== session.user.id && !canAccessOtherUsers) {
+      if (userId !== user.id && !canAccessOtherUsers) {
         return NextResponse.json(
           { error: 'Insufficient permissions' },
           { status: 403 }
@@ -60,31 +56,31 @@ export async function GET(request: NextRequest) {
       targetUserIds = [userId];
     } else if (includeTeam) {
       // Team data requested
-      if (session.user.role === 'ADMIN') {
+      if (user.role === 'ADMIN') {
         // Admin can see all users
         const allUsers = await prisma.user.findMany({
           where: { status: 'ACTIVE' },
           select: { id: true }
         });
         targetUserIds = allUsers.map(u => u.id);
-      } else if (session.user.role === 'LEAD_MR') {
+      } else if (user.role === 'LEAD_MR') {
         // Lead MR can see their team
         const teamMembers = await prisma.user.findMany({
-          where: { leadMrId: session.user.id },
+          where: { leadMrId: user.id },
           select: { id: true }
         });
-        targetUserIds = [session.user.id, ...teamMembers.map(u => u.id)];
+        targetUserIds = [user.id, ...teamMembers.map(u => u.id)];
       }
     }
 
     // For Lead MR accessing specific user, verify team membership
-    if (session.user.role === 'LEAD_MR' && userId && userId !== session.user.id) {
+    if (user.role === 'LEAD_MR' && userId && userId !== user.id) {
       const targetUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { leadMrId: true }
       });
 
-      if (!targetUser || targetUser.leadMrId !== session.user.id) {
+      if (!targetUser || targetUser.leadMrId !== user.id) {
         return NextResponse.json(
           { error: 'Can only access your team members data' },
           { status: 403 }
@@ -93,7 +89,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query conditions
-    const whereConditions: any = {
+    const whereConditions: Record<string, unknown> = {
       userId: { in: targetUserIds },
       checkOut: null // Only active sessions
     };
@@ -177,8 +173,8 @@ export async function GET(request: NextRequest) {
           latitude: gpsLogs[0].latitude,
           longitude: gpsLogs[0].longitude,
           timestamp: gpsLogs[0].timestamp,
-          accuracy: gpsLogs[0].accuracy,
-          speed: gpsLogs[0].speed
+          accuracy: gpsLogs[0].accuracy ?? undefined,
+          speed: gpsLogs[0].speed ?? undefined
         } : undefined,
         stats: {
           totalKm: sessionData.totalKm || 0,
@@ -223,7 +219,7 @@ export async function GET(request: NextRequest) {
       },
       insights,
       metadata: {
-        requestedBy: session.user.id,
+        requestedBy: user.id,
         requestedAt: new Date(),
         filters: {
           userId: userId,
@@ -248,7 +244,12 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function to analyze movement from GPS logs
-function analyzeMovement(gpsLogs: any[]): {
+function analyzeMovement(gpsLogs: Array<{
+  latitude: number;
+  longitude: number;
+  timestamp: Date;
+  speed: number | null;
+}>): {
   isMoving: boolean;
   averageSpeed: number;
   distanceInLast5Minutes: number;

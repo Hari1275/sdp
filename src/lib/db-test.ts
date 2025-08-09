@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { UserRole, BusinessType, TaskStatus, Priority, SessionStatus } from '@prisma/client'
+import { UserRole, BusinessType, TaskStatus, Priority } from '@prisma/client';
 import bcrypt from 'bcryptjs'
 
 // Database connection test
@@ -143,11 +143,9 @@ export async function testAllModels() {
     console.log('7️⃣ Testing GPSSession model...')
     const testGpsSession = await prisma.gPSSession.create({
       data: {
-        mrId: mrUser.id,
-        checkInTime: new Date(),
-        totalHours: 0,
-        totalKms: 0,
-        status: SessionStatus.ACTIVE,
+        userId: mrUser.id,
+        checkIn: new Date(),
+        totalKm: 0,
       }
     })
     console.log('✅ GPS Session created:', testGpsSession.id)

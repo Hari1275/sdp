@@ -4,28 +4,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { validateGPSErrorData } from '@/lib/gps-validation';
 
-interface GPSError {
-  id: string;
-  sessionId?: string;
-  userId: string;
-  errorType: string;
-  errorMessage: string;
-  errorData?: any;
-  deviceInfo?: {
-    userAgent?: string;
-    platform?: string;
-    coordinates?: {
-      latitude?: number;
-      longitude?: number;
-      accuracy?: number;
-    };
-  };
-  timestamp: Date;
-  resolved: boolean;
-  resolvedAt?: Date;
-  resolvedBy?: string;
-  resolution?: string;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -114,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Provide immediate troubleshooting suggestions
-    const troubleshootingTips = generateTroubleshootingTips(errorType, errorMessage, errorData);
+    const troubleshootingTips = generateTroubleshootingTips(errorType, errorMessage);
 
     return NextResponse.json({
       success: true,
@@ -162,7 +140,7 @@ export async function GET(request: NextRequest) {
 
     // For now, retrieve from notifications as a workaround
     // In production, you'd query a proper error logging table
-    const whereConditions: any = {
+    const whereConditions: Record<string, unknown> = {
       type: 'SYSTEM_ALERT',
       title: { startsWith: 'GPS Error:' }
     };
@@ -334,8 +312,7 @@ export async function PATCH(request: NextRequest) {
 // Helper function to generate troubleshooting tips
 function generateTroubleshootingTips(
   errorType: string,
-  errorMessage: string,
-  errorData?: any
+  errorMessage: string
 ): string[] {
   const tips = [];
 

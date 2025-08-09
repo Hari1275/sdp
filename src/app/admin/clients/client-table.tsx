@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Client } from '@/types';
 import { useClientStore } from '@/store/client-store';
 import { Badge } from '@/components/ui/badge';

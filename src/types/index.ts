@@ -76,6 +76,9 @@ export interface Client {
   name: string
   phone?: string
   businessType: 'CLINIC' | 'MEDICAL_STORE' | 'HOSPITAL' | 'PHARMACY' | 'HEALTHCARE_CENTER'
+  areaId: string
+  regionId: string
+  mrId: string
   area: {
     id: string
     name: string

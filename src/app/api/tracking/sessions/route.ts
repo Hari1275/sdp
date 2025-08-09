@@ -1,19 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils'
 import { validateAnalyticsQuery } from '@/lib/gps-validation';
 import { generateSessionSummary } from '@/lib/gps-analytics';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getAuthenticatedUser(request);
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!user) {
+      return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
 
     const { searchParams } = new URL(request.url);
@@ -45,13 +41,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Determine which user's data to retrieve
-    let targetUserId = session.user.id;
+    let targetUserId = user.id;
     
     if (userId) {
       // Check if current user can access other user's data
-      const canAccessOtherUsers = session.user.role === 'ADMIN' || session.user.role === 'LEAD_MR';
+      const canAccessOtherUsers = user.role === 'ADMIN' || user.role === 'LEAD_MR';
       
-      if (userId !== session.user.id && !canAccessOtherUsers) {
+      if (userId !== user.id && !canAccessOtherUsers) {
         return NextResponse.json(
           { error: 'Insufficient permissions to access other user data' },
           { status: 403 }
@@ -62,13 +58,13 @@ export async function GET(request: NextRequest) {
     }
 
     // If Lead MR, verify they can only access their team members
-    if (session.user.role === 'LEAD_MR' && userId && userId !== session.user.id) {
+    if (user.role === 'LEAD_MR' && userId && userId !== user.id) {
       const targetUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { leadMrId: true }
       });
 
-      if (!targetUser || targetUser.leadMrId !== session.user.id) {
+      if (!targetUser || targetUser.leadMrId !== user.id) {
         return NextResponse.json(
           { error: 'Can only access your team members data' },
           { status: 403 }
@@ -77,7 +73,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query conditions
-    const whereConditions: any = {
+    const whereConditions: Record<string, unknown> = {
       userId: targetUserId
     };
 
@@ -149,7 +145,7 @@ export async function GET(request: NextRequest) {
         startLng: s.startLng,
         endLat: s.endLat,
         endLng: s.endLng,
-        gpsLogs: includeLogs ? (s.gpsLogs as any[]).map(log => ({
+        gpsLogs: includeLogs ? (s.gpsLogs as Array<{ latitude: number; longitude: number; timestamp: Date; speed: number | null }>).map(log => ({
           latitude: log.latitude,
           longitude: log.longitude,
           timestamp: log.timestamp,
@@ -196,7 +192,7 @@ export async function GET(request: NextRequest) {
 
     // Add warnings if any
     if (validation.warnings.length > 0) {
-      (response as any).warnings = validation.warnings;
+      (response as Record<string, unknown>).warnings = validation.warnings;
     }
 
     return NextResponse.json(response);

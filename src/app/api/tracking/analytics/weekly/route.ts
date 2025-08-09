@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     weekEnd.setHours(23, 59, 59, 999);
 
     // Build query conditions
-    const whereConditions: any = {
+    const whereConditions: Record<string, unknown> = {
       userId: targetUserId,
       checkIn: {
         gte: targetWeekStart,
@@ -147,7 +147,6 @@ export async function GET(request: NextRequest) {
     const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const dailyBreakdown = weeklyStats.dailyStats.map((dayStats, index) => ({
       dayName: weekdays[index],
-      date: dayStats.date,
       ...dayStats
     }));
 
@@ -266,7 +265,7 @@ export async function GET(request: NextRequest) {
 
     // Add warnings if any
     if (validation.warnings.length > 0) {
-      (response as any).warnings = validation.warnings;
+      (response as Record<string, unknown>).warnings = validation.warnings;
     }
 
     return NextResponse.json(response);
@@ -294,7 +293,7 @@ function getWeekStart(date: Date): Date {
   return weekStart;
 }
 
-function calculateConsistencyScore(dailyBreakdown: any[]): number {
+function calculateConsistencyScore(dailyBreakdown: Array<{ totalKm: number }>): number {
   const activeDays = dailyBreakdown.filter(day => day.totalKm > 0);
   
   if (activeDays.length === 0) return 0;

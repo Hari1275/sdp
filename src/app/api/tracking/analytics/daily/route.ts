@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     dayEnd.setHours(23, 59, 59, 999);
 
     // Build query conditions
-    const whereConditions: any = {
+    const whereConditions: Record<string, unknown> = {
       userId: targetUserId,
       checkIn: {
         gte: dayStart,
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
 
     // Add warnings if any
     if (validation.warnings.length > 0) {
-      (response as any).warnings = validation.warnings;
+      (response as Record<string, unknown>).warnings = validation.warnings;
     }
 
     return NextResponse.json(response);

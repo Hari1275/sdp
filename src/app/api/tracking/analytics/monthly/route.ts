@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query conditions
-    const whereConditions: any = {
+    const whereConditions: Record<string, unknown> = {
       userId: targetUserId,
       checkIn: {
         gte: monthStart,
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Calculate monthly trends
-    const trends = calculateMonthlyTrends(monthlyStats.weeklyStats);
+    const trends = calculateMonthlyTrends({ weeklyStats: monthlyStats.weeklyStats });
 
     // Calculate working days and efficiency metrics
     const workingDays = sessions.filter(s => s.checkOut).length;
@@ -273,7 +273,7 @@ export async function GET(request: NextRequest) {
 
     // Add warnings if any
     if (validation.warnings.length > 0) {
-      (response as any).warnings = validation.warnings;
+      (response as Record<string, unknown>).warnings = validation.warnings;
     }
 
     return NextResponse.json(response);
@@ -300,11 +300,12 @@ function getMonthName(month: number): string {
   return monthNames[month - 1];
 }
 
-function calculateMonthlyTrends(weeklyStats: any[]): {
+function calculateMonthlyTrends(monthlyStats: { weeklyStats: Array<{ totalKm: number; totalActiveHours: number; avgEfficiency: number }> }): {
   distanceTrend: 'increasing' | 'decreasing' | 'stable';
   efficiencyTrend: 'improving' | 'declining' | 'stable';
   consistencyTrend: 'improving' | 'declining' | 'stable';
 } {
+  const { weeklyStats } = monthlyStats;
   if (weeklyStats.length < 2) {
     return {
       distanceTrend: 'stable',

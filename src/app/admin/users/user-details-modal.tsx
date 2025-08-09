@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { DateDisplay } from '@/components/date-display';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -24,15 +23,12 @@ import {
   Shield,
   Calendar,
   Users,
-  Target,
   Clock,
   AlertCircle,
   CheckCircle2,
-  XCircle,
   TrendingUp,
   Building2,
-  Activity,
-  Eye
+  Activity
 } from 'lucide-react';
 import { apiGet } from '@/lib/api-client';
 
@@ -170,15 +166,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
   const [taskError, setTaskError] = useState<string | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
 
-  // Fetch pending tasks when modal opens
-  useEffect(() => {
-    if (open && user) {
-      fetchPendingTasks();
-      fetchUserClients();
-    }
-  }, [open, user]);
-
-  const fetchPendingTasks = async () => {
+  const fetchPendingTasks = useCallback(async () => {
     if (!user) return;
     
     setIsLoadingTasks(true);
@@ -195,9 +183,9 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     } finally {
       setIsLoadingTasks(false);
     }
-  };
+  }, [user]);
 
-  const fetchUserClients = async () => {
+  const fetchUserClients = useCallback(async () => {
     if (!user) return;
     
     setIsLoadingClients(true);
@@ -214,7 +202,15 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     } finally {
       setIsLoadingClients(false);
     }
-  };
+  }, [user]);
+
+  // Fetch pending tasks when modal opens
+  useEffect(() => {
+    if (open && user) {
+      fetchPendingTasks();
+      fetchUserClients();
+    }
+  }, [open, user, fetchPendingTasks, fetchUserClients]);
 
   if (!user) return null;
 
