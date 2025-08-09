@@ -51,6 +51,8 @@ function LoginForm() {
         
         console.log('Login successful, session:', session)
         console.log('User role:', session?.user?.role)
+        console.log('Production mode:', process.env.NODE_ENV === 'production')
+        console.log('Current URL:', window.location.href)
         
         if (session?.user?.role) {
           // Role-based redirect
