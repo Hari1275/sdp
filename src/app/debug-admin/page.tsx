@@ -4,9 +4,42 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+interface AdminUserResult {
+  found?: boolean;
+  user?: {
+    id: string;
+    username: string;
+    email: string | null;
+    name: string;
+    role: string;
+    status: string;
+    createdAt: string;
+    lastLoginAt: string | null;
+  };
+  passwordValid?: boolean | string;
+  message?: string;
+  suggestion?: string;
+  error?: string;
+}
+
+interface SeedResult {
+  success?: boolean;
+  message?: string;
+  data?: {
+    regions: number;
+    areas: number;
+    users: number;
+    clients: number;
+    businessEntries: number;
+    tasks: number;
+  };
+  error?: string;
+  timestamp?: string;
+}
+
 export default function AdminDebugPage() {
-  const [adminUser, setAdminUser] = useState<any>(null);
-  const [seedResult, setSeedResult] = useState<any>(null);
+  const [adminUser, setAdminUser] = useState<AdminUserResult | null>(null);
+  const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   const checkAdminUser = async () => {
