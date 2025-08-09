@@ -49,22 +49,30 @@ function LoginForm() {
         // Get the updated session to check user role
         const session = await getSession()
         
+        console.log('Login successful, session:', session)
+        console.log('User role:', session?.user?.role)
+        
         if (session?.user?.role) {
           // Role-based redirect
           switch (session.user.role) {
             case 'ADMIN':
+              console.log('Redirecting to admin dashboard')
               router.push('/admin')
               break
             case 'LEAD_MR':
+              console.log('Redirecting to lead MR dashboard')
               router.push('/lead-mr')
               break
             case 'MR':
+              console.log('Redirecting to MR dashboard')
               router.push('/dashboard/mr')
               break
             default:
+              console.log('Redirecting to default callback URL:', callbackUrl)
               router.push(callbackUrl)
           }
         } else {
+          console.log('No role found, redirecting to callback URL:', callbackUrl)
           router.push(callbackUrl)
         }
       }
