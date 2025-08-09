@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils'
 import { validateAnalyticsQuery } from '@/lib/gps-validation';
 import { generateSessionSummary } from '@/lib/gps-analytics';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
