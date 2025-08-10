@@ -14,6 +14,14 @@ import {
   Download,
 } from "lucide-react";
 import { safeApiCall } from "@/lib/api-client";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
 import * as Sentry from "@sentry/nextjs";
 
 type OverviewResponse = {
@@ -194,13 +202,44 @@ export default function DashboardOverview() {
               <CardTitle>Task Trends (7d)</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-sm text-gray-600">
-                {data.trends.map((t) => (
-                  <div key={t.date} className="p-2 rounded border bg-white">
-                    <div className="font-medium">{t.date.slice(5)}</div>
-                    <div className="text-xs">Created: {t.tasksCreated}</div>
-                  </div>
-                ))}
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={data.trends}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient
+                        id="colorTasks"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#10b981"
+                          stopOpacity={0.4}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#10b981"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip labelFormatter={(d) => d} />
+                    <Area
+                      type="monotone"
+                      dataKey="tasksCreated"
+                      stroke="#10b981"
+                      fillOpacity={1}
+                      fill="url(#colorTasks)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>

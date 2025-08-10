@@ -75,6 +75,12 @@ const navigation = [
     description: "Reporting dashboard and exports",
   },
   {
+    name: "Tracking",
+    href: "/admin/tracking",
+    icon: MapPin,
+    description: "Live GPS tracking",
+  },
+  {
     name: "Settings",
     href: "/admin/settings",
     icon: Settings,

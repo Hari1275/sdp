@@ -3,6 +3,7 @@
 import DashboardOverview from "@/components/reports/dashboard-overview";
 import UserPerformance from "@/components/reports/user-performance";
 import ExportInterface from "@/components/reports/export-interface";
+import RegionalPerformance from "@/components/reports/regional-performance";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ReportsPage() {
@@ -17,6 +18,7 @@ export default function ReportsPage() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="user">User Performance</TabsTrigger>
+            <TabsTrigger value="regional">Regional</TabsTrigger>
             <TabsTrigger value="export">Export</TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
@@ -24,6 +26,9 @@ export default function ReportsPage() {
           </TabsContent>
           <TabsContent value="user">
             <UserPerformance />
+          </TabsContent>
+          <TabsContent value="regional">
+            <RegionalPerformance />
           </TabsContent>
           <TabsContent value="export">
             <ExportInterface />

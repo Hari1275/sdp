@@ -5,32 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import * as Sentry from "@sentry/nextjs";
-import {
-  ResponsiveContainer,
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Bar,
-} from "recharts";
 import { safeApiCall } from "@/lib/api-client";
 
 type Row = {
-  userId: string;
-  name: string;
-  username: string;
-  regionId: string | null;
-  tasksAssigned: number;
-  tasksCompleted: number;
+  regionId: string;
+  regionName: string;
+  clients: number;
+  tasks: number;
+  completedTasks: number;
   completionRate: number;
   totalKm: number;
-  gpsSessions: number;
-  businessEntries: number;
-  businessAmount: number;
 };
 
-export default function UserPerformance() {
+export default function RegionalPerformance() {
   const [dateFrom, setDateFrom] = useState<string>(
     new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   );
@@ -46,7 +33,7 @@ export default function UserPerformance() {
     setError(null);
     try {
       const res = await safeApiCall<{ data: Row[] }>(
-        `/api/reports/user-performance?dateFrom=${dateFrom}&dateTo=${dateTo}`
+        `/api/reports/regional-performance?dateFrom=${dateFrom}&dateTo=${dateTo}`
       );
       if (res.success) {
         const payload = res.data as unknown;
@@ -59,7 +46,7 @@ export default function UserPerformance() {
         setRows(data);
       } else {
         setError(res.error);
-        Sentry.captureMessage(`User performance load failed: ${res.error}`);
+        Sentry.captureMessage(`Regional performance load failed: ${res.error}`);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
@@ -110,61 +97,30 @@ export default function UserPerformance() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>User Performance</CardTitle>
+            <CardTitle>Regional Performance</CardTitle>
           </CardHeader>
           <CardContent>
-            {rows.length > 0 && (
-              <div className="h-72 mb-6">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={rows.slice(0, 10)}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="username" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar
-                      dataKey="tasksCompleted"
-                      fill="#3b82f6"
-                      name="Completed"
-                    />
-                    <Bar
-                      dataKey="tasksAssigned"
-                      fill="#93c5fd"
-                      name="Assigned"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500">
-                    <th className="p-2">User</th>
-                    <th className="p-2">Assigned</th>
+                    <th className="p-2">Region</th>
+                    <th className="p-2">Clients</th>
+                    <th className="p-2">Tasks</th>
                     <th className="p-2">Completed</th>
                     <th className="p-2">Completion</th>
                     <th className="p-2">Total Km</th>
-                    <th className="p-2">GPS Sessions</th>
-                    <th className="p-2">Business Entries</th>
-                    <th className="p-2">Business Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.userId} className="border-t">
-                      <td className="p-2">
-                        {r.name}{" "}
-                        <span className="text-xs text-gray-500">
-                          ({r.username})
-                        </span>
-                      </td>
-                      <td className="p-2">{r.tasksAssigned}</td>
-                      <td className="p-2">{r.tasksCompleted}</td>
+                    <tr key={r.regionId} className="border-t">
+                      <td className="p-2">{r.regionName}</td>
+                      <td className="p-2">{r.clients}</td>
+                      <td className="p-2">{r.tasks}</td>
+                      <td className="p-2">{r.completedTasks}</td>
                       <td className="p-2">{r.completionRate}%</td>
                       <td className="p-2">{r.totalKm}</td>
-                      <td className="p-2">{r.gpsSessions}</td>
-                      <td className="p-2">{r.businessEntries}</td>
-                      <td className="p-2">{r.businessAmount}</td>
                     </tr>
                   ))}
                 </tbody>
