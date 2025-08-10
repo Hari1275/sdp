@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - type augmentation provided by @sentry/nextjs
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -9,30 +12,40 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Access-Control-Allow-Origin",
-            value: process.env.NODE_ENV === "development" 
-              ? "*" // Allow all origins in development
-              : (process.env.ALLOWED_ORIGINS || "https://your-production-domain.com")
+            value:
+              process.env.NODE_ENV === "development"
+                ? "*" // Allow all origins in development
+                : process.env.ALLOWED_ORIGINS ||
+                  "https://your-production-domain.com",
           },
           {
             key: "Access-Control-Allow-Methods",
-            value: "GET, POST, PUT, DELETE, OPTIONS"
+            value: "GET, POST, PUT, DELETE, OPTIONS",
           },
           {
             key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+            value:
+              "Content-Type, Authorization, X-Requested-With, Accept, Origin",
           },
           {
             key: "Access-Control-Allow-Credentials",
-            value: "true"
+            value: "true",
           },
           {
             key: "Access-Control-Max-Age",
-            value: "86400" // 24 hours
-          }
-        ]
-      }
+            value: "86400", // 24 hours
+          },
+        ],
+      },
     ];
-  }
+  },
 };
 
-export default nextConfig;
+const sentryWebpackPluginOptions = {
+  // Suppress tunnel warnings if not using tunnels
+  silent: true,
+};
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - wrapper returns compatible config
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);

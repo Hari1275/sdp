@@ -1,13 +1,13 @@
 "use client";
 
-import { ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ReactNode } from "react";
+import { useSession } from "next-auth/react";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,9 +15,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+} from "@/components/ui/dropdown-menu";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   Users,
   MapPin,
@@ -28,10 +28,10 @@ import {
   LogOut,
   Bell,
   Search,
-} from 'lucide-react';
-import { signOut } from 'next-auth/react';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+} from "lucide-react";
+import { signOut } from "next-auth/react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -39,46 +39,46 @@ interface AdminLayoutProps {
 
 const navigation = [
   {
-    name: 'Dashboard',
-    href: '/admin',
+    name: "Dashboard",
+    href: "/admin",
     icon: BarChart3,
-    description: 'System overview and statistics',
+    description: "System overview and statistics",
   },
   {
-    name: 'User Management',
-    href: '/admin/users',
+    name: "User Management",
+    href: "/admin/users",
     icon: Users,
-    description: 'Manage system users and roles',
+    description: "Manage system users and roles",
   },
   {
-    name: 'Regions & Areas',
-    href: '/admin/regions',
+    name: "Regions & Areas",
+    href: "/admin/regions",
     icon: MapPin,
-    description: 'Manage geographical regions',
+    description: "Manage geographical regions",
   },
   {
-    name: 'Clients',
-    href: '/admin/clients',
+    name: "Clients",
+    href: "/admin/clients",
     icon: Building2,
-    description: 'Healthcare facility management',
+    description: "Healthcare facility management",
   },
   {
-    name: 'Tasks',
-    href: '/admin/tasks',
+    name: "Tasks",
+    href: "/admin/tasks",
     icon: CheckSquare,
-    description: 'Task assignment and tracking',
+    description: "Task assignment and tracking",
   },
   {
-    name: 'Analytics',
-    href: '/admin/analytics',
+    name: "Reports",
+    href: "/admin/reports",
     icon: BarChart3,
-    description: 'Performance insights',
+    description: "Reporting dashboard and exports",
   },
   {
-    name: 'Settings',
-    href: '/admin/settings',
+    name: "Settings",
+    href: "/admin/settings",
     icon: Settings,
-    description: 'System configuration',
+    description: "System configuration",
   },
 ];
 
@@ -87,7 +87,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
 
   // Loading state
-  if (status === 'loading') {
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -97,16 +97,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Not authenticated
   if (!session) {
-    redirect('/login');
+    redirect("/login");
   }
 
   // Not admin
-  if (session.user?.role !== 'ADMIN') {
-    redirect('/unauthorized');
+  if (session.user?.role !== "ADMIN") {
+    redirect("/unauthorized");
   }
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: '/login' });
+    signOut({ callbackUrl: "/login" });
   };
 
   return (
@@ -121,7 +121,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <span className="text-white font-bold text-sm">SDP</span>
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  Admin Dashboard
+                </h1>
                 <p className="text-xs text-gray-500">SDP Ayurveda Management</p>
               </div>
             </div>
@@ -149,18 +151,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 3
               </Badge>
             </Button>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button
+                  variant="ghost"
+                  className="relative h-8 w-8 rounded-full"
+                >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={session.user?.image || ''} alt={session.user?.name || ''} />
+                    <AvatarImage
+                      src={session.user?.image || ""}
+                      alt={session.user?.name || ""}
+                    />
                     <AvatarFallback>
                       {session.user?.name
-                        ?.split(' ')
+                        ?.split(" ")
                         .map((n) => n[0])
-                        .join('')
-                        .toUpperCase() || 'A'}
+                        .join("")
+                        .toUpperCase() || "A"}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -169,10 +177,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {session.user?.name || 'Admin User'}
+                      {session.user?.name || "Admin User"}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {session.user?.email || 'admin@sdp.com'}
+                      {session.user?.email || "admin@sdp.com"}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -200,16 +208,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               {navigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
-                
+
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
                     className={cn(
-                      'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors',
+                      "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
                       isActive
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? "bg-gray-100 text-gray-900"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     )}
                   >
                     <Icon className="mr-3 h-4 w-4" />
@@ -230,7 +238,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               {navigation.slice(0, 4).map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Card key={item.name} className="p-3 hover:shadow-sm transition-shadow cursor-pointer">
+                  <Card
+                    key={item.name}
+                    className="p-3 hover:shadow-sm transition-shadow cursor-pointer"
+                  >
                     <Link href={item.href} className="block">
                       <div className="flex items-start space-x-3">
                         <div className="flex-shrink-0">
@@ -256,9 +267,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0">
-          {children}
-        </main>
+        <main className="flex-1 min-w-0">{children}</main>
       </div>
     </div>
   );

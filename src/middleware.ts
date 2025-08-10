@@ -1,91 +1,110 @@
-import { withAuth } from 'next-auth/middleware'
-import { NextResponse } from 'next/server'
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 
 export default withAuth(
   function middleware(req) {
-    const token = req.nextauth.token
-    const pathname = req.nextUrl.pathname
+    // Annotate Sentry user if available in middleware
+    try {
+      const reqAny = req as unknown as {
+        nextauth?: { token?: { sub?: string; name?: string } };
+      };
+      const token = reqAny.nextauth?.token;
+      if (token?.sub) {
+        Sentry.setUser({
+          id: token.sub as string,
+          username: token?.name as string | undefined,
+        });
+      }
+    } catch {}
+    const token = req.nextauth.token;
+    const pathname = req.nextUrl.pathname;
 
     // Define role-based access controls
     const roleBasedRoutes = {
-      '/admin': ['ADMIN'],
-      '/lead-mr': ['ADMIN', 'LEAD_MR'],
-      '/dashboard': ['ADMIN', 'LEAD_MR', 'MR']
-    }
+      "/admin": ["ADMIN"],
+      "/lead-mr": ["ADMIN", "LEAD_MR"],
+      "/dashboard": ["ADMIN", "LEAD_MR", "MR"],
+    };
 
     // Check role-based access
     for (const [route, allowedRoles] of Object.entries(roleBasedRoutes)) {
       if (pathname.startsWith(route) && token?.role) {
         if (!allowedRoles.includes(token.role as string)) {
-          return NextResponse.redirect(new URL('/unauthorized', req.url))
+          return NextResponse.redirect(new URL("/unauthorized", req.url));
         }
       }
     }
 
     // Handle role-based redirects after login
-    if (pathname === '/dashboard' && token?.role) {
-      const role = token.role as string
-      
+    if (pathname === "/dashboard" && token?.role) {
+      const role = token.role as string;
+
       switch (role) {
-        case 'ADMIN':
-          return NextResponse.redirect(new URL('/admin', req.url))
-        case 'LEAD_MR':
-          return NextResponse.redirect(new URL('/lead-mr', req.url))
-        case 'MR':
-          return NextResponse.redirect(new URL('/dashboard/mr', req.url))
+        case "ADMIN":
+          return NextResponse.redirect(new URL("/admin", req.url));
+        case "LEAD_MR":
+          return NextResponse.redirect(new URL("/lead-mr", req.url));
+        case "MR":
+          return NextResponse.redirect(new URL("/dashboard/mr", req.url));
         default:
-          return NextResponse.redirect(new URL('/login', req.url))
+          return NextResponse.redirect(new URL("/login", req.url));
       }
     }
 
-    return NextResponse.next()
+    try {
+      return NextResponse.next();
+    } catch (error) {
+      Sentry.captureException(error);
+      throw error;
+    }
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        const pathname = req.nextUrl.pathname
+        const pathname = req.nextUrl.pathname;
 
         // Allow access to public routes
         const publicRoutes = [
-          '/',
-          '/login',
-          '/api/health',
-          '/api/db-test',
-          '/unauthorized'
-        ]
+          "/",
+          "/login",
+          "/api/health",
+          "/api/db-test",
+          "/unauthorized",
+        ];
 
-        if (publicRoutes.some(route => pathname === route)) {
-          return true
+        if (publicRoutes.some((route) => pathname === route)) {
+          return true;
         }
 
         // Allow access to API routes that don't require auth
         const publicApiRoutes = [
-          '/api/health',
-          '/api/db-test',
-          '/api/auth',
-          '/api/seed'
-        ]
+          "/api/health",
+          "/api/db-test",
+          "/api/auth",
+          "/api/seed",
+        ];
 
-        if (publicApiRoutes.some(route => pathname.startsWith(route))) {
-          return true
+        if (publicApiRoutes.some((route) => pathname.startsWith(route))) {
+          return true;
         }
 
         // Allow all other API routes to handle their own authentication
         // (they support both session and JWT authentication)
-        if (pathname.startsWith('/api/')) {
-          return true
+        if (pathname.startsWith("/api/")) {
+          return true;
         }
 
         // Require NextAuth session authentication for non-API routes (web pages)
-        return !!token
+        return !!token;
       },
     },
     pages: {
-      signIn: '/login',
-      error: '/login',
+      signIn: "/login",
+      error: "/login",
     },
   }
-)
+);
 
 export const config = {
   matcher: [
@@ -99,6 +118,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api/auth|api/health|api/db-test|api/seed|_next/static|_next/image|favicon.ico).*)',
+    "/((?!api/auth|api/health|api/db-test|api/seed|_next/static|_next/image|favicon.ico).*)",
   ],
-}
+};

@@ -1,0 +1,211 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  Users,
+  Building2,
+  CheckSquare,
+  MapPin,
+  Activity,
+  Download,
+} from "lucide-react";
+import { safeApiCall } from "@/lib/api-client";
+import * as Sentry from "@sentry/nextjs";
+
+type OverviewResponse = {
+  kpis: {
+    totalUsers: number;
+    activeUsers: number;
+    totalClients: number;
+    pendingTasks: number;
+    completedTasks: number;
+    totalKm: number;
+  };
+  trends: Array<{ date: string; tasksCreated: number }>;
+  dateRange: { from: string; to: string };
+};
+
+export default function DashboardOverview() {
+  const [dateFrom, setDateFrom] = useState<string>(
+    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  );
+  const [dateTo, setDateTo] = useState<string>(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<OverviewResponse | null>(null);
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await safeApiCall<OverviewResponse>(
+        `/api/reports/overview?dateFrom=${dateFrom}&dateTo=${dateTo}`
+      );
+      if (result.success) {
+        setData(result.data);
+      } else {
+        setError(result.error);
+        Sentry.captureMessage(`Overview load failed: ${result.error}`);
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Unknown error";
+      setError(message);
+      Sentry.captureException(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="space-y-6 p-6">
+      <div className="flex items-end gap-3 flex-wrap">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">From</label>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-[200px]"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">To</label>
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-[200px]"
+          />
+        </div>
+        <Button onClick={loadData}>Apply</Button>
+        <div className="ml-auto">
+          <Button variant="secondary">
+            <Download className="h-4 w-4 mr-2" /> Export
+          </Button>
+        </div>
+      </div>
+
+      <Separator />
+
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-gray-200 rounded w-24" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="pt-6 text-red-600">{error}</CardContent>
+        </Card>
+      ) : data ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Users
+                </CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{data.kpis.totalUsers}</div>
+                <div className="text-xs text-muted-foreground">
+                  {data.kpis.activeUsers} active
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Clients
+                </CardTitle>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {data.kpis.totalClients}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Pending Tasks
+                </CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {data.kpis.pendingTasks}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Completed Tasks
+                </CardTitle>
+                <CheckSquare className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {data.kpis.completedTasks}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Kilometers
+                </CardTitle>
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{data.kpis.totalKm}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Placeholder for trends table (simple) */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Task Trends (7d)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-sm text-gray-600">
+                {data.trends.map((t) => (
+                  <div key={t.date} className="p-2 rounded border bg-white">
+                    <div className="font-medium">{t.date.slice(5)}</div>
+                    <div className="text-xs">Created: {t.tasksCreated}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+    </div>
+  );
+}

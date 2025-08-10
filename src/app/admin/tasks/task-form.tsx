@@ -104,7 +104,7 @@ export function TaskForm() {
         )
         .catch(() => setMrs([]));
     }
-  }, [isSheetOpen, fetchRegions]);
+  }, [isSheetOpen, fetchRegions, form]);
 
   // Load areas when region changes
   useEffect(() => {
