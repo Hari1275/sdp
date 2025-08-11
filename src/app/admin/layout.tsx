@@ -20,7 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Settings, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { navigation, filterNavByRole, isPathAllowed, NavItem } from "./navigation-config";
+import { filterNavByRole, isPathAllowed, NavItem } from "./navigation-config";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -137,7 +137,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       <div className="flex">
         {/* Sidebar */}
-        <nav className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-64px)]">
+        <nav className="w-64 bg-white border-r border-gray-200 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto">
           <div className="p-6">
             <div className="space-y-1">
               {allowedNav.map((item: NavItem) => {

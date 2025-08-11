@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { sanitizeCoordinate, validateSessionData } from '@/lib/gps-validation';
 import { calculateTotalDistance } from '@/lib/gps-utils';
+import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authenticated session
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    // Get the authenticated user (supports both JWT and session)
+    const user = await getAuthenticatedUser(request);
+
+    if (!user) {
+      return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
 
     // Parse request body
@@ -55,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify session ownership
-    if (gpsSession.userId !== session.user.id) {
+    if (gpsSession.userId !== user.id) {
       return NextResponse.json(
         { error: 'Unauthorized - not your session' },
         { status: 403 }
@@ -76,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Validate checkout data
     const sessionData = {
-      userId: session.user.id,
+      userId: user.id,
       checkIn: gpsSession.checkIn,
       checkOut: checkOut,
       endLat: endCoord?.latitude,
@@ -156,7 +152,7 @@ export async function POST(request: NextRequest) {
       await prisma.dailySummary.upsert({
         where: {
           mrId_date: {
-            mrId: session.user.id,
+            mrId: user.id,
             date: today
           }
         },
@@ -172,7 +168,7 @@ export async function POST(request: NextRequest) {
           }
         },
         create: {
-          mrId: session.user.id,
+          mrId: user.id,
           date: today,
           totalKms: totalKm,
           totalHours: sessionDuration,
@@ -236,13 +232,10 @@ export async function POST(request: NextRequest) {
 // PATCH method to force close session (admin/emergency)
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(request);
+
+    if (!user) {
+      return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
 
     const body = await request.json();
@@ -272,9 +265,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Check permissions - user can close own session, or admin can close any
-    const canClose = gpsSession.userId === session.user.id || 
-                    session.user.role === 'ADMIN' || 
-                    session.user.role === 'LEAD_MR';
+    const canClose = gpsSession.userId === user.id || 
+                    user.role === 'ADMIN' || 
+                    user.role === 'LEAD_MR';
 
     if (!canClose) {
       return NextResponse.json(
@@ -304,7 +297,7 @@ export async function PATCH(request: NextRequest) {
     });
 
     // Log the forced closure
-    console.log(`Session ${sessionId} force-closed by ${session.user.id}. Reason: ${reason || 'Not specified'}`);
+    console.log(`Session ${sessionId} force-closed by ${user.id}. Reason: ${reason || 'Not specified'}`);
 
     return NextResponse.json({
       sessionId: updatedSession.id,
@@ -312,7 +305,7 @@ export async function PATCH(request: NextRequest) {
       totalKm: Math.round(totalKm * 1000) / 1000,
       status: 'force_closed',
       reason: reason || 'Force closed',
-      closedBy: session.user.id
+      closedBy: user.id
     });
 
   } catch (error) {

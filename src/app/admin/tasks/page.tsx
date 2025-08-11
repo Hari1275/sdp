@@ -23,6 +23,16 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { TaskFormDynamic } from "@/components/portal-safe";
+import { TaskDetailsModal } from './task-details-modal';
+import { ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type StatusFilter =
   | "ALL"
@@ -43,10 +53,12 @@ export default function TasksAdminPage() {
     updateStatus,
     completeTask,
     openTaskSheet,
+    deleteTask,
   } = useTaskStore();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [priority, setPriority] = useState<PriorityFilter>("ALL");
+  const [viewTask, setViewTask] = useState<(typeof tasks)[number] | null>(null);
 
   useEffect(() => {
     fetchTasks(1, 10);
@@ -324,36 +336,104 @@ export default function TasksAdminPage() {
                             : "-"}
                         </td>
                         <td className="py-2 pr-0 text-right">
-                          {task.status !== "COMPLETED" ? (
-                            <div className="flex gap-2 justify-end">
-                              {task.status !== "IN_PROGRESS" && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    updateStatus(task.id, "IN_PROGRESS")
-                                  }
-                                >
-                                  Start
+                          <div className="flex gap-2 justify-end">
+                            {/* View details: always available */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
                                 </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                onClick={() => completeTask(task.id)}
-                              >
-                                Complete
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Completed
-                            </span>
-                          )}
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => setViewTask(task)}>
+                                  <Eye className="mr-2 h-4 w-4" /> View Details
+                                </DropdownMenuItem>
+                                {task.status === "PENDING" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => openTaskSheet(task)}>
+                                      <Pencil className="mr-2 h-4 w-4" /> Edit Task
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={async () => {
+                                        if (confirm('Delete this task?')) {
+                                          await deleteTask(task.id);
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" /> Delete Task
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            {/* Allow Start/Complete when not completed */}
+                            {task.status !== "COMPLETED" && (
+                              <>
+                                {task.status !== "IN_PROGRESS" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => updateStatus(task.id, "IN_PROGRESS")}
+                                  >
+                                    Start
+                                  </Button>
+                                )}
+                                <Button size="sm" onClick={() => completeTask(task.id)}>
+                                  Complete
+                                </Button>
+                              </>
+                            )}
+                            {/* Start/Complete buttons remain outside the menu for quick actions */}
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {/* Pagination controls */}
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <p className="text-sm font-medium">Rows per page</p>
+                    <Select value={`${pagination.limit}`} onValueChange={(v) => fetchTasks(1, Number(v))}>
+                      <SelectTrigger className="h-8 w-[80px]">
+                        <SelectValue placeholder={pagination.limit} />
+                      </SelectTrigger>
+                      <SelectContent side="top">
+                        {[5, 10, 20, 30, 40, 50].map((size) => (
+                          <SelectItem key={size} value={`${size}`}>{size}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center space-x-6 lg:space-x-8">
+                    <div className="flex w-[120px] items-center justify-center text-sm font-medium">
+                      Page {pagination.page} of {Math.max(1, pagination.totalPages || 1)}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        className="h-8 w-8 p-0"
+                        onClick={() => fetchTasks(Math.max(1, pagination.page - 1), pagination.limit)}
+                        disabled={pagination.page <= 1}
+                      >
+                        <span className="sr-only">Go to previous page</span>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-8 p-0"
+                        onClick={() => fetchTasks(pagination.page + 1, pagination.limit)}
+                        disabled={pagination.page >= pagination.totalPages}
+                      >
+                        <span className="sr-only">Go to next page</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </ClientOnly>
@@ -361,6 +441,7 @@ export default function TasksAdminPage() {
       </Card>
 
       <TaskFormDynamic />
+      <TaskDetailsModal task={viewTask} open={!!viewTask} onClose={() => setViewTask(null)} />
     </div>
   );
 }

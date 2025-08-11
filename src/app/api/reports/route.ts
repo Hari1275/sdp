@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { successResponse } from "@/lib/api-utils";
 
 // Simple index route to describe available report endpoints

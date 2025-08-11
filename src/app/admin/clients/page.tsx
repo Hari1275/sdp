@@ -18,6 +18,7 @@ import {
   MapPin,
   DollarSign
 } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,10 +27,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ClientTable } from './client-table';
 import { ClientFilters } from './client-filters';
 import { ClientForm } from './client-form';
-import { SeedDatabaseButton } from '@/components/seed-database-button';
 import { useState } from 'react';
 
 export default function ClientManagementPage() {
@@ -42,6 +49,11 @@ export default function ClientManagementPage() {
     searchQuery,
     isSearching,
     isExporting,
+    page,
+    limit,
+    totalPages,
+    hasNext,
+    hasPrev,
     fetchClients,
     fetchStatistics,
     searchClients,
@@ -50,16 +62,25 @@ export default function ClientManagementPage() {
     setFilters,
     clearFilters,
     exportClients,
-    clearError
+    clearError,
+    setPage,
+    setLimit
   } = useClientStore();
 
   const [showFilters, setShowFilters] = useState(false);
   const [searchInput, setSearchInput] = useState('');
 
   useEffect(() => {
-    fetchClients();
     fetchStatistics();
-  }, [fetchClients, fetchStatistics]);
+  }, [fetchStatistics]);
+
+  // Refetch clients when pagination or filters change
+  useEffect(() => {
+    // Avoid refetching if user is typing/searching; search handler manages list
+    if (!isSearching && !searchInput.trim()) {
+      fetchClients();
+    }
+  }, [fetchClients, page, limit, filters, isSearching, searchInput]);
 
   // Debounced search
   useEffect(() => {
@@ -187,44 +208,6 @@ export default function ClientManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Debug button for checking database */}
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/debug/clients');
-                const result = await response.json();
-                console.log('[DEBUG] Database state:', result);
-                alert(`Debug info logged to console. Clients: ${result.data?.counts?.clients || 0}`);
-              } catch (error) {
-                console.error('[DEBUG] Error:', error);
-                alert('Debug failed - check console');
-              }
-            }}
-          >
-            Debug DB
-          </Button>
-          {/* Debug store state */}
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => {
-              const state = useClientStore.getState();
-              console.log('[DEBUG] Client Store State:', {
-                clients: state.clients,
-                clientsLength: Array.isArray(state.clients) ? state.clients.length : 'Not array',
-                isLoading: state.isLoading,
-                error: state.error,
-                filters: state.filters,
-                statistics: state.statistics
-              });
-              alert('Store state logged to console - check console for details');
-            }}
-          >
-            Debug Store
-          </Button>
-          <SeedDatabaseButton />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" disabled={isExporting}>
@@ -250,7 +233,8 @@ export default function ClientManagementPage() {
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards */
+      }
       {statistics && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -314,58 +298,7 @@ export default function ClientManagementPage() {
         </div>
       )}
 
-      {/* Search and Filters */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle>Client Directory</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search clients..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
-              <Button
-                variant={showFilters ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="mr-2 h-4 w-4" />
-                Filters
-                {Object.keys(filters).length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {Object.keys(filters).length}
-                  </Badge>
-                )}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        
-        {showFilters && (
-          <CardContent className="pt-0">
-            <ClientFilters
-              filters={filters}
-              onFiltersChange={setFilters}
-              onClearFilters={clearFilters}
-            />
-          </CardContent>
-        )}
-        
-        <CardContent className={showFilters ? "pt-0" : ""}>
-          <ClientTable 
-            clients={filteredClients}
-            isLoading={isLoading || isSearching}
-            searchQuery={searchInput}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Business Type Distribution */}
+      {/* Business Type Distribution and Top Areas moved to top level */}
       {statistics?.businessTypes && statistics.businessTypes.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
@@ -425,6 +358,105 @@ export default function ClientManagementPage() {
           </Card>
         </div>
       )}
+
+      {/* Search and Filters */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle>Client Directory</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search clients..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-10 w-64"
+                />
+              </div>
+              <Button
+                variant={showFilters ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="mr-2 h-4 w-4" />
+                Filters
+                {Object.keys(filters).length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {Object.keys(filters).length}
+                  </Badge>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        
+        {showFilters && (
+          <CardContent className="pt-0">
+            <ClientFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              onClearFilters={clearFilters}
+            />
+          </CardContent>
+        )}
+        
+        <CardContent className={showFilters ? "pt-0" : ""}>
+          <ClientTable 
+            clients={filteredClients}
+            isLoading={isLoading || isSearching}
+            searchQuery={searchInput}
+          />
+          {/* Pagination controls consistent with Users page */}
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <p className="text-sm font-medium">Rows per page</p>
+              <Select
+                value={`${limit}`}
+                onValueChange={(value) => setLimit(Number(value))}
+              >
+                <SelectTrigger className="h-8 w-[80px]">
+                  <SelectValue placeholder={limit} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[5, 10, 20, 30, 40, 50].map((size) => (
+                    <SelectItem key={size} value={`${size}`}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-6 lg:space-x-8">
+              <div className="flex w-[120px] items-center justify-center text-sm font-medium">
+                Page {page} of {Math.max(1, totalPages || 1)}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => hasPrev && setPage(page - 1)}
+                  disabled={!hasPrev}
+                >
+                  <span className="sr-only">Go to previous page</span>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => hasNext && setPage(page + 1)}
+                  disabled={!hasNext}
+                >
+                  <span className="sr-only">Go to next page</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Removed duplicate charts previously at bottom */}
 
       <ClientForm />
     </div>

@@ -113,6 +113,13 @@ interface ClientStore {
   isSheetOpen: boolean;
   statistics: ClientStatistics | null;
   businessHistory: BusinessHistory | null;
+  // Pagination
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
   
   // Search & Export
   searchResults: Client[];
@@ -138,6 +145,8 @@ interface ClientStore {
   clearFilters: () => void;
   setSearchQuery: (query: string) => void;
   clearError: () => void;
+  setPage: (page: number) => void;
+  setLimit: (limit: number) => void;
 }
 
 export const useClientStore = create<ClientStore>((set, get) => ({
@@ -150,6 +159,13 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   isSheetOpen: false,
   statistics: null,
   businessHistory: null,
+  // Pagination defaults
+  page: 1,
+  limit: 10,
+  total: 0,
+  totalPages: 0,
+  hasNext: false,
+  hasPrev: false,
   searchResults: [],
   isSearching: false,
   searchQuery: '',
@@ -161,12 +177,12 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     try {
       console.log('[ClientStore] Starting fetchClients...');
       
-      const { filters } = get();
+      const { filters, page, limit } = get();
       const queryParams = new URLSearchParams();
       
       // Add pagination
-      queryParams.append('page', '1');
-      queryParams.append('limit', '50');
+      queryParams.append('page', String(page));
+      queryParams.append('limit', String(limit));
       
       // Add filters
       Object.entries(filters).forEach(([key, value]) => {
@@ -203,7 +219,31 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         isArray: Array.isArray(clientsData),
         firstClient: clients[0]
       });
-      set({ clients, isLoading: false });
+      // Extract pagination if available
+      const pagination = result.data?.pagination || result.pagination || null;
+      if (pagination) {
+        set({
+          clients,
+          isLoading: false,
+          page: pagination.page ?? page,
+          limit: pagination.limit ?? limit,
+          total: pagination.total ?? clients.length,
+          totalPages: pagination.totalPages ?? Math.ceil((pagination.total ?? clients.length) / (pagination.limit ?? limit)),
+          hasNext: Boolean(pagination.hasNext),
+          hasPrev: Boolean(pagination.hasPrev),
+        });
+      } else {
+        // Fallback when API doesn't return pagination
+        const total = clients.length;
+        set({
+          clients,
+          isLoading: false,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNext: false,
+          hasPrev: page > 1,
+        });
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       console.error('[ClientStore] fetchClients error:', errorMessage);
@@ -544,7 +584,10 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
   setFilters: (newFilters: Partial<ClientFilters>) => {
     const { filters } = get();
-    set({ filters: { ...filters, ...newFilters } });
+    set({ 
+      filters: { ...filters, ...newFilters },
+      page: 1,
+    });
   },
 
   clearFilters: () => {
@@ -557,5 +600,11 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
   clearError: () => {
     set({ error: null });
+  },
+  setPage: (newPage: number) => {
+    set({ page: Math.max(1, newPage) });
+  },
+  setLimit: (newLimit: number) => {
+    set({ limit: newLimit, page: 1 });
   },
 }));

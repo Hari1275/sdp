@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { validateAnalyticsQuery } from '@/lib/gps-validation';
 import { calculateDailyGPSStats } from '@/lib/gps-analytics';
+import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
 
     const { searchParams } = new URL(request.url);
@@ -42,12 +37,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Determine target user
-    let targetUserId = session.user.id;
+    let targetUserId = user.id;
     
     if (userId) {
-      const canAccessOtherUsers = session.user.role === 'ADMIN' || session.user.role === 'LEAD_MR';
+      const canAccessOtherUsers = user.role === 'ADMIN' || user.role === 'LEAD_MR';
       
-      if (userId !== session.user.id && !canAccessOtherUsers) {
+      if (userId !== user.id && !canAccessOtherUsers) {
         return NextResponse.json(
           { error: 'Insufficient permissions' },
           { status: 403 }
@@ -58,13 +53,13 @@ export async function GET(request: NextRequest) {
     }
 
     // For Lead MR, verify team access
-    if (session.user.role === 'LEAD_MR' && userId && userId !== session.user.id) {
+    if (user.role === 'LEAD_MR' && userId && userId !== user.id) {
       const targetUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { leadMrId: true }
       });
 
-      if (!targetUser || targetUser.leadMrId !== session.user.id) {
+      if (!targetUser || targetUser.leadMrId !== user.id) {
         return NextResponse.json(
           { error: 'Can only access your team members data' },
           { status: 403 }

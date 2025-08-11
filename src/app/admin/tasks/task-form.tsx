@@ -31,7 +31,7 @@ import {
   StickyFormFooter,
   FormContainer,
 } from "@/components/ui/scrollable-form-content";
-import { apiPost } from "@/lib/api-client";
+import { apiPost, apiPut } from "@/lib/api-client";
 
 const baseTaskFormSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -46,7 +46,7 @@ const baseTaskFormSchema = z.object({
 type TaskFormData = z.infer<typeof baseTaskFormSchema>;
 
 export function TaskForm() {
-  const { isSheetOpen, closeTaskSheet, fetchTasks } = useTaskStore();
+  const { isSheetOpen, closeTaskSheet, fetchTasks, selectedTask } = useTaskStore();
   const { regions, areas, fetchRegions, fetchAreas } = useRegionsStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mrs, setMrs] = useState<
@@ -71,15 +71,31 @@ export function TaskForm() {
     if (isSheetOpen) {
       fetchRegions();
       // reset form
-      form.reset({
-        title: "",
-        description: "",
-        regionId: "",
-        areaId: "none",
-        assigneeId: "",
-        priority: "MEDIUM",
-        dueDate: "",
-      });
+      if (selectedTask) {
+        form.reset({
+          title: selectedTask.title || "",
+          description: selectedTask.description || "",
+          regionId: selectedTask.region?.id || "",
+          areaId: selectedTask.area?.id || "none",
+          assigneeId: selectedTask.assignee?.id || "",
+          priority: selectedTask.priority as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
+          dueDate: selectedTask.dueDate ? new Date(selectedTask.dueDate).toISOString().slice(0, 10) : "",
+        });
+        // Ensure areas list for the preselected region is loaded
+        if (selectedTask.region?.id) {
+          fetchAreas(1, selectedTask.region.id);
+        }
+      } else {
+        form.reset({
+          title: "",
+          description: "",
+          regionId: "",
+          areaId: "none",
+          assigneeId: "",
+          priority: "MEDIUM",
+          dueDate: "",
+        });
+      }
       // fetch MR users for assignee dropdown
       fetch(`/api/users?role=MR&page=1&limit=50`)
         .then((r) => r.json())
@@ -104,7 +120,7 @@ export function TaskForm() {
         )
         .catch(() => setMrs([]));
     }
-  }, [isSheetOpen, fetchRegions, form]);
+  }, [isSheetOpen, fetchRegions, form, fetchAreas, selectedTask]);
 
   // Load areas when region changes
   useEffect(() => {
@@ -127,16 +143,18 @@ export function TaskForm() {
           ? new Date(data.dueDate).toISOString()
           : undefined,
       };
-      const result = await apiPost("/api/tasks", payload);
+      const result = selectedTask
+        ? await apiPut(`/api/tasks/${selectedTask.id}`, payload)
+        : await apiPost("/api/tasks", payload);
       if (!result.success)
         throw new Error(result.error || "Failed to create task");
-      toast({ title: "Success", description: "Task created successfully" });
+      toast({ title: "Success", description: selectedTask ? "Task updated successfully" : "Task created successfully" });
       closeTaskSheet();
       await fetchTasks(1, 10);
     } catch {
       toast({
         title: "Error",
-        description: "Failed to create task",
+        description: selectedTask ? "Failed to update task" : "Failed to create task",
         variant: "destructive",
       });
     } finally {
@@ -320,7 +338,7 @@ export function TaskForm() {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                Create Task
+                {selectedTask ? 'Update Task' : 'Create Task'}
               </Button>
             </StickyFormFooter>
           </FormContainer>

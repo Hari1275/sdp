@@ -4,6 +4,7 @@ import {
   Building2,
   CheckSquare,
   BarChart3,
+  type LucideIcon,
 } from "lucide-react";
 
 export type UserRole = "MR" | "LEAD_MR" | "ADMIN";
@@ -11,7 +12,7 @@ export type UserRole = "MR" | "LEAD_MR" | "ADMIN";
 export type NavItem = {
   name: string;
   href: string;
-  icon: any;
+  icon: LucideIcon;
   description: string;
   roles: UserRole[];
 };
