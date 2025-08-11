@@ -18,73 +18,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  Users,
-  MapPin,
-  Building2,
-  CheckSquare,
-  BarChart3,
-  Settings,
-  LogOut,
-  
-} from "lucide-react";
+import { Settings, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
- 
+import { navigation, filterNavByRole, isPathAllowed, NavItem } from "./navigation-config";
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
-
-const navigation = [
-  {
-    name: "Dashboard",
-    href: "/admin",
-    icon: BarChart3,
-    description: "System overview and statistics",
-  },
-  {
-    name: "User Management",
-    href: "/admin/users",
-    icon: Users,
-    description: "Manage system users and roles",
-  },
-  {
-    name: "Regions & Areas",
-    href: "/admin/regions",
-    icon: MapPin,
-    description: "Manage geographical regions",
-  },
-  {
-    name: "Clients",
-    href: "/admin/clients",
-    icon: Building2,
-    description: "Healthcare facility management",
-  },
-  {
-    name: "Tasks",
-    href: "/admin/tasks",
-    icon: CheckSquare,
-    description: "Task assignment and tracking",
-  },
-  {
-    name: "Reports",
-    href: "/admin/reports",
-    icon: BarChart3,
-    description: "Reporting dashboard and exports",
-  },
-  {
-    name: "Tracking",
-    href: "/admin/tracking",
-    icon: MapPin,
-    description: "Live GPS tracking",
-  },
-  // {
-  //   name: "Settings",
-  //   href: "/admin/settings",
-  //   icon: Settings,
-  //   description: "System configuration",
-  // },
-];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { data: session, status } = useSession();
@@ -104,9 +44,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     redirect("/login");
   }
 
-  // Not admin
-  if (session.user?.role !== "ADMIN") {
+  // Only allow Admin and Lead MR overall
+  if (session.user?.role !== "ADMIN" && session.user?.role !== "LEAD_MR") {
     redirect("/unauthorized");
+  }
+
+  // Filter navigation by role
+  const allowedNav = filterNavByRole(session.user.role);
+
+  // Route-level guard: if current path belongs to a disallowed item, redirect to first allowed
+  if (!isPathAllowed(pathname || "/admin", session.user.role)) {
+    redirect(allowedNav[0]?.href ?? "/unauthorized");
   }
 
   const handleSignOut = () => {
@@ -192,7 +140,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <nav className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-64px)]">
           <div className="p-6">
             <div className="space-y-1">
-              {navigation.map((item) => {
+              {allowedNav.map((item: NavItem) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
 
@@ -222,7 +170,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Quick Access
               </h3>
-              {navigation.slice(0, 4).map((item) => {
+              {allowedNav.slice(0, 4).map((item: NavItem) => {
                 const Icon = item.icon;
                 return (
                   <Card

@@ -63,7 +63,7 @@ function LoginForm() {
               break
             case 'LEAD_MR':
               console.log('Redirecting to lead MR dashboard')
-              router.push('/lead-mr')
+              router.push('/admin')
               break
             case 'MR':
               console.log('Redirecting to MR dashboard')

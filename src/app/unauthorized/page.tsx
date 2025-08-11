@@ -23,7 +23,7 @@ export default function UnauthorizedPage() {
       case 'ADMIN':
         return '/admin'
       case 'LEAD_MR':
-        return '/lead-mr'
+        return '/admin'
       case 'MR':
         return '/dashboard/mr'
       default:

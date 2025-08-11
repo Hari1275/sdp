@@ -21,16 +21,18 @@ export default withAuth(
     const pathname = req.nextUrl.pathname;
 
     // Define role-based access controls
-    const roleBasedRoutes = {
-      "/admin": ["ADMIN"],
+    type UserRole = "ADMIN" | "LEAD_MR" | "MR";
+    const roleBasedRoutes: Record<string, readonly UserRole[]> = {
+      "/admin": ["ADMIN", "LEAD_MR"],
       "/lead-mr": ["ADMIN", "LEAD_MR"],
       "/dashboard": ["ADMIN", "LEAD_MR", "MR"],
-    };
+    } as const;
 
     // Check role-based access
     for (const [route, allowedRoles] of Object.entries(roleBasedRoutes)) {
-      if (pathname.startsWith(route) && token?.role) {
-        if (!allowedRoles.includes(token.role as string)) {
+      const role = token?.role as UserRole | undefined;
+      if (pathname.startsWith(route) && role) {
+        if (!allowedRoles.includes(role)) {
           return NextResponse.redirect(new URL("/unauthorized", req.url));
         }
       }
@@ -44,7 +46,7 @@ export default withAuth(
         case "ADMIN":
           return NextResponse.redirect(new URL("/admin", req.url));
         case "LEAD_MR":
-          return NextResponse.redirect(new URL("/lead-mr", req.url));
+          return NextResponse.redirect(new URL("/admin", req.url));
         case "MR":
           return NextResponse.redirect(new URL("/dashboard/mr", req.url));
         default:
