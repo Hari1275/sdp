@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -69,15 +70,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {/* Logo and Title */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">SDP</span>
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">
-                  Admin Dashboard
-                </h1>
-                <p className="text-xs text-gray-500">SDP Ayurveda Management</p>
-              </div>
+              <Link href="/admin" className="flex items-center space-x-3">
+                <Image
+                  src="/logo.png"
+                  alt="SDP Ayurveda"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-md object-contain"
+                  priority
+                />
+                <div>
+                  <h1 className="text-lg font-semibold text-gray-900">
+                    Admin Dashboard
+                  </h1>
+                  <p className="text-xs text-gray-500">SDP Ayurveda Management</p>
+                </div>
+              </Link>
             </div>
           </div>
 

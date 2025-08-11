@@ -219,7 +219,7 @@ function LoginForm() {
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500">
-          <p>© 2024 SDP Ayurveda. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} SDP Ayurveda</p>
         </div>
       </div>
     </div>

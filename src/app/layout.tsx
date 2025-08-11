@@ -14,6 +14,18 @@ export const metadata: Metadata = {
   description: "Field management solution for SDP Ayurveda with GPS tracking and performance analytics",
   keywords: ["ayurveda", "field management", "GPS tracking", "dashboard", "MR management"],
   authors: [{ name: "SDP Ayurveda" }],
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon.ico", type: "image/x-icon" },
+    ],
+    shortcut: [
+      { url: "/favicon.ico", type: "image/x-icon" },
+    ],
+    apple: [
+      { url: "/favicon.png", type: "image/png" },
+    ],
+  },
 };
 
 export const viewport = {
