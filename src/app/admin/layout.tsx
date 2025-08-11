@@ -1,13 +1,15 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import LogoPng from "../../../public/logo.png";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -29,6 +31,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { data: session, status } = useSession();
+  const [signoutOpen, setSignoutOpen] = useState(false);
   const pathname = usePathname();
 
   // Loading state
@@ -72,7 +75,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <div className="flex items-center space-x-3">
               <Link href="/admin" className="flex items-center space-x-3">
                 <Image
-                  src="/logo.png"
+                  src={LogoPng}
                   alt="SDP Ayurveda"
                   width={32}
                   height={32}
@@ -133,7 +136,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
+                <DropdownMenuItem onClick={() => setSignoutOpen(true)}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
@@ -142,6 +145,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
         </div>
       </header>
+
+      <AlertDialog
+        open={signoutOpen}
+        onOpenChange={setSignoutOpen}
+        title="Sign out?"
+        description="You will be returned to the login page."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setSignoutOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSignOut}>
+              Sign out
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex">
         {/* Sidebar */}
