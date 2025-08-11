@@ -17,7 +17,7 @@ export function ScrollableFormContent({
 }: ScrollableFormContentProps) {
   return (
     <div className={cn(
-      "flex-1 overflow-y-auto space-y-4 mt-6 pb-20 pr-2 scrollbar-thin",
+      "flex-1 overflow-y-auto overflow-x-visible space-y-4 mt-6 pb-20 pr-2 scrollbar-thin",
       className
     )}>
       {children}
