@@ -56,7 +56,7 @@ export default function ExportInterface() {
         setModalText(errMsg);
         setModalOpen(true);
       }
-    } catch (e) {
+    } catch {
       setModalText("Unexpected error during export");
       setModalOpen(true);
     } finally {

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { successResponse } from "@/lib/api-utils";
 
 // Simple index route to describe available report endpoints
-export async function GET(_request: NextRequest) {
+export async function GET() {
   return successResponse({
     endpoints: {
       overview: "/api/reports/overview",

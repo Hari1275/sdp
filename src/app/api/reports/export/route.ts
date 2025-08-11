@@ -331,7 +331,7 @@ export async function GET(request: NextRequest) {
       },
     });
     return res;
-  } catch (error) {
+  } catch {
     // No user context here; don't log user id
     return errorResponse(
       "INTERNAL_SERVER_ERROR",
