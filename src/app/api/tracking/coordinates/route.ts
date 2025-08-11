@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { validateCoordinateData, sanitizeCoordinate } from '@/lib/gps-validation';
 import { calculateTotalDistance, filterByAccuracy } from '@/lib/gps-utils';
+import { getAuthenticatedUser, errorResponse, logError } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authenticated session
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // Auth supports both JWT (mobile) and session (web)
+    const user = await getAuthenticatedUser(request);
+    if (!user) return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
 
     // Parse request body
     const body = await request.json();
@@ -52,11 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (gpsSession.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized - not your session' },
-        { status: 403 }
-      );
+    if (gpsSession.userId !== user.id) {
+      return errorResponse('FORBIDDEN', 'Unauthorized - not your session', 403);
     }
 
     // Check if session is still active
@@ -158,7 +148,7 @@ export async function POST(request: NextRequest) {
         await prisma.dailySummary.upsert({
           where: {
             mrId_date: {
-              mrId: session.user.id,
+              mrId: user.id,
               date: today
             }
           },
@@ -168,7 +158,7 @@ export async function POST(request: NextRequest) {
             }
           },
           create: {
-            mrId: session.user.id,
+            mrId: user.id,
             date: today,
             totalKms: totalDistance,
             totalHours: 0,
@@ -179,7 +169,7 @@ export async function POST(request: NextRequest) {
         });
       } catch (summaryError) {
         // Log but don't fail the request
-        console.error('Failed to update daily summary:', summaryError);
+        logError(summaryError, 'POST /api/tracking/coordinates - dailySummary', user.id);
       }
     }
 
@@ -215,15 +205,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response, { status: 200 });
 
   } catch (error) {
-    console.error('GPS coordinate logging error:', error);
-    
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        message: 'Failed to log GPS coordinates'
-      },
-      { status: 500 }
-    );
+    logError(error, 'POST /api/tracking/coordinates');
+    return errorResponse('INTERNAL_SERVER_ERROR', 'Failed to log GPS coordinates', 500);
   }
 }
 

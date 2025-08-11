@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   GoogleMap,
   Marker,
@@ -9,6 +9,7 @@ import {
   useJsApiLoader,
   MarkerClustererF,
 } from "@react-google-maps/api";
+import * as Sentry from "@sentry/nextjs";
 
 type TeamLocation = {
   userId: string;
@@ -50,10 +51,64 @@ export default function LiveMap({
     lng: number;
   } | null>(null);
 
+  // Ensure unique markers per user by keeping the latest location per userId
+  const uniqueLocations = useMemo(() => {
+    const latestByUser = new Map<string, TeamLocation>();
+    for (const loc of locations) {
+      const previous = latestByUser.get(loc.userId);
+      const locTs = new Date(loc.timestamp).getTime();
+      const prevTs = previous ? new Date(previous.timestamp).getTime() : -Infinity;
+      if (!previous || locTs >= prevTs) {
+        latestByUser.set(loc.userId, loc);
+      }
+    }
+    return Array.from(latestByUser.values());
+  }, [locations]);
+
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
   });
+
+  // Pan/zoom to explicit focus when provided
+  useEffect(() => {
+    if (!isLoaded || !focus || !mapRef) return;
+    try {
+      const target = new google.maps.LatLng(focus.lat, focus.lng);
+      mapRef.panTo(target);
+      mapRef.setZoom(Math.max(mapRef.getZoom() || 6, 14));
+      setHighlight((curr) => {
+        if (!curr || curr.lat !== focus.lat || curr.lng !== focus.lng) {
+          return focus;
+        }
+        return curr;
+      });
+    } catch (e) {
+      Sentry.captureException(e);
+    }
+  }, [isLoaded, focus, mapRef]);
+
+  // Follow the selected user's latest trail point if requested
+  useEffect(() => {
+    if (!isLoaded || !follow || !selectedUserId || !trails || !mapRef) return;
+    try {
+      const t = trails.find((x) => x.userId === selectedUserId);
+      const last = t?.trail?.[t.trail.length - 1];
+      if (last) {
+        const target = new google.maps.LatLng(last.lat, last.lng);
+        mapRef.panTo(target);
+        if ((mapRef.getZoom() || 6) < 13) mapRef.setZoom(13);
+        setHighlight((curr) => {
+          if (!curr || curr.lat !== last.lat || curr.lng !== last.lng) {
+            return { lat: last.lat, lng: last.lng };
+          }
+          return curr;
+        });
+      }
+    } catch (e) {
+      Sentry.captureException(e);
+    }
+  }, [isLoaded, follow, selectedUserId, trails, mapRef]);
 
   if (!isLoaded) {
     return <div className="w-full h-96 rounded-md overflow-hidden border" />;
@@ -72,24 +127,9 @@ export default function LiveMap({
         }}
         onLoad={(map) => setMapRef(map)}
       >
-        {focus &&
-          mapRef &&
-          (() => {
-            const target = new google.maps.LatLng(focus.lat, focus.lng);
-            mapRef.panTo(target);
-            mapRef.setZoom(Math.max(mapRef.getZoom() || 6, 14));
-            if (
-              !highlight ||
-              highlight.lat !== focus.lat ||
-              highlight.lng !== focus.lng
-            ) {
-              setHighlight(focus);
-            }
-            return null;
-          })()}
-        {trails?.map((t) => (
+        {trails?.map((t, idx) => (
           <GPolyline
-            key={`trail-${t.userId}`}
+            key={`trail-${t.userId}-${idx}`}
             path={t.trail.map((p) => ({ lat: p.lat, lng: p.lng }))}
             options={{
               strokeColor:
@@ -121,7 +161,7 @@ export default function LiveMap({
         <MarkerClustererF>
           {(clusterer) => (
             <>
-              {locations.map((loc) => (
+              {uniqueLocations.map((loc) => (
                 <Marker
                   key={loc.userId}
                   position={{ lat: loc.latitude, lng: loc.longitude }}
@@ -146,28 +186,6 @@ export default function LiveMap({
             </>
           )}
         </MarkerClustererF>
-
-        {follow &&
-          selectedUserId &&
-          trails &&
-          mapRef &&
-          (() => {
-            const t = trails.find((x) => x.userId === selectedUserId);
-            const last = t?.trail?.[t.trail.length - 1];
-            if (last) {
-              const target = new google.maps.LatLng(last.lat, last.lng);
-              mapRef.panTo(target);
-              if ((mapRef.getZoom() || 6) < 13) mapRef.setZoom(13);
-              if (
-                !highlight ||
-                highlight.lat !== last.lat ||
-                highlight.lng !== last.lng
-              ) {
-                setHighlight({ lat: last.lat, lng: last.lng });
-              }
-            }
-            return null;
-          })()}
       </GoogleMap>
     </div>
   );

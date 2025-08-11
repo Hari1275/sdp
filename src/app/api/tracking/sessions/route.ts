@@ -90,12 +90,10 @@ export async function GET(request: NextRequest) {
       whereConditions.checkIn = { lte: new Date(dateTo) };
     }
 
-    if (status) {
-      if (status === 'active') {
-        whereConditions.checkOut = null;
-      } else if (status === 'completed') {
-        whereConditions.checkOut = { not: null };
-      }
+    const onlyActive = status === 'active';
+    const onlyCompleted = status === 'completed';
+    if (onlyCompleted) {
+      whereConditions.checkOut = { not: null };
     }
 
     // Get sessions with optional GPS logs
@@ -135,8 +133,13 @@ export async function GET(request: NextRequest) {
       prisma.gPSSession.count({ where: whereConditions })
     ]);
 
+    // Optionally filter for active sessions in memory (prisma/mongo null semantics safeguard)
+    const filteredSessions = onlyActive
+      ? sessions.filter(s => s.checkOut === null)
+      : sessions;
+
     // Generate session summaries
-    const sessionSummaries = sessions.map(s => {
+    const sessionSummaries = filteredSessions.map(s => {
       const summary = generateSessionSummary({
         id: s.id,
         userId: s.userId,

@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         checkIn,
+        checkOut: null,
         startLat: startCoord?.latitude,
         startLng: startCoord?.longitude,
         totalKm: 0

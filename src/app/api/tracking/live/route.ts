@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
+import * as Sentry from "@sentry/nextjs";
 import {
   errorResponse,
   getAuthenticatedUser,
@@ -26,6 +27,23 @@ export async function GET(request: NextRequest) {
       return errorResponse("UNAUTHORIZED", "Authentication required", 401);
     }
 
+    let allowedUserWhere: Record<string, unknown> = {};
+    switch (user.role) {
+      case UserRole.MR:
+        allowedUserWhere = { id: user.id };
+        break;
+      case UserRole.LEAD_MR:
+        allowedUserWhere = {
+          OR: [{ regionId: user.regionId || undefined }, { leadMrId: user.id }],
+        };
+        break;
+      case UserRole.ADMIN:
+      default:
+        allowedUserWhere = {};
+        break;
+    }
+
+    // Determine allowed users (IDs) based on role
     let userWhere: Record<string, unknown> = {};
     switch (user.role) {
       case UserRole.MR:
@@ -43,20 +61,23 @@ export async function GET(request: NextRequest) {
     }
 
     const allowedUsers = await prisma.user.findMany({
-      where: userWhere,
+      where: allowedUserWhere,
       select: { id: true, name: true, username: true },
     });
     const allowedIds = allowedUsers.map((u) => u.id);
 
+    // Query recent sessions for allowed users; filter active in memory
     const sessions = await prisma.gPSSession.findMany({
-      where: { userId: { in: allowedIds }, checkOut: null },
+      where: { userId: { in: allowedIds } },
       select: {
         id: true,
         userId: true,
         checkIn: true,
+        checkOut: true,
         totalKm: true,
         startLat: true,
         startLng: true,
+        user: { select: { id: true, name: true, username: true } },
         gpsLogs: {
           orderBy: { timestamp: "desc" },
           take: 20,
@@ -64,12 +85,15 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { checkIn: "desc" },
-      take: 100,
+      take: 300,
     });
 
+    // Guard against any null comparison issues by filtering active now
+    const sessionsActive = sessions.filter(s => s.checkOut === null);
+
     const now = Date.now();
-    const activeSessions = sessions.map((s) => {
-      const u = allowedUsers.find((x) => x.id === s.userId);
+    const activeSessions = sessionsActive.map((s) => {
+      const u = s.user;
       const last = s.gpsLogs[0] || null;
       const trail = [...s.gpsLogs]
         .reverse()
@@ -117,6 +141,18 @@ export async function GET(request: NextRequest) {
       (sum, s) => sum + (s.totalKm || 0),
       0
     );
+
+    // If no active sessions were found, capture a diagnostic message in Sentry
+    if (activeSessions.length === 0) {
+      Sentry.captureMessage("Live tracking: no active sessions found", {
+        level: "warning",
+        extra: {
+          userId: user.id,
+          userRole: user.role,
+          userWhere,
+        },
+      });
+    }
 
     return successResponse({
       activeSessions,

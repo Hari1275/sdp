@@ -83,6 +83,11 @@ export default function TrackingPage() {
     { lat: number; lng: number } | undefined
   >(undefined);
   const [follow, setFollow] = useState<boolean>(true);
+  // Configurable refresh interval (defaults to 30s). Can be overridden via env.
+  const REFRESH_MS = useMemo(() => {
+    const v = Number(process.env.NEXT_PUBLIC_LIVE_REFRESH_MS ?? 30000);
+    return Number.isFinite(v) && v > 0 ? v : 30000;
+  }, []);
 
   const uniqueUsers = useMemo(() => {
     const ids = new Map<string, string>();
@@ -126,6 +131,7 @@ export default function TrackingPage() {
       teamLocations: typeof locations;
     }>("/api/tracking/live");
     if (res.success) {
+      // console.log('--->', res.data.activeSessions);
       setSessions(res.data.activeSessions);
       setSummary(res.data.summary);
       setLocations(res.data.teamLocations || []);
@@ -169,20 +175,20 @@ export default function TrackingPage() {
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 30_000);
+    const id = setInterval(load, REFRESH_MS);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [REFRESH_MS]);
 
   useEffect(() => {
     loadActivities();
-    const id = setInterval(loadActivities, 30_000);
+    const id = setInterval(loadActivities, REFRESH_MS);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateFrom]);
+  }, [dateFrom, REFRESH_MS]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6" suppressHydrationWarning>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Real-Time Tracking</h1>
@@ -193,13 +199,17 @@ export default function TrackingPage() {
         <div className="flex items-center gap-3">
           {summary && (
             <>
-              <Badge variant="secondary">Active: {summary.activeCount}</Badge>
-              <Badge variant="secondary">
-                Total Km: {summary.totalKmToday}
+              <Badge variant="secondary" suppressHydrationWarning>
+                Active: {summary.activeCount}
               </Badge>
-              <span className="text-xs text-muted-foreground">
-                Updated: {new Date(summary.lastUpdate).toLocaleTimeString()}
-              </span>
+              <Badge variant="secondary">
+                <span suppressHydrationWarning>
+                  Total Km: {summary.totalKmToday}
+                </span>
+              </Badge>
+                  <span className="text-xs text-muted-foreground" suppressHydrationWarning>
+                    Updated: {new Date(summary.lastUpdate).toLocaleTimeString()}
+                  </span>
             </>
           )}
           <Button onClick={load} size="sm">
@@ -289,7 +299,7 @@ export default function TrackingPage() {
                         onClick={() => setSelectedTrailUserId(s.userId)}
                       >
                         <td className="p-2">{s.userName}</td>
-                        <td className="p-2">
+                        <td className="p-2" suppressHydrationWarning>
                           {new Date(s.checkIn).toLocaleString()}
                         </td>
                         <td className="p-2">{s.durationMinutes}</td>
@@ -301,7 +311,7 @@ export default function TrackingPage() {
                               )}`
                             : "-"}
                         </td>
-                        <td className="p-2">
+                        <td className="p-2" suppressHydrationWarning>
                           {s.last
                             ? new Date(s.last.timestamp).toLocaleTimeString()
                             : "-"}
