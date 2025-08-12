@@ -56,7 +56,6 @@ export default function ClientManagementPage() {
     hasPrev,
     fetchClients,
     fetchStatistics,
-    searchClients,
     openClientSheet,
     setSearchQuery,
     setFilters,
@@ -82,21 +81,20 @@ export default function ClientManagementPage() {
     }
   }, [fetchClients, page, limit, filters, isSearching, searchInput]);
 
-  // Debounced search
+  // Debounced search (client-side filtering like Users page)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchInput !== searchQuery) {
         setSearchQuery(searchInput);
-        if (searchInput.trim()) {
-          searchClients({ search: searchInput.trim() });
-        } else {
+        if (!searchInput.trim()) {
+          // On clearing search, refetch to ensure list is fresh
           fetchClients();
         }
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchInput, searchQuery, searchClients, fetchClients, setSearchQuery]);
+  }, [searchInput, searchQuery, fetchClients, setSearchQuery]);
 
   // Filter clients based on applied filters with enhanced safety
   const filteredClients = useMemo(() => {
@@ -133,6 +131,26 @@ export default function ClientManagementPage() {
       console.log('[ClientsPage] After areaId filter:', result.length);
     }
 
+    // Apply client-side search across key fields (aligns with Users table client-side search)
+    const term = searchInput.trim().toLowerCase();
+    if (term) {
+      result = result.filter((client) => {
+        const haystack = [
+          client?.name,
+          client?.phone,
+          client?.address,
+          client?.businessType,
+          client?.mr?.name,
+          client?.area?.name,
+          client?.region?.name,
+        ]
+          .filter(Boolean)
+          .map((v) => String(v).toLowerCase());
+        return haystack.some((v) => v.includes(term));
+      });
+      console.log('[ClientsPage] After search filter:', result.length);
+    }
+
     console.log('[ClientsPage] Final filtered result:', {
       originalLength: safeClients.length,
       filteredLength: result.length,
@@ -140,7 +158,7 @@ export default function ClientManagementPage() {
     });
 
     return result;
-  }, [clients, filters, error, isLoading, searchQuery]);
+  }, [clients, filters, error, isLoading, searchQuery, searchInput]);
 
   const handleExport = async (format: 'csv' | 'excel') => {
     try {
