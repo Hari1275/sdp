@@ -71,32 +71,32 @@ export default function RegionsPage() {
   const handleDeleteRegion = async (id: string) => {
     try {
       await deleteRegion(id);
-    } catch (error) {
-      console.error('Failed to delete region:', error);
+    } catch {
+      // console.error('Failed to delete region');
     }
   };
 
   const handleDeleteArea = async (id: string) => {
     try {
       await deleteArea(id);
-    } catch (error) {
-      console.error('Failed to delete area:', error);
+    } catch {
+      // console.error('Failed to delete area');
     }
   };
 
   const handleToggleRegionStatus = async (id: string, currentStatus: string) => {
     try {
       await toggleRegionStatus(id, currentStatus);
-    } catch (error) {
-      console.error('Failed to toggle region status:', error);
+    } catch {
+      // console.error('Failed to toggle region status');
     }
   };
 
   const handleToggleAreaStatus = async (id: string, currentStatus: string) => {
     try {
       await toggleAreaStatus(id, currentStatus);
-    } catch (error) {
-      console.error('Failed to toggle area status:', error);
+    } catch {
+      // console.error('Failed to toggle area status');
     }
   };
 
@@ -136,20 +136,20 @@ export default function RegionsPage() {
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold">Regions & Areas Management</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Regions & Areas Management</h1>
           <p className="text-muted-foreground">
             Manage geographical regions and their areas.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => openAreaDialog()}>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => openAreaDialog()} className="w-full sm:w-auto">
             <Target className="mr-2 h-4 w-4" />
             Add Area
           </Button>
-          <Button onClick={() => openRegionDialog()}>
+          <Button onClick={() => openRegionDialog()} className="w-full sm:w-auto">
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Region
           </Button>
@@ -157,7 +157,7 @@ export default function RegionsPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Regions</CardTitle>
@@ -250,7 +250,7 @@ export default function RegionsPage() {
 
       {/* Regions and Areas Hierarchy */}
       <div className="space-y-6">
-        <h2 className="text-2xl font-semibold">Regions Hierarchy</h2>
+        <h2 className="text-xl md:text-2xl font-semibold">Regions Hierarchy</h2>
         
         {regions.length === 0 ? (
           <Card>

@@ -145,8 +145,8 @@ export async function POST(request: NextRequest) {
       user: userData
     }, 'Token refreshed successfully')
 
-  } catch (error) {
-    console.error('Token refresh error:', error)
+  } catch {
+  // console.error('Token refresh error:', error)
     return errorResponse(
       'INTERNAL_ERROR',
       'An error occurred during token refresh',

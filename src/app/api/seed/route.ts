@@ -12,7 +12,7 @@ export async function POST() {
       }, { status: 403 })
     }
 
-    console.log('🌱 Starting database seeding via API...')
+    // console.log('🌱 Starting database seeding via API...')
     
     const result = await seedDatabase()
     
@@ -24,7 +24,7 @@ export async function POST() {
     })
     
   } catch (error) {
-    console.error('Database seeding failed:', error)
+    // console.error('Database seeding failed:', error)
     
     return NextResponse.json({
       success: false,

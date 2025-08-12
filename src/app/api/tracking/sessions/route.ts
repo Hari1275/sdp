@@ -202,8 +202,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
 
-  } catch (error) {
-    console.error('GPS sessions retrieval error:', error);
+  } catch {
+  // console.error('GPS sessions retrieval error:', error);
     
     return NextResponse.json(
       { 
@@ -244,8 +244,7 @@ export async function POST(request: NextRequest) {
       startLng, 
       endLat, 
       endLng, 
-      totalKm,
-      notes 
+      totalKm
     } = body;
 
     // Validate required fields
@@ -284,7 +283,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log the manual session creation
-    console.log(`Manual session created by admin ${session.user.id} for user ${userId}. Notes: ${notes || 'None'}`);
+  // console.log(`Manual session created by admin ${session.user.id} for user ${userId}. Notes: ${notes || 'None'}`);
 
     return NextResponse.json({
       sessionId: manualSession.id,
@@ -297,8 +296,8 @@ export async function POST(request: NextRequest) {
       message: 'Manual session created successfully'
     }, { status: 201 });
 
-  } catch (error) {
-    console.error('Manual session creation error:', error);
+  } catch {
+  // console.error('Manual session creation error:', error);
     
     return NextResponse.json(
       { 

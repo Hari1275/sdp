@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
       errorType,
       errorMessage,
       errorData,
-      deviceInfo,
+      // deviceInfo, // unused for now
       timestamp,
-      coordinates
+      // coordinates, // unused for now
     } = body;
 
     // Validate error data
@@ -49,30 +49,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare device info
-    const userAgent = request.headers.get('user-agent') || undefined;
-    const deviceData = {
-      ...deviceInfo,
-      userAgent,
-      ...(coordinates && { coordinates })
-    };
+    // Prepare device info (omitted for now; add back when needed)
+    // const _deviceData = { ...deviceInfo, userAgent, ...(coordinates && { coordinates }) };
 
     // Create error log entry (using a simple table structure for now)
     // In a real implementation, you'd want a dedicated errors table
-    const errorLog = {
-      sessionId: sessionId || null,
-      userId: session.user.id,
-      errorType,
-      errorMessage,
-      errorData: errorData ? JSON.stringify(errorData) : null,
-      deviceInfo: deviceData ? JSON.stringify(deviceData) : null,
-      timestamp: errorInput.timestamp,
-      resolved: false
-    };
+    // const _errorLog = {
+    //   sessionId: sessionId || null,
+    //   userId: session.user.id,
+    //   errorType,
+    //   errorMessage,
+    //   errorData: errorData ? JSON.stringify(errorData) : null,
+    //   deviceInfo: deviceData ? JSON.stringify(deviceData) : null,
+    //   timestamp: errorInput.timestamp,
+    //   resolved: false
+    // };
 
     // For now, we'll store errors in the database as a JSON field
     // You might want to create a dedicated GPSError model in production
-    console.log('GPS Error logged:', errorLog);
+  // console.log('GPS Error logged:', errorLog);
 
     // Try to create a temporary solution using existing models
     // This is a workaround - in production you'd want a proper error logging table
@@ -87,8 +82,8 @@ export async function POST(request: NextRequest) {
           isRead: false
         }
       });
-    } catch (notificationError) {
-      console.error('Failed to log error as notification:', notificationError);
+    } catch {
+      // console.error('Failed to log error as notification:', _notificationError);
     }
 
     // Provide immediate troubleshooting suggestions
@@ -282,11 +277,11 @@ export async function PATCH(request: NextRequest) {
       }
     });
 
-    console.log(`GPS errors resolved by admin ${session.user.id}:`, {
-      errorIds,
-      resolution,
-      count: updatedErrors.count
-    });
+  // console.log(`GPS errors resolved by admin ${session.user.id}:`, {
+  //   errorIds,
+  //   resolution,
+  //   count: updatedErrors.count
+  // });
 
     return NextResponse.json({
       success: true,

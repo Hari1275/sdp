@@ -178,8 +178,8 @@ export async function POST(request: NextRequest) {
       user: userData
     }, 'Login successful')
 
-  } catch (error) {
-    console.error('Mobile login error:', error)
+  } catch {
+  // console.error('Mobile login error:', error)
     return errorResponse(
       'INTERNAL_ERROR',
       'An error occurred during login',

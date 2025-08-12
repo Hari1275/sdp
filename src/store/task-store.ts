@@ -85,7 +85,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       );
       set({ tasks: list, isLoading: false });
     } catch (error) {
-      console.error("Failed to fetch tasks", error);
+      // console.error("Failed to fetch tasks", error);
       set({
         tasks: [],
         isLoading: false,

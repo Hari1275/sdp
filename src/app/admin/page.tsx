@@ -101,7 +101,7 @@ export default function AdminDashboard() {
         setRecentActivities([]);
         
       } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+        // console.error('Error fetching dashboard stats:', error);
         setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
         
         // Fallback to mock data
@@ -179,17 +179,17 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard Overview</h1>
         <p className="text-gray-500 mt-2">
           Welcome to the SDP Ayurveda Admin Dashboard
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -273,8 +273,8 @@ export default function AdminDashboard() {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-2xl font-semibold mb-6">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (

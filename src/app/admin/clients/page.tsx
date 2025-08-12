@@ -99,36 +99,36 @@ export default function ClientManagementPage() {
   // Filter clients based on applied filters with enhanced safety
   const filteredClients = useMemo(() => {
     // Enhanced safety checks with debugging
-    console.log('[ClientsPage] Filtering clients:', {
-      clientsType: typeof clients,
-      clientsArray: Array.isArray(clients),
-      clientsLength: Array.isArray(clients) ? clients.length : 'N/A',
-      clientsRaw: clients,
-      isLoading,
-      error,
-      searchQuery,
-      filters
-    });
+    // console.log('[ClientsPage] Filtering clients:', {
+    //   clientsType: typeof clients,
+    //   clientsArray: Array.isArray(clients),
+    //   clientsLength: Array.isArray(clients) ? clients.length : 'N/A',
+    //   clientsRaw: clients,
+    //   isLoading,
+    //   error,
+    //   searchQuery,
+    //   filters
+    // });
 
     const safeClients = Array.isArray(clients) ? clients : [];
     let result = safeClients;
 
     // Log raw client data
     if (safeClients.length > 0) {
-      console.log('[ClientsPage] Sample client data:', safeClients[0]);
+      // console.log('[ClientsPage] Sample client data:', safeClients[0]);
     }
 
     if (filters.businessType) {
       result = result.filter(client => client?.businessType === filters.businessType);
-      console.log('[ClientsPage] After businessType filter:', result.length);
+      // console.log('[ClientsPage] After businessType filter:', result.length);
     }
     if (filters.regionId) {
       result = result.filter(client => client?.region?.id === filters.regionId);
-      console.log('[ClientsPage] After regionId filter:', result.length);
+      // console.log('[ClientsPage] After regionId filter:', result.length);
     }
     if (filters.areaId) {
       result = result.filter(client => client?.area?.id === filters.areaId);
-      console.log('[ClientsPage] After areaId filter:', result.length);
+      // console.log('[ClientsPage] After areaId filter:', result.length);
     }
 
     // Apply client-side search across key fields (aligns with Users table client-side search)
@@ -148,23 +148,23 @@ export default function ClientManagementPage() {
           .map((v) => String(v).toLowerCase());
         return haystack.some((v) => v.includes(term));
       });
-      console.log('[ClientsPage] After search filter:', result.length);
+      // console.log('[ClientsPage] After search filter:', result.length);
     }
 
-    console.log('[ClientsPage] Final filtered result:', {
-      originalLength: safeClients.length,
-      filteredLength: result.length,
-      filters: filters
-    });
+    // console.log('[ClientsPage] Final filtered result:', {
+    //   originalLength: safeClients.length,
+    //   filteredLength: result.length,
+    //   filters: filters
+    // });
 
     return result;
-  }, [clients, filters, error, isLoading, searchQuery, searchInput]);
+  }, [clients, filters, searchInput]);
 
   const handleExport = async (format: 'csv' | 'excel') => {
     try {
       await exportClients({ format, filters });
-    } catch (error) {
-      console.error('Export failed:', error);
+    } catch {
+    // console.error('Export failed:', error);
     }
   };
 
@@ -216,19 +216,19 @@ export default function ClientManagementPage() {
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold">Client Management</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Client Management</h1>
           <p className="text-muted-foreground">
             Manage healthcare facilities and track business relationships.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={isExporting}>
+              <Button variant="outline" disabled={isExporting} className="w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />
                 {isExporting ? 'Exporting...' : 'Export'}
               </Button>
@@ -244,7 +244,7 @@ export default function ClientManagementPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={() => openClientSheet()}>
+          <Button onClick={() => openClientSheet()} className="w-full sm:w-auto">
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Client
           </Button>
@@ -254,7 +254,7 @@ export default function ClientManagementPage() {
       {/* Statistics Cards */
       }
       {statistics && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
@@ -380,16 +380,16 @@ export default function ClientManagementPage() {
       {/* Search and Filters */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <CardTitle>Client Directory</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder="Search clients..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-10 w-64"
+                  className="pl-10 w-full sm:w-64"
                 />
               </div>
               <Button
@@ -426,8 +426,8 @@ export default function ClientManagementPage() {
             searchQuery={searchInput}
           />
           {/* Pagination controls consistent with Users page */}
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+          <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
               <p className="text-sm font-medium">Rows per page</p>
               <Select
                 value={`${limit}`}
@@ -445,8 +445,8 @@ export default function ClientManagementPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-6 lg:space-x-8">
-              <div className="flex w-[120px] items-center justify-center text-sm font-medium">
+            <div className="flex items-center space-x-4 sm:space-x-6 lg:space-x-8 w-full sm:w-auto">
+              <div className="flex w-[120px] items-center justify-center text-sm font-medium mx-auto sm:mx-0">
                 Page {page} of {Math.max(1, totalPages || 1)}
               </div>
               <div className="flex items-center space-x-2">

@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs'
 export async function testDatabaseConnection() {
   try {
     await prisma.$connect()
-    console.log('✅ Database connection successful')
+  // console.log('✅ Database connection successful')
     return { success: true, message: 'Database connected successfully' }
   } catch (error) {
     console.error('❌ Database connection failed:', error)
@@ -20,20 +20,20 @@ export async function testAllModels() {
     // Clean up existing test data first
     await cleanupTestData()
 
-    console.log('🧪 Starting comprehensive database schema test...')
+  // console.log('🧪 Starting comprehensive database schema test...')
 
     // 1. Test Region creation
-    console.log('1️⃣ Testing Region model...')
+  // console.log('1️⃣ Testing Region model...')
     const testRegion = await prisma.region.create({
       data: {
         name: 'Test Region - Mumbai',
         description: 'Test region for schema validation',
       }
     })
-    console.log('✅ Region created:', testRegion.name)
+  // console.log('✅ Region created:', testRegion.name)
 
     // 2. Test Area creation with Region relationship
-    console.log('2️⃣ Testing Area model...')
+  // console.log('2️⃣ Testing Area model...')
     const testArea = await prisma.area.create({
       data: {
         name: 'Test Area - Bandra',
@@ -41,10 +41,10 @@ export async function testAllModels() {
         regionId: testRegion.id,
       }
     })
-    console.log('✅ Area created:', testArea.name)
+  // console.log('✅ Area created:', testArea.name)
 
     // 3. Test User creation with role and relationships
-    console.log('3️⃣ Testing User model...')
+  // console.log('3️⃣ Testing User model...')
     const hashedPassword = await bcrypt.hash('testpassword123', 10)
     
     // Create Admin user
@@ -59,7 +59,7 @@ export async function testAllModels() {
         regionId: testRegion.id,
       }
     })
-    console.log('✅ Admin user created:', adminUser.name)
+  // console.log('✅ Admin user created:', adminUser.name)
 
     // Create Lead MR user
     const leadMrUser = await prisma.user.create({
@@ -73,7 +73,7 @@ export async function testAllModels() {
         regionId: testRegion.id,
       }
     })
-    console.log('✅ Lead MR user created:', leadMrUser.name)
+  // console.log('✅ Lead MR user created:', leadMrUser.name)
 
     // Create MR user with Lead MR relationship
     const mrUser = await prisma.user.create({
@@ -88,10 +88,10 @@ export async function testAllModels() {
         leadMrId: leadMrUser.id,
       }
     })
-    console.log('✅ MR user created:', mrUser.name)
+  // console.log('✅ MR user created:', mrUser.name)
 
     // 4. Test Client creation with all relationships
-    console.log('4️⃣ Testing Client model...')
+  // console.log('4️⃣ Testing Client model...')
     const testClient = await prisma.client.create({
       data: {
         name: 'Test Healthcare Clinic',
@@ -106,10 +106,10 @@ export async function testAllModels() {
         mrId: mrUser.id,
       }
     })
-    console.log('✅ Client created:', testClient.name)
+  // console.log('✅ Client created:', testClient.name)
 
     // 5. Test Business Entry creation
-    console.log('5️⃣ Testing BusinessEntry model...')
+  // console.log('5️⃣ Testing BusinessEntry model...')
     const testBusinessEntry = await prisma.businessEntry.create({
       data: {
         amount: 25000.50,
@@ -120,10 +120,10 @@ export async function testAllModels() {
         longitude: 72.8295,
       }
     })
-    console.log('✅ Business entry created:', testBusinessEntry.amount)
+  // console.log('✅ Business entry created:', testBusinessEntry.amount)
 
     // 6. Test Task creation with assignment relationships
-    console.log('6️⃣ Testing Task model...')
+  // console.log('6️⃣ Testing Task model...')
     const testTask = await prisma.task.create({
       data: {
         title: 'Test Task - Client Visit',
@@ -137,10 +137,10 @@ export async function testAllModels() {
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
       }
     })
-    console.log('✅ Task created:', testTask.title)
+  // console.log('✅ Task created:', testTask.title)
 
     // 7. Test GPS Session creation
-    console.log('7️⃣ Testing GPSSession model...')
+  // console.log('7️⃣ Testing GPSSession model...')
     const testGpsSession = await prisma.gPSSession.create({
       data: {
         userId: mrUser.id,
@@ -148,10 +148,10 @@ export async function testAllModels() {
         totalKm: 0,
       }
     })
-    console.log('✅ GPS Session created:', testGpsSession.id)
+  // console.log('✅ GPS Session created:', testGpsSession.id)
 
     // 8. Test GPS Log creation
-    console.log('8️⃣ Testing GPSLog model...')
+  // console.log('8️⃣ Testing GPSLog model...')
     const testGpsLog = await prisma.gPSLog.create({
       data: {
         sessionId: testGpsSession.id,
@@ -161,10 +161,10 @@ export async function testAllModels() {
         speed: 25.5,
       }
     })
-    console.log('✅ GPS Log created:', testGpsLog.id)
+  // console.log('✅ GPS Log created:', testGpsLog.id)
 
     // 9. Test Notification creation
-    console.log('9️⃣ Testing Notification model...')
+  // console.log('9️⃣ Testing Notification model...')
     const testNotification = await prisma.notification.create({
       data: {
         title: 'Test Notification',
@@ -172,10 +172,10 @@ export async function testAllModels() {
         targetUserId: mrUser.id,
       }
     })
-    console.log('✅ Notification created:', testNotification.title)
+  // console.log('✅ Notification created:', testNotification.title)
 
     // 10. Test Daily Summary creation
-    console.log('🔟 Testing DailySummary model...')
+  // console.log('🔟 Testing DailySummary model...')
     const testDailySummary = await prisma.dailySummary.create({
       data: {
         mrId: mrUser.id,
@@ -187,9 +187,9 @@ export async function testAllModels() {
         checkInCount: 1,
       }
     })
-    console.log('✅ Daily Summary created:', testDailySummary.totalVisits, 'visits')
+  // console.log('✅ Daily Summary created:', testDailySummary.totalVisits, 'visits')
 
-    console.log('✅ All models tested successfully!')
+  // console.log('✅ All models tested successfully!')
     
     return { 
       success: true, 
@@ -219,7 +219,7 @@ export async function testAllModels() {
 // Test relationship queries
 export async function testRelationshipQueries() {
   try {
-    console.log('🔍 Testing relationship queries...')
+  // console.log('🔍 Testing relationship queries...')
 
     // Test User with Region relationship
     const userWithRegion = await prisma.user.findFirst({
@@ -239,15 +239,15 @@ export async function testRelationshipQueries() {
     })
     
     if (userWithRegion) {
-      console.log('✅ User relationships loaded:', {
-        user: userWithRegion.name,
-        region: userWithRegion.region?.name,
-        leadMr: userWithRegion.leadMr?.name,
-        clientsCount: userWithRegion.clients.length,
-        businessEntriesCount: userWithRegion.businessEntries.length,
-        tasksCount: userWithRegion.assignedTasks.length,
-        gpsSessionsCount: userWithRegion.gpsSessions.length
-      })
+      // console.log('✅ User relationships loaded:', {
+      //   user: userWithRegion.name,
+      //   region: userWithRegion.region?.name,
+      //   leadMr: userWithRegion.leadMr?.name,
+      //   clientsCount: userWithRegion.clients.length,
+      //   businessEntriesCount: userWithRegion.businessEntries.length,
+      //   tasksCount: userWithRegion.assignedTasks.length,
+      //   gpsSessionsCount: userWithRegion.gpsSessions.length
+      // })
     }
 
     // Test Region with all related data
@@ -267,13 +267,13 @@ export async function testRelationshipQueries() {
     })
 
     if (regionWithAll) {
-      console.log('✅ Region relationships loaded:', {
-        region: regionWithAll.name,
-        areasCount: regionWithAll.areas.length,
-        usersCount: regionWithAll.users.length,
-        clientsCount: regionWithAll.clients.length,
-        tasksCount: regionWithAll.tasks.length
-      })
+      // console.log('✅ Region relationships loaded:', {
+      //   region: regionWithAll.name,
+      //   areasCount: regionWithAll.areas.length,
+      //   usersCount: regionWithAll.users.length,
+      //   clientsCount: regionWithAll.clients.length,
+      //   tasksCount: regionWithAll.tasks.length
+      // })
     }
 
     // Test Client with Business Entries
@@ -291,13 +291,13 @@ export async function testRelationshipQueries() {
     })
 
     if (clientWithEntries) {
-      console.log('✅ Client relationships loaded:', {
-        client: clientWithEntries.name,
-        businessEntriesCount: clientWithEntries.businessEntries.length,
-        area: clientWithEntries.area.name,
-        region: clientWithEntries.area.region.name,
-        mr: clientWithEntries.mr.name
-      })
+      // console.log('✅ Client relationships loaded:', {
+      //   client: clientWithEntries.name,
+      //   businessEntriesCount: clientWithEntries.businessEntries.length,
+      //   area: clientWithEntries.area.name,
+      //   region: clientWithEntries.area.region.name,
+      //   mr: clientWithEntries.mr.name
+      // })
     }
 
     return { success: true, message: 'All relationship queries executed successfully' }
@@ -311,7 +311,7 @@ export async function testRelationshipQueries() {
 // Test unique constraints
 export async function testUniqueConstraints() {
   try {
-    console.log('🛡️ Testing unique constraints...')
+  // console.log('🛡️ Testing unique constraints...')
 
     // Test duplicate username
     try {
@@ -323,11 +323,11 @@ export async function testUniqueConstraints() {
           role: UserRole.MR,
         }
       })
-      console.log('❌ Username uniqueness constraint failed')
+      // console.log('❌ Username uniqueness constraint failed')
       return { success: false, message: 'Username uniqueness constraint failed' }
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-        console.log('✅ Username uniqueness constraint working')
+        // console.log('✅ Username uniqueness constraint working')
       }
     }
 
@@ -338,11 +338,11 @@ export async function testUniqueConstraints() {
           name: 'Test Region - Mumbai' // This should fail
         }
       })
-      console.log('❌ Region name uniqueness constraint failed')
+      // console.log('❌ Region name uniqueness constraint failed')
       return { success: false, message: 'Region name uniqueness constraint failed' }
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-        console.log('✅ Region name uniqueness constraint working')
+        // console.log('✅ Region name uniqueness constraint working')
       }
     }
 
@@ -359,11 +359,11 @@ export async function testUniqueConstraints() {
           mrId: (await prisma.user.findFirst({ where: { username: 'test_mr' } }))!.id,
         }
       })
-      console.log('❌ Client uniqueness constraint failed')
+      // console.log('❌ Client uniqueness constraint failed')
       return { success: false, message: 'Client uniqueness constraint failed' }
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-        console.log('✅ Client uniqueness constraint working')
+        // console.log('✅ Client uniqueness constraint working')
       }
     }
 
@@ -378,7 +378,7 @@ export async function testUniqueConstraints() {
 // Clean up test data
 export async function cleanupTestData() {
   try {
-    console.log('🧹 Cleaning up test data...')
+  // console.log('🧹 Cleaning up test data...')
     
     // Delete in order to respect foreign key constraints
     await prisma.gPSLog.deleteMany({ where: {} })
@@ -392,7 +392,7 @@ export async function cleanupTestData() {
     await prisma.area.deleteMany({ where: {} })
     await prisma.region.deleteMany({ where: {} })
     
-    console.log('✅ Test data cleaned up')
+  // console.log('✅ Test data cleaned up')
     return { success: true, message: 'Test data cleaned up successfully' }
     
   } catch (error) {

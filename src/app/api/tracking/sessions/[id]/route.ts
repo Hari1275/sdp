@@ -237,7 +237,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     });
 
     // Log the modification
-    console.log(`GPS session ${sessionId} modified by ${session.user.id}. Changes:`, updateData);
+    // console.log(`GPS session ${sessionId} modified by ${session.user.id}. Changes:`, updateData);
 
     return NextResponse.json({
       sessionId: updatedSession.id,
@@ -308,7 +308,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     });
 
     // Log the deletion
-    console.log(`GPS session ${sessionId} deleted by admin ${session.user.id}. User: ${gpsSession.user.name}, GPS logs: ${gpsSession._count.gpsLogs}`);
+    // console.log(`GPS session ${sessionId} deleted by admin ${session.user.id}. User: ${gpsSession.user.name}, GPS logs: ${gpsSession._count.gpsLogs}`);
 
     return NextResponse.json({
       message: 'GPS session deleted successfully',

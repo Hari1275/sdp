@@ -118,6 +118,13 @@ export async function GET(
         longitude: true,
         createdAt: true,
         updatedAt: true,
+        mr: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          }
+        },
         client: {
           select: {
             id: true,
@@ -139,7 +146,8 @@ export async function GET(
             mr: {
               select: {
                 id: true,
-                name: true
+                name: true,
+                username: true,
               }
             }
           }

@@ -58,7 +58,7 @@ export default function LiveMovementChart({ trail }: { trail: TrailPoint[] }) {
   }, [trail]);
 
   return (
-    <div className="w-full h-64">
+    <div className="w-full h-56 md:h-64">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={data}

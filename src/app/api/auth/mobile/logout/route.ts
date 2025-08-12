@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         userId = payload.id
         
         // Optional: Log the logout event
-        console.log(`User ${payload.username} (${userId}) logged out from mobile app`)
+        // console.log(`User ${payload.username} (${userId}) logged out from mobile app`)
         
         // Optional: Update user's last activity or logout time
         await prisma.user.update({
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         if (error instanceof JWTError) {
           // Even if token is invalid/expired, we can still "logout"
-          console.log('Logout attempt with invalid/expired token:', error.message)
+          // console.log('Logout attempt with invalid/expired token:', error.message)
         }
       }
     }
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
       ]
     }, 'You have been successfully logged out')
 
-  } catch (error) {
-    console.error('Mobile logout error:', error)
+  } catch {
+  // console.error('Mobile logout error:', error)
     
     // Even if there's an error, we should allow logout to proceed
     // since it's primarily a client-side operation for JWT tokens

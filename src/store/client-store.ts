@@ -108,6 +108,7 @@ interface ClientStore {
   clients: Client[];
   selectedClient: Client | null;
   isLoading: boolean;
+  isBusinessLoading: boolean;
   error: string | null;
   filters: ClientFilters;
   isSheetOpen: boolean;
@@ -154,6 +155,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   clients: [],
   selectedClient: null,
   isLoading: false,
+  isBusinessLoading: false,
   error: null,
   filters: {},
   isSheetOpen: false,
@@ -175,7 +177,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   fetchClients: async () => {
     set({ isLoading: true, error: null });
     try {
-      console.log('[ClientStore] Starting fetchClients...');
+      // console.log('[ClientStore] Starting fetchClients...');
       
       const { filters, page, limit } = get();
       const queryParams = new URLSearchParams();
@@ -192,18 +194,18 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       });
 
       const url = `/api/clients?${queryParams.toString()}`;
-      console.log('[ClientStore] Fetching from:', url);
+      // console.log('[ClientStore] Fetching from:', url);
       
       const response = await fetch(url);
-      console.log('[ClientStore] Response status:', response.status, response.statusText);
+      // console.log('[ClientStore] Response status:', response.status, response.statusText);
       
       const result = await response.json();
-      console.log('[ClientStore] Response data:', result);
+      // console.log('[ClientStore] Response data:', result);
 
       if (!response.ok) {
         // Check if it's an authentication error
         if (response.status === 401) {
-          console.warn('[ClientStore] Authentication failed. User may not be logged in.');
+          // console.warn('[ClientStore] Authentication failed. User may not be logged in.');
           throw new Error('Please log in to view clients');
         }
         throw new Error(result.message || `Failed to fetch clients (${response.status})`);
@@ -212,13 +214,13 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       // Handle nested data structure: result.data.data contains the clients array
       const clientsData = result.data?.data || result.data || [];
       const clients = Array.isArray(clientsData) ? clientsData : [];
-      console.log('[ClientStore] Setting clients:', clients.length, 'items');
-      console.log('[ClientStore] Client data structure check:', {
-        resultData: result.data,
-        clientsData,
-        isArray: Array.isArray(clientsData),
-        firstClient: clients[0]
-      });
+      // console.log('[ClientStore] Setting clients:', clients.length, 'items');
+      // console.log('[ClientStore] Client data structure check:', {
+      //   resultData: result.data,
+      //   clientsData,
+      //   isArray: Array.isArray(clientsData),
+      //   firstClient: clients[0]
+      // });
       // Extract pagination if available
       const pagination = result.data?.pagination || result.pagination || null;
       if (pagination) {
@@ -246,7 +248,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-      console.error('[ClientStore] fetchClients error:', errorMessage);
+      // console.error('[ClientStore] fetchClients error:', errorMessage);
       set({ 
         error: errorMessage,
         isLoading: false,
@@ -410,7 +412,7 @@ export const useClientStore = create<ClientStore>((set, get) => ({
   fetchStatistics: async (filters?: ClientFilters) => {
     set({ isLoading: true, error: null });
     try {
-      console.log('[ClientStore] Starting fetchStatistics...');
+      // console.log('[ClientStore] Starting fetchStatistics...');
       
       const queryParams = new URLSearchParams();
       
@@ -423,18 +425,18 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       }
 
       const url = `/api/clients/statistics?${queryParams.toString()}`;
-      console.log('[ClientStore] Fetching statistics from:', url);
+      // console.log('[ClientStore] Fetching statistics from:', url);
       
       const response = await fetch(url);
-      console.log('[ClientStore] Statistics response status:', response.status, response.statusText);
+      // console.log('[ClientStore] Statistics response status:', response.status, response.statusText);
       
       const result = await response.json();
-      console.log('[ClientStore] Statistics response data:', result);
+      // console.log('[ClientStore] Statistics response data:', result);
 
       if (!response.ok) {
         // Check if it's an authentication error
         if (response.status === 401) {
-          console.warn('[ClientStore] Authentication failed for statistics. User may not be logged in.');
+          // console.warn('[ClientStore] Authentication failed for statistics. User may not be logged in.');
           // For statistics, we can set a default empty state instead of showing an error
           set({ 
             statistics: null, 
@@ -445,11 +447,11 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         throw new Error(result.message || `Failed to fetch statistics (${response.status})`);
       }
 
-      console.log('[ClientStore] Setting statistics data');
+      // console.log('[ClientStore] Setting statistics data');
       set({ statistics: result.data, isLoading: false });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-      console.error('[ClientStore] fetchStatistics error:', errorMessage);
+      // console.error('[ClientStore] fetchStatistics error:', errorMessage);
       set({ 
         error: errorMessage,
         isLoading: false,
@@ -460,58 +462,127 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
   // Fetch business history
   fetchBusinessHistory: async (clientId: string, filters = {}) => {
-    set({ isLoading: true, error: null });
+    set({ isBusinessLoading: true, error: null });
     try {
-      console.log('[ClientStore] Starting fetchBusinessHistory for client:', clientId);
-      
       const queryParams = new URLSearchParams();
-      
-      // Add filters
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== '') {
           queryParams.append(key, value.toString());
         }
       });
+      // Primary API path (rich structure)
+      const primaryUrl = `/api/clients/${clientId}/business?${queryParams.toString()}`;
+      let response = await fetch(primaryUrl);
+      let result = await response.json();
 
-      const url = `/api/clients/${clientId}/business?${queryParams.toString()}`;
-      console.log('[ClientStore] Fetching business history from:', url);
-      
-      const response = await fetch(url);
-      console.log('[ClientStore] Business history response status:', response.status, response.statusText);
-      
-      const result = await response.json();
-      console.log('[ClientStore] Business history response data:', result);
+      if (response.ok && result?.data) {
+        set({ businessHistory: result.data as BusinessHistory, isBusinessLoading: false });
+        return;
+      }
 
+      // If unauthorized, set safe empty state and stop
+      if (!response.ok && response.status === 401) {
+        set({ 
+          businessHistory: {
+            client: { id: clientId, name: 'Unknown' },
+            businessEntries: [],
+            pagination: { page: 1, limit: 10, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
+            statistics: { totalAmount: 0, averageAmount: 0, totalEntries: 0, minAmount: 0, maxAmount: 0, growthRate: 0 },
+            trends: { monthlyData: [] },
+            recentActivity: { last30Days: 0, last7Days: 0 }
+          },
+          isBusinessLoading: false
+        });
+        return;
+      }
+
+      // Fallback to alternate API path and map
+      const fallbackUrl = `/api/business/client/${clientId}?${queryParams.toString()}`;
+      response = await fetch(fallbackUrl);
+      result = await response.json();
       if (!response.ok) {
-        // Check if it's an authentication error
-        if (response.status === 401) {
-          console.warn('[ClientStore] Authentication failed for business history. User may not be logged in.');
-          // Set empty business history instead of error for auth issues
-          set({ 
-            businessHistory: {
-              client: { id: clientId, name: 'Unknown' },
-              businessEntries: [],
-              pagination: { page: 1, limit: 10, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
-              statistics: { totalAmount: 0, averageAmount: 0, totalEntries: 0, minAmount: 0, maxAmount: 0, growthRate: 0 },
-              trends: { monthlyData: [] },
-              recentActivity: { last30Days: 0, last7Days: 0 }
-            }, 
-            isLoading: false 
-          });
-          return;
-        }
         throw new Error(result.message || `Failed to fetch business history (${response.status})`);
       }
 
-      console.log('[ClientStore] Setting business history data');
-      set({ businessHistory: result.data, isLoading: false });
+      type ApiBusinessEntry = {
+        id: string;
+        amount: number;
+        notes?: string;
+        latitude: number;
+        longitude: number;
+        createdAt: string;
+        updatedAt: string;
+        mr?: { id?: string; name?: string; username?: string };
+        client?: { mr?: { id?: string; name?: string; username?: string } };
+      };
+
+      const apiData: {
+        client?: { id?: string; name?: string; totalAmount?: number; totalEntries?: number };
+        data?: ApiBusinessEntry[];
+        pagination?: { page?: number; limit?: number; total?: number; totalPages?: number; hasNext?: boolean; hasPrev?: boolean };
+      } = result.data || {};
+
+      const apiEntries = Array.isArray(apiData.data) ? apiData.data : [];
+      const entries: BusinessEntry[] = apiEntries.map((e: ApiBusinessEntry) => ({
+        id: e.id,
+        amount: e.amount,
+        notes: e.notes,
+        latitude: e.latitude,
+        longitude: e.longitude,
+        createdAt: e.createdAt,
+        updatedAt: e.updatedAt,
+        mr: {
+          id: e.mr?.id || e.client?.mr?.id || '',
+          name: e.mr?.name || e.client?.mr?.name || 'Unknown',
+          username: e.mr?.username || e.client?.mr?.username || 'unknown',
+        },
+      }));
+
+      const totalEntries = typeof apiData?.client?.totalEntries === 'number' ? apiData.client.totalEntries : (apiData.pagination?.total || entries.length || 0);
+      const totalAmount = typeof apiData?.client?.totalAmount === 'number' ? apiData.client.totalAmount : entries.reduce((sum: number, e: BusinessEntry) => sum + (Number(e.amount) || 0), 0);
+      const avgAmount = totalEntries > 0 ? totalAmount / totalEntries : 0;
+      const amounts = entries.map((e: BusinessEntry) => Number(e.amount) || 0);
+      const minAmount = amounts.length ? Math.min(...amounts) : 0;
+      const maxAmount = amounts.length ? Math.max(...amounts) : 0;
+
+      const now = Date.now();
+      const ms7 = 7 * 24 * 60 * 60 * 1000;
+      const ms30 = 30 * 24 * 60 * 60 * 1000;
+      const last7Days = entries.filter((entry: BusinessEntry) => now - new Date(entry.createdAt).getTime() <= ms7).length;
+      const last30Days = entries.filter((entry: BusinessEntry) => now - new Date(entry.createdAt).getTime() <= ms30).length;
+
+      const mapped: BusinessHistory = {
+        client: {
+          id: apiData?.client?.id || clientId,
+          name: apiData?.client?.name || 'Unknown',
+        },
+        businessEntries: entries,
+        pagination: {
+          page: apiData?.pagination?.page || 1,
+          limit: apiData?.pagination?.limit || 10,
+          total: apiData?.pagination?.total || entries.length,
+          totalPages: apiData?.pagination?.totalPages || 1,
+          hasNext: Boolean(apiData?.pagination?.hasNext),
+          hasPrev: Boolean(apiData?.pagination?.hasPrev),
+        },
+        statistics: {
+          totalAmount,
+          averageAmount: avgAmount,
+          totalEntries,
+          minAmount,
+          maxAmount,
+          growthRate: 0,
+        },
+        trends: { monthlyData: [] },
+        recentActivity: { last30Days, last7Days },
+      };
+
+      set({ businessHistory: mapped, isBusinessLoading: false });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-      console.error('[ClientStore] fetchBusinessHistory error:', errorMessage);
       set({ 
         error: errorMessage,
-        isLoading: false,
-        // Set empty business history on error to prevent modal from breaking
+        isBusinessLoading: false,
         businessHistory: {
           client: { id: clientId, name: 'Unknown' },
           businessEntries: [],
@@ -558,9 +629,8 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         document.body.removeChild(a);
       } else {
         // Handle Excel format (JSON response)
-        const result = await response.json();
+        await response.json();
         // You could implement Excel export logic here
-        console.log('Excel export data:', result);
       }
 
       set({ isExporting: false });

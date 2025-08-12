@@ -163,9 +163,9 @@ const putHandler = withAuth(
       });
 
       // Log the completion action for audit trail
-      console.log(
-        `Task completed: ${completedTask.id} by user: ${user.id} (${user.name}) at ${new Date().toISOString()}`
-      );
+      // console.log(
+      //   `Task completed: ${completedTask.id} by user: ${user.id} (${user.name}) at ${new Date().toISOString()}`
+      // );
 
       return successResponse(
         {

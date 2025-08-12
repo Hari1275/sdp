@@ -129,8 +129,8 @@ export async function POST(request: NextRequest) {
         });
       }
 
-    } catch (dbError) {
-      console.error('Database error in coordinate logging:', dbError);
+    } catch {
+  // console.error('Database error in coordinate logging:', dbError);
       
       return NextResponse.json(
         { 
@@ -206,8 +206,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 200 });
 
-  } catch (error) {
-    logError(error, 'POST /api/tracking/coordinates');
+  } catch (err) {
+    logError(err, 'POST /api/tracking/coordinates');
     return errorResponse('INTERNAL_SERVER_ERROR', 'Failed to log GPS coordinates', 500);
   }
 }
@@ -320,8 +320,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('GPS coordinate retrieval error:', error);
+  } catch {
     
     return NextResponse.json(
       { 

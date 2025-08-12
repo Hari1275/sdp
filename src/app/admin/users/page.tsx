@@ -49,22 +49,22 @@ export default function UserManagementPage() {
   }, [users]);
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">User Management</h1>
           <p className="text-muted-foreground">
             Manage all users in the system.
           </p>
         </div>
-        <Button onClick={() => openUserSheet()}>
+        <Button onClick={() => openUserSheet()} className="w-full sm:w-auto">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add User
         </Button>
       </div>
 
       {/* User Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>

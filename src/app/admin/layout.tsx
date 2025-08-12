@@ -21,9 +21,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {  LogOut } from "lucide-react";
+import {  LogOut, Menu } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { filterNavByRole, isPathAllowed, NavItem } from "./navigation-config";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -66,12 +68,100 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-gray-50/50 overflow-x-hidden">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="px-6 h-16 flex items-center justify-between">
+        <div className="px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           {/* Logo and Title */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-3">
+            {/* Mobile menu */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-72 sm:w-80">
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                <div className="h-16 flex items-center px-4 border-b">
+                  <Image
+                    src={LogoPng}
+                    alt="SDP Ayurveda"
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 rounded-md object-contain"
+                    priority
+                  />
+                  <div className="ml-3">
+                    <h2 className="text-base font-semibold">Admin Dashboard</h2>
+                    <p className="text-xs text-muted-foreground">SDP Ayurveda</p>
+                  </div>
+                </div>
+                <ScrollArea className="h-[calc(100vh-64px)]">
+                  <div className="p-4">
+                    <div className="space-y-1">
+                      {allowedNav.map((item: NavItem) => {
+                        const Icon = item.icon;
+                        const isActive = pathname === item.href;
+                        return (
+                          <SheetClose asChild key={`sheet-${item.name}`}>
+                            <Link
+                              href={item.href}
+                              className={cn(
+                                "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                                isActive
+                                  ? "bg-gray-100 text-gray-900"
+                                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                              )}
+                            >
+                              <Icon className="mr-3 h-4 w-4" />
+                              <span>{item.name}</span>
+                            </Link>
+                          </SheetClose>
+                        );
+                      })}
+                    </div>
+                    <Separator className="my-6" />
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Quick Access
+                      </h3>
+                      {allowedNav.slice(0, 4).map((item: NavItem) => {
+                        const Icon = item.icon;
+                        return (
+                          <Card
+                            key={`sheet-qa-${item.name}`}
+                            className="p-3 hover:shadow-sm transition-shadow cursor-pointer"
+                          >
+                            <SheetClose asChild>
+                              <Link href={item.href} className="block">
+                                <div className="flex items-start space-x-3">
+                                  <div className="flex-shrink-0">
+                                    <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                                      <Icon className="h-4 w-4 text-gray-600" />
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {item.name}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {item.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </Link>
+                            </SheetClose>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+
             <div className="flex items-center space-x-3">
               <Link href="/admin" className="flex items-center space-x-3">
                 <Image
@@ -83,10 +173,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   priority
                 />
                 <div>
-                  <h1 className="text-lg font-semibold text-gray-900">
+                  <h1 className="text-base sm:text-lg font-semibold text-gray-900">
                     Admin Dashboard
                   </h1>
-                  <p className="text-xs text-gray-500">SDP Ayurveda Management</p>
+                  <p className="hidden sm:block text-xs text-gray-500">SDP Ayurveda Management</p>
                 </div>
               </Link>
             </div>
@@ -95,7 +185,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {/* Search removed per request */}
 
           {/* User Menu */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Notification bell removed per request */}
 
             <DropdownMenu>
@@ -163,9 +253,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         }
       />
 
-      <div className="flex">
+      <div className="flex items-start">
         {/* Sidebar */}
-        <nav className="w-64 bg-white border-r border-gray-200 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto">
+        <nav className="hidden lg:block fixed left-0 top-[64px] w-64 bg-white border-r border-gray-200 h-[calc(100vh-64px)] overflow-y-auto z-40">
           <div className="p-6">
             <div className="space-y-1">
               {allowedNav.map((item: NavItem) => {
@@ -230,7 +320,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0">{children}</main>
+        <main className="flex-1 min-w-0 lg:ml-64">{children}</main>
       </div>
     </div>
   );

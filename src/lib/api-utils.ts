@@ -156,10 +156,10 @@ export async function getAuthenticatedUser(request: NextRequest) {
         return await getAuthenticatedUserFromToken(jwtToken);
       } catch (error) {
         if (error instanceof JWTError) {
-          console.log("JWT authentication failed:", error.message);
+          // console.log("JWT authentication failed:", error.message);
           // Continue to session-based authentication
         } else {
-          console.error("JWT authentication error:", error);
+          // console.error("JWT authentication error:", error);
         }
       }
     }
@@ -180,8 +180,8 @@ export async function getAuthenticatedUser(request: NextRequest) {
     });
 
     return user;
-  } catch (error) {
-    console.error("Authentication error:", error);
+  } catch {
+    // console.error("Authentication error");
     return null;
   }
 }
@@ -354,12 +354,12 @@ export function logError(
   });
 
   // Keep console output for local debugging and tests
-  console.error(`[${context}] Error:`, {
-    message: errorObj.message || "Unknown error",
-    stack: errorObj.stack || "No stack trace",
-    userId,
-    timestamp: new Date().toISOString(),
-  });
+  // console.error(`[${context}] Error:`, {
+  //   message: errorObj.message || "Unknown error",
+  //   stack: errorObj.stack || "No stack trace",
+  //   userId,
+  //   timestamp: new Date().toISOString(),
+  // });
 }
 
 // File upload helpers (for future use)

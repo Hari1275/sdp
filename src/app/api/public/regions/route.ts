@@ -4,7 +4,7 @@ import { successResponse, errorResponse } from '@/lib/api-utils';
 // GET /api/public/regions - List regions (public endpoint for forms)
 export async function GET() {
   try {
-    console.log('[PublicRegions] Fetching regions...');
+  // console.log('[PublicRegions] Fetching regions...');
     
     // Get regions - simple query for dropdown usage
     const regions = await prisma.region.findMany({
@@ -21,7 +21,7 @@ export async function GET() {
       }
     });
 
-    console.log('[PublicRegions] Found regions:', regions.length);
+  // console.log('[PublicRegions] Found regions:', regions.length);
 
     return successResponse(regions);
   } catch (error) {

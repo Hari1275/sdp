@@ -5,7 +5,7 @@ import { successResponse, errorResponse } from '@/lib/api-utils';
 // GET /api/public/users - List users (public endpoint for forms)
 export async function GET(_request: NextRequest) {
   try {
-    console.log('[PublicUsers] Fetching users...');
+  // console.log('[PublicUsers] Fetching users...');
     
     const { searchParams } = new URL(_request.url);
     const role = searchParams.get('role');
@@ -36,13 +36,13 @@ export async function GET(_request: NextRequest) {
       ]
     });
 
-    console.log('[PublicUsers] Found users:', users.length, 'with role:', role || 'all');
-    console.log('[PublicUsers] Users data:', users.map(u => ({ 
-      id: u.id, 
-      name: u.name, 
-      role: u.role, 
-      regionId: u.regionId 
-    })));
+  // console.log('[PublicUsers] Found users:', users.length, 'with role:', role || 'all');
+  // console.log('[PublicUsers] Users data:', users.map(u => ({ 
+  //     id: u.id, 
+  //     name: u.name, 
+  //     role: u.role, 
+  //     regionId: u.regionId 
+  //   })));
 
     return successResponse(users);
   } catch (error) {

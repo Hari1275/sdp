@@ -91,7 +91,7 @@ export function extractPaginatedData<T>(response: unknown): T[] {
     }
   }
   
-  console.error('Unexpected API response structure:', response);
+  // console.error('Unexpected API response structure:', response);
   return [];
 }
 
@@ -109,7 +109,7 @@ export function extractSingleData<T>(response: unknown): T | null {
     return (response as { success: boolean; data: T }).data;
   }
   
-  console.error('Unexpected API response structure:', response);
+  // console.error('Unexpected API response structure:', response);
   return null;
 }
 
@@ -120,7 +120,7 @@ export async function apiGet<T>(url: string): Promise<T[]> {
   const result = await safeApiCall<unknown>(url);
   
   if (!result.success) {
-    console.error('API GET failed:', result.error);
+    // console.error('API GET failed:', result.error);
     return [];
   }
   
@@ -145,7 +145,7 @@ export async function apiGet<T>(url: string): Promise<T[]> {
     return responseData as T[];
   }
   
-  console.error('Unexpected API response structure:', responseData);
+  // console.error('Unexpected API response structure:', responseData);
   return [];
 }
 

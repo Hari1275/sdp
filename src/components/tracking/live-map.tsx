@@ -115,7 +115,7 @@ export default function LiveMap({
   }
 
   return (
-    <div className="w-full h-96 rounded-md overflow-hidden border">
+    <div className="w-full h-72 md:h-96 rounded-md overflow-hidden border">
       <GoogleMap
         center={center}
         zoom={6}

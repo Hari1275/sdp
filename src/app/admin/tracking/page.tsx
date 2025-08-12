@@ -189,30 +189,30 @@ export default function TrackingPage() {
 
   return (
     <div className="p-6 space-y-6" suppressHydrationWarning>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Real-Time Tracking</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-semibold">Real-Time Tracking</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Live view of active GPS sessions
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-start sm:justify-end mt-2 sm:mt-0">
           {summary && (
             <>
-              <Badge variant="secondary" suppressHydrationWarning>
+              <Badge variant="secondary" className="text-xs" suppressHydrationWarning>
                 Active: {summary.activeCount}
               </Badge>
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="text-xs">
                 <span suppressHydrationWarning>
                   Total Km: {summary.totalKmToday}
                 </span>
               </Badge>
-                  <span className="text-xs text-muted-foreground" suppressHydrationWarning>
+                  <span className="text-[11px] sm:text-xs text-muted-foreground" suppressHydrationWarning>
                     Updated: {new Date(summary.lastUpdate).toLocaleTimeString()}
                   </span>
             </>
           )}
-          <Button onClick={load} size="sm">
+          <Button onClick={load} size="sm" className="w-full sm:w-auto">
             Refresh
           </Button>
         </div>
@@ -230,11 +230,11 @@ export default function TrackingPage() {
         <>
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Live Map</CardTitle>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-base sm:text-lg">Live Map</CardTitle>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   {selectedTrailUserId && (
-                    <span className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700">
+                    <span className="text-[11px] sm:text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700">
                       Selected:{" "}
                       {sessions.find((s) => s.userId === selectedTrailUserId)
                         ?.userName || "User"}
@@ -243,17 +243,19 @@ export default function TrackingPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto"
                     onClick={() => setSelectedTrailUserId(null)}
                     disabled={!selectedTrailUserId}
                   >
                     Clear selection
                   </Button>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[11px] sm:text-xs text-muted-foreground">
                     Follow selected
                   </span>
                   <Button
                     variant={follow ? "default" : "outline"}
                     size="sm"
+                    className="w-full sm:w-auto"
                     onClick={() => setFollow((v) => !v)}
                   >
                     {follow ? "On" : "Off"}

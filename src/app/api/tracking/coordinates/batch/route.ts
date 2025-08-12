@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         totalDistance += result.distanceAdded;
         
       } catch (chunkError) {
-        console.error(`Error processing chunk ${i}-${i + chunkSize}:`, chunkError);
+        // console.error(`Error processing chunk ${i}-${i + chunkSize}:`, chunkError);
         stats.errors.push(`Chunk ${i}-${i + chunkSize}: ${chunkError}`);
       }
     }
@@ -309,7 +309,7 @@ async function processCoordinateChunk(
     }
 
   } catch (dbError) {
-    console.error('Database error in batch coordinate processing:', dbError);
+  // console.error('Database error in batch coordinate processing:', dbError);
     result.errors.push(`Database error: ${dbError}`);
   }
 
@@ -392,8 +392,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Batch upload status error:', error);
+  } catch {
+  // console.error('Batch upload status error:', error);
     
     return NextResponse.json(
       { 

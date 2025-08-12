@@ -269,8 +269,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
 
-  } catch (error) {
-    console.error('Weekly GPS analytics error:', error);
+  } catch {
+  // console.error('Weekly GPS analytics error:', error);
     
     return NextResponse.json(
       { 

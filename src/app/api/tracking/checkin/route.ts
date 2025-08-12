@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log(`Auto-closed unclosed session ${unclosedSessionId} for user ${user.id}`);
+      // console.log(`Auto-closed unclosed session ${unclosedSessionId} for user ${user.id}`);
     }
 
     // Check for overlapping sessions (but allow them with warning)
@@ -132,8 +132,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
 
-  } catch (error) {
-    console.error('GPS check-in error:', error);
+  } catch {
+  // console.error('GPS check-in error:', error);
     
     return NextResponse.json(
       { 
@@ -204,8 +204,8 @@ export async function GET(request: NextRequest) {
       activeSession: null
     });
 
-  } catch (error) {
-    console.error('GPS session status error:', error);
+  } catch {
+  // console.error('GPS session status error:', error);
     
     return NextResponse.json(
       { 

@@ -78,14 +78,14 @@ const ActionsCell = ({ client }: { client: Client }) => {
   const { openClientSheet, deleteClient } = useClientStore();
   const [showDetails, setShowDetails] = useState(false);
   
-  console.log('[ActionsCell] Rendering for client:', client.id, 'showDetails:', showDetails);
+  // console.log('[ActionsCell] Rendering for client:', client.id, 'showDetails:', showDetails);
 
   const handleDelete = useCallback(async () => {
     if (window.confirm(`Are you sure you want to delete ${client.name}?`)) {
       try {
         await deleteClient(client.id);
-      } catch (error) {
-        console.error('Delete failed:', error);
+      } catch {
+        // console.error('Delete failed:', error);
       }
     }
   }, [client.id, client.name, deleteClient]);
@@ -97,17 +97,15 @@ const ActionsCell = ({ client }: { client: Client }) => {
     }
   }, [client.latitude, client.longitude]);
 
-  const handleViewDetails = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('[ActionsCell] View Details clicked for client:', client.id, client.name, 'current showDetails:', showDetails);
-    setShowDetails(true);
-  }, [client.id, client.name, showDetails]);
+  const handleViewDetails = useCallback(() => {
+    // Open dialog after the dropdown menu closes to avoid focus/stacking conflicts
+    setTimeout(() => setShowDetails(true), 0);
+  }, []);
 
   const handleCloseModal = useCallback(() => {
-    console.log('[ActionsCell] Closing modal for client:', client.id);
+    // console.log('[ActionsCell] Closing modal for client:', client.id);
     setShowDetails(false);
-  }, [client.id]);
+  }, []);
 
   const handleEditClient = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -138,7 +136,7 @@ const ActionsCell = ({ client }: { client: Client }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={handleViewDetails}>
+          <DropdownMenuItem onSelect={handleViewDetails}>
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </DropdownMenuItem>
@@ -178,25 +176,25 @@ export function ClientTable({ clients, isLoading, searchQuery }: ClientTableProp
   // Enhanced safety checks with multiple fallbacks
   const safeClients = React.useMemo(() => {
     if (!clients) {
-      console.warn('[ClientTable] No clients data provided');
+      // console.warn('[ClientTable] No clients data provided');
       return [];
     }
     if (!Array.isArray(clients)) {
-      console.warn('[ClientTable] Clients data is not an array:', typeof clients);
+      // console.warn('[ClientTable] Clients data is not an array:', typeof clients);
       return [];
     }
     // Filter out invalid client objects
     return clients.filter((client) => {
       if (!client || typeof client !== 'object') {
-        console.warn('[ClientTable] Invalid client object:', client);
+        // console.warn('[ClientTable] Invalid client object:', client);
         return false;
       }
       if (!client.id) {
-        console.warn('[ClientTable] Client missing ID:', client);
+        // console.warn('[ClientTable] Client missing ID:', client);
         return false;
       }
       if (!client.name) {
-        console.warn('[ClientTable] Client missing name:', client);
+        // console.warn('[ClientTable] Client missing name:', client);
         return false;
       }
       return true;
@@ -205,14 +203,14 @@ export function ClientTable({ clients, isLoading, searchQuery }: ClientTableProp
 
   // Debug logging
   React.useEffect(() => {
-    console.log('[ClientTable] Render state:', {
-      isLoading,
-      clientsProvided: !!clients,
-      clientsType: typeof clients,
-      clientsLength: Array.isArray(clients) ? clients.length : 'N/A',
-      safeClientsLength: safeClients.length,
-      searchQuery
-    });
+    // console.log('[ClientTable] Render state:', {
+    //   isLoading,
+    //   clientsProvided: !!clients,
+    //   clientsType: typeof clients,
+    //   clientsLength: Array.isArray(clients) ? clients.length : 'N/A',
+    //   safeClientsLength: safeClients.length,
+    //   searchQuery
+    // });
   }, [isLoading, clients, safeClients.length, searchQuery]);
   
   if (isLoading) {
@@ -258,17 +256,17 @@ export function ClientTable({ clients, isLoading, searchQuery }: ClientTableProp
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-hidden">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Client</TableHead>
-            <TableHead>Contact</TableHead>
+            <TableHead className="hidden md:table-cell">Contact</TableHead>
             <TableHead>Business Type</TableHead>
             <TableHead>Location</TableHead>
-            <TableHead>MR</TableHead>
-            <TableHead>Business</TableHead>
-            <TableHead>Created</TableHead>
+            <TableHead className="hidden md:table-cell">MR</TableHead>
+            <TableHead className="hidden md:table-cell">Business</TableHead>
+            <TableHead className="hidden lg:table-cell">Created</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -298,7 +296,7 @@ export function ClientTable({ clients, isLoading, searchQuery }: ClientTableProp
                   <div>
                     <div className="font-medium">{clientName}</div>
                     {clientAddress && (
-                      <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                      <div className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
                         {clientAddress}
                       </div>
                     )}
@@ -307,7 +305,7 @@ export function ClientTable({ clients, isLoading, searchQuery }: ClientTableProp
               </TableCell>
 
               {/* Contact Information */}
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <div className="space-y-1">
                   {clientPhone ? (
                     <div className="flex items-center gap-1 text-sm">
@@ -341,12 +339,12 @@ export function ClientTable({ clients, isLoading, searchQuery }: ClientTableProp
               </TableCell>
 
               {/* Marketing Representative */}
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <div className="text-sm font-medium">{clientMRName}</div>
               </TableCell>
 
               {/* Business Statistics */}
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-600" />
                   <span className="text-sm font-medium">
@@ -357,7 +355,7 @@ export function ClientTable({ clients, isLoading, searchQuery }: ClientTableProp
               </TableCell>
 
               {/* Created Date */}
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <ClientOnly fallback={<span>Loading...</span>}>

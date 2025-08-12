@@ -11,19 +11,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import {
   Building2, 
-  Phone, 
-  MapPin, 
-  User, 
+  Phone,
+  MapPin,
+  User,
   Calendar,
   TrendingUp,
-  ExternalLink,
   FileText,
   DollarSign,
   Activity,
@@ -68,7 +66,7 @@ const getBusinessTypeColor = (businessType: string) => {
 };
 
 export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModalProps) {
-  const { fetchBusinessHistory, businessHistory, isLoading } = useClientStore();
+  const { fetchBusinessHistory, businessHistory, isBusinessLoading } = useClientStore();
   
   useEffect(() => {
     console.log('[ClientDetailsModal] Modal state changed:', { open, client: !!client, clientId: client?.id });
@@ -80,17 +78,12 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
   }, [open, client, fetchBusinessHistory]);
   
   useEffect(() => {
-    console.log('[ClientDetailsModal] Business history updated:', { businessHistory, isLoading });
-  }, [businessHistory, isLoading]);
+    console.log('[ClientDetailsModal] Business history updated:', { businessHistory, isBusinessLoading });
+  }, [businessHistory, isBusinessLoading]);
 
   if (!client) return null;
 
-  const openMaps = () => {
-    if (client.latitude && client.longitude) {
-      const url = `https://www.google.com/maps?q=${client.latitude},${client.longitude}`;
-      window.open(url, '_blank');
-    }
-  };
+  // Map actions removed along with map tab
 
   return (
     <Dialog 
@@ -126,7 +119,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="business">Business History</TabsTrigger>
-            <TabsTrigger value="location">Location</TabsTrigger>
+            {/* Removed map tab */}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
@@ -231,7 +224,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
           </TabsContent>
 
           <TabsContent value="business" className="space-y-6 mt-6">
-            {isLoading ? (
+            {isBusinessLoading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <div key={i} className="p-4 border rounded-lg">
@@ -284,11 +277,11 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                     </CardHeader>
                     <CardContent>
                       <div className={`text-2xl font-bold ${
-                        businessHistory.statistics.growthRate > 0 ? 'text-green-600' : 
-                        businessHistory.statistics.growthRate < 0 ? 'text-red-600' : 'text-gray-600'
+                        (businessHistory.statistics?.growthRate || 0) > 0 ? 'text-green-600' : 
+                        (businessHistory.statistics?.growthRate || 0) < 0 ? 'text-red-600' : 'text-gray-600'
                       }`}>
-                        {businessHistory.statistics.growthRate > 0 ? '+' : ''}
-                        {businessHistory.statistics.growthRate}%
+                        {(businessHistory.statistics?.growthRate || 0) > 0 ? '+' : ''}
+                        {Math.abs(businessHistory.statistics?.growthRate || 0)}%
                       </div>
                       <p className="text-xs text-muted-foreground">
                         vs last month
@@ -373,66 +366,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
             )}
           </TabsContent>
 
-          <TabsContent value="location" className="space-y-6 mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Location Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm font-medium mb-2">Address</div>
-                    <div className="text-sm text-muted-foreground">
-                      {client.address || 'No address provided'}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium mb-2">Region & Area</div>
-                    <div className="text-sm text-muted-foreground">
-                      {client.area?.name || 'Unknown Area'}, {client.region?.name || 'Unknown Region'}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium mb-2">GPS Coordinates</div>
-                    <div className="text-sm text-muted-foreground">
-                      {client.latitude.toFixed(6)}, {client.longitude.toFixed(6)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium mb-2">Actions</div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={openMaps}
-                      className="w-full"
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Open in Maps
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Map placeholder - in a real app, you'd integrate with a map service */}
-                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <MapPin className="h-12 w-12 mx-auto mb-2" />
-                    <p className="text-sm">Map integration would go here</p>
-                    <p className="text-xs">
-                      Coordinates: {client.latitude.toFixed(6)}, {client.longitude.toFixed(6)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {/* Location tab removed per request */}
         </Tabs>
       </DialogContent>
     </Dialog>

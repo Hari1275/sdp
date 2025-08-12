@@ -4,7 +4,7 @@ import { hashPassword } from "./password";
 
 export async function seedDatabase() {
   try {
-    console.log("🌱 Starting database seeding...");
+  // console.log("🌱 Starting database seeding...");
 
     // Create regions
     const regions = await Promise.all([
@@ -34,7 +34,7 @@ export async function seedDatabase() {
       }),
     ]);
 
-    console.log(`✅ Created ${regions.length} regions`);
+  // console.log(`✅ Created ${regions.length} regions`);
 
     // Create areas
     const areas = await Promise.all([
@@ -83,7 +83,7 @@ export async function seedDatabase() {
       }),
     ]);
 
-    console.log(`✅ Created ${areas.length} areas`);
+  // console.log(`✅ Created ${areas.length} areas`);
 
     // Create users with hashed passwords
     const hashedPassword = await hashPassword("password123");
@@ -184,7 +184,7 @@ export async function seedDatabase() {
       }),
     ]);
 
-    console.log(`✅ Created ${users.length + mrUsers.length} users`);
+  // console.log(`✅ Created ${users.length + mrUsers.length} users`);
 
     // Create sample clients
     const clients = await Promise.all([
@@ -261,7 +261,7 @@ export async function seedDatabase() {
       }),
     ]);
 
-    console.log(`✅ Created ${clients.length} clients`);
+  // console.log(`✅ Created ${clients.length} clients`);
 
     // Create sample business entries
     const businessEntries = await Promise.all([
@@ -287,7 +287,7 @@ export async function seedDatabase() {
       }),
     ]);
 
-    console.log(`✅ Created ${businessEntries.length} business entries`);
+  // console.log(`✅ Created ${businessEntries.length} business entries`);
 
     // Create sample tasks
     const tasks = await Promise.all([
@@ -319,7 +319,7 @@ export async function seedDatabase() {
       }),
     ]);
 
-    console.log(`✅ Created ${tasks.length} tasks`);
+  // console.log(`✅ Created ${tasks.length} tasks`);
 
     // Create GPS sessions and logs for live tracking testing
     const now = new Date();
@@ -407,9 +407,9 @@ export async function seedDatabase() {
       },
     });
 
-    console.log("✅ Created GPS sessions/logs and recent activities");
+  // console.log("✅ Created GPS sessions/logs and recent activities");
 
-    console.log("🌱 Database seeding completed successfully!");
+  // console.log("🌱 Database seeding completed successfully!");
 
     return {
       success: true,
@@ -424,7 +424,7 @@ export async function seedDatabase() {
       },
     };
   } catch (error) {
-    console.error("❌ Database seeding failed:", error);
+  // console.error("❌ Database seeding failed:", error);
     throw error;
   }
 }

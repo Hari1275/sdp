@@ -177,9 +177,8 @@ export async function POST(request: NextRequest) {
           totalBusiness: 0
         }
       });
-    } catch (summaryError) {
+    } catch {
       // Log error but don't fail the checkout
-      console.error('Failed to update daily summary:', summaryError);
     }
 
     // Prepare response
@@ -216,8 +215,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 200 });
 
-  } catch (error) {
-    console.error('GPS check-out error:', error);
+  } catch {
+  // console.error('GPS check-out error:', error);
     
     return NextResponse.json(
       { 
@@ -297,7 +296,7 @@ export async function PATCH(request: NextRequest) {
     });
 
     // Log the forced closure
-    console.log(`Session ${sessionId} force-closed by ${user.id}. Reason: ${reason || 'Not specified'}`);
+  // console.log(`Session ${sessionId} force-closed by ${user.id}. Reason: ${reason || 'Not specified'}`);
 
     return NextResponse.json({
       sessionId: updatedSession.id,
@@ -308,8 +307,8 @@ export async function PATCH(request: NextRequest) {
       closedBy: user.id
     });
 
-  } catch (error) {
-    console.error('Force close session error:', error);
+  } catch {
+  // console.error('Force close session error:', error);
     
     return NextResponse.json(
       { 

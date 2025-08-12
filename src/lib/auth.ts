@@ -218,17 +218,15 @@ export const authOptions: NextAuthOptions = {
     error: "/login",
   },
   events: {
-    async signIn({ user }) {
-      console.log("User signed in:", {
-        userId: user.id,
-        username: user.username,
-        role: user.role,
-      });
+    async signIn() {
+      // console.log("User signed in:", {
+      //   userId: user.id,
+      //   username: user.username,
+      //   role: user.role,
+      // });
     },
-    async signOut({ session, token }) {
-      console.log("User signed out:", {
-        userId: token?.id || session?.user?.id,
-      });
+    async signOut() {
+      // console.log("User signed out");
     },
   },
   debug: process.env.NODE_ENV === "development",

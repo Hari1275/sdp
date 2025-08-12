@@ -40,6 +40,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Settings2, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -96,11 +97,16 @@ export function DataTable<TData, TValue>({
     }
   };
 
+  const getResponsiveColumnClass = (columnId: string) => {
+    const hideOnMobile = new Set(["email", "region", "leadMr", "_count", "createdAt"]);
+    return hideOnMobile.has(columnId) ? "hidden md:table-cell" : "";
+  };
+
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center space-x-2 w-full sm:w-auto">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -109,7 +115,7 @@ export function DataTable<TData, TValue>({
               onChange={(event) =>
                 table.getColumn("name")?.setFilterValue(event.target.value)
               }
-              className="pl-8 max-w-sm"
+              className="pl-8 w-full sm:max-w-sm"
             />
           </div>
           <Select value={roleFilter} onValueChange={handleRoleFilter}>
@@ -136,7 +142,7 @@ export function DataTable<TData, TValue>({
           </Select>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 w-full sm:w-auto">
           <Badge variant="secondary">
             {table.getFilteredRowModel().rows.length} users
           </Badge>
@@ -171,14 +177,17 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-hidden">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="px-4">
+                    <TableHead
+                      key={header.id}
+                      className={cn("px-4", getResponsiveColumnClass(header.column.id))}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -200,7 +209,10 @@ export function DataTable<TData, TValue>({
                   className="hover:bg-muted/50"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4">
+                    <TableCell
+                      key={cell.id}
+                      className={cn("px-4", getResponsiveColumnClass(cell.column.id))}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -218,8 +230,8 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center space-x-2 w-full sm:w-auto">
           <p className="text-sm font-medium">Rows per page</p>
           <Select
             value={`${table.getState().pagination.pageSize}`}
@@ -240,8 +252,8 @@ export function DataTable<TData, TValue>({
           </Select>
         </div>
         
-        <div className="flex items-center space-x-6 lg:space-x-8">
-          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+        <div className="flex items-center space-x-4 sm:space-x-6 lg:space-x-8 w-full sm:w-auto">
+          <div className="flex w-[100px] items-center justify-center text-sm font-medium mx-auto sm:mx-0">
             Page {table.getState().pagination.pageIndex + 1} of{" "}
             {table.getPageCount()}
           </div>
