@@ -55,9 +55,8 @@ export async function GET(request: NextRequest) {
         whereClause.assigneeId = user.id;
         break;
       case UserRole.LEAD_MR:
-        // Lead MR can see tasks in their region and assigned to their team
+        // Lead MR can see tasks assigned to their team or themselves, and tasks they created
         whereClause.OR = [
-          { regionId: user.regionId },
           { assignee: { leadMrId: user.id } },
           { assigneeId: user.id },
           { createdById: user.id },

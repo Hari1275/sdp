@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
     const gpsSession = await prisma.gPSSession.findUnique({
       where: { id: sessionId },
       include: {
+        user: { select: { leadMrId: true } },
         gpsLogs: {
           orderBy: { timestamp: 'desc' },
           take: 1
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (gpsSession.userId !== user.id) {
+    if (gpsSession.userId !== user.id && !(user.role === 'ADMIN' || (user.role === 'LEAD_MR' && gpsSession.user?.leadMrId === user.id))) {
       return errorResponse('FORBIDDEN', 'Unauthorized - not your session', 403);
     }
 
@@ -363,7 +364,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (gpsSession.userId !== session.user.id) {
+    if (gpsSession.userId !== session.user.id && !(session.user.role === 'ADMIN' || (session.user.role === 'LEAD_MR' && (gpsSession as { user?: { leadMrId?: string | null } }).user?.leadMrId === session.user.id))) {
       return NextResponse.json(
         { error: 'Unauthorized - not your session' },
         { status: 403 }

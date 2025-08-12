@@ -43,8 +43,9 @@ export async function GET(request: NextRequest) {
         scopedUserWhere = { id: user.id };
         break;
       case UserRole.LEAD_MR:
+        // Restrict to self and direct team only
         scopedUserWhere = {
-          OR: [{ regionId: user.regionId || undefined }, { leadMrId: user.id }],
+          OR: [{ id: user.id }, { leadMrId: user.id }],
         };
         break;
       case UserRole.ADMIN:
@@ -54,11 +55,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (regionId) {
-      // Enforce region constraint only if admin or same region
-      if (user.role !== UserRole.ADMIN && user.regionId !== regionId) {
+      // Only admins can arbitrarily filter by region; Lead MR scope is team/self-only
+      if (user.role !== UserRole.ADMIN) {
         return errorResponse(
           "FORBIDDEN",
-          "You can only access your region data",
+          "Only administrators can filter by arbitrary region",
           403
         );
       }

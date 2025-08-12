@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,6 +47,7 @@ const baseTaskFormSchema = z.object({
 type TaskFormData = z.infer<typeof baseTaskFormSchema>;
 
 export function TaskForm() {
+  const { data: session } = useSession();
   const { isSheetOpen, closeTaskSheet, fetchTasks, selectedTask } = useTaskStore();
   const { regions, areas, fetchRegions, fetchAreas } = useRegionsStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,31 +98,78 @@ export function TaskForm() {
           dueDate: "",
         });
       }
-      // fetch MR users for assignee dropdown
-      fetch(`/api/users?role=MR&page=1&limit=50`)
-        .then((r) => r.json())
-        .then(
-          (res: {
+      // Fetch MR users for assignee dropdown
+      // - For Lead MR: only their team members (and implicitly same region via server)
+      // - For Admin: all MRs
+      const role = session?.user?.role;
+      const userId = session?.user?.id as string | undefined;
+
+      const fetchAssignees = async () => {
+        try {
+          if (role === "LEAD_MR" && userId) {
+            // Prefer team list first
+            const r = await fetch(`/api/users/${userId}/team`);
+            const res: {
+              success: boolean;
+              data?: {
+                teamMembers?: Array<{
+                  id: string;
+                  name: string;
+                  username: string;
+                }>;
+              };
+            } = await r.json();
+            if (res?.success && res?.data?.teamMembers) {
+              setMrs(
+                res.data.teamMembers.map((u) => ({
+                  id: u.id,
+                  name: u.name,
+                  username: u.username,
+                }))
+              );
+              return;
+            }
+            // Fallback: include same-region MRs if any
+            const r2 = await fetch(`/api/users?role=MR&assignable=true&page=1&limit=50`);
+            const res2: {
+              success: boolean;
+              data?: { data?: Array<{ id: string; name: string; username: string }> };
+            } = await r2.json();
+            if (res2?.success && res2?.data?.data) {
+              setMrs(res2.data.data);
+              return;
+            }
+            setMrs([]);
+            return;
+          }
+
+          // Default (ADMIN or fallback): list all MRs
+          const r = await fetch(`/api/users?role=MR&page=1&limit=50`);
+          const res: {
             success: boolean;
             data?: {
               data?: Array<{ id: string; name: string; username: string }>;
             };
-          }) => {
-            if (res?.success && res?.data?.data) {
-              const list = res.data.data.map((u) => ({
+          } = await r.json();
+          if (res?.success && res?.data?.data) {
+            setMrs(
+              res.data.data.map((u) => ({
                 id: u.id,
                 name: u.name,
                 username: u.username,
-              }));
-              setMrs(list);
-            } else {
-              setMrs([]);
-            }
+              }))
+            );
+          } else {
+            setMrs([]);
           }
-        )
-        .catch(() => setMrs([]));
+        } catch {
+          setMrs([]);
+        }
+      };
+
+      fetchAssignees();
     }
-  }, [isSheetOpen, fetchRegions, form, fetchAreas, selectedTask]);
+  }, [isSheetOpen, fetchRegions, form, fetchAreas, selectedTask, session?.user?.role, session?.user?.id]);
 
   // Load areas when region changes
   useEffect(() => {

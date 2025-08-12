@@ -1,21 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server'
+// Avoid NextRequest constructor in Jest; use standard Request
+
+// Mock NextResponse.json to use global Response in tests
+jest.mock('next/server', () => ({
+  NextResponse: {
+    json: (body: unknown, init?: { status?: number }) =>
+      new Response(JSON.stringify(body), {
+        status: init?.status ?? 200,
+        headers: { 'content-type': 'application/json' },
+      }) as unknown as Response,
+  },
+}))
 import { POST } from '../checkout/route'
 import * as prismaModule from '../../../../../__mocks__/prisma'
+import { NextRequest } from 'next/server'
 
 // Mock prisma client used by the route
-jest.mock('@/lib/prisma', () => prismaModule)
+/* eslint-disable @typescript-eslint/no-require-imports */
+jest.mock('@/lib/prisma', () => require('../../../../../__mocks__/prisma'))
 
 // Mutable mock for getAuthenticatedUser
-const getAuthenticatedUserMock = jest.fn()
+const getAuthenticatedUserMock: jest.Mock<Promise<{ id: string; role: string } | null>> = jest.fn()
 
-// Mock only the pieces we use from api-utils
+// Mock only the pieces we use from api-utils and avoid NextResponse in tests
 jest.mock('@/lib/api-utils', () => {
   const real = jest.requireActual('@/lib/api-utils')
   return {
     ...real,
     getAuthenticatedUser: (...args: unknown[]) => getAuthenticatedUserMock(...args),
     errorResponse: (code: string, message?: string, status = 400) =>
-      NextResponse.json({ error: code, message }, { status }),
+      new Response(JSON.stringify({ error: code, message }), { status, headers: { 'content-type': 'application/json' } }) as unknown as Response,
   }
 })
 
@@ -23,16 +36,11 @@ jest.mock('@/lib/api-utils', () => {
 const { prisma } = prismaModule
 
 function makeRequest(body: Record<string, unknown>, headers?: Record<string, string>) {
-  const url = new URL('http://localhost:3000/api/tracking/checkout')
-  const init: RequestInit = {
+  return new Request('http://localhost:3000/api/tracking/checkout', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      ...(headers || {}),
-    },
+    headers: new Headers({ 'content-type': 'application/json', ...(headers || {}) }),
     body: JSON.stringify(body),
-  }
-  return new NextRequest(url, init)
+  })
 }
 
 describe('checkout auth', () => {
@@ -44,7 +52,7 @@ describe('checkout auth', () => {
     getAuthenticatedUserMock.mockResolvedValueOnce(null)
 
     const req = makeRequest({ sessionId: 's1', checkOut: new Date().toISOString() })
-    const res = await POST(req)
+    const res = await POST(req as NextRequest)
 
     expect(res.status).toBe(401)
   })
@@ -85,7 +93,7 @@ describe('checkout auth', () => {
       { authorization: 'Bearer test-token' }
     )
 
-    const res = await POST(req)
+    const res = await POST(req as NextRequest)
     const json = await res.json()
 
     expect(res.status).toBe(200)

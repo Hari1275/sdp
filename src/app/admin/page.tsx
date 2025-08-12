@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Building2, MapPin, CheckSquare, TrendingUp, Activity, Clock, AlertCircle } from 'lucide-react';
+import { Users, Building2, MapPin, CheckSquare, TrendingUp, Activity, AlertCircle } from 'lucide-react';
 import { apiGet } from '@/lib/api-client';
 import Link from 'next/link';
-import { format, formatDistance } from 'date-fns';
+// import { format, formatDistance } from 'date-fns';
 
 interface DashboardStats {
   totalUsers: number;
@@ -36,7 +36,8 @@ export default function AdminDashboard() {
     completedTasks: 0,
     totalAreas: 0,
   });
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  // Recent activity removed; keep setter no-op to avoid unused var
+  const [, setRecentActivities] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,38 +97,8 @@ export default function AdminDashboard() {
           completedTasks,
         });
 
-        // Mock recent activities for now
-        const mockActivities: RecentActivity[] = [
-          {
-            id: '1',
-            type: 'user_created',
-            description: 'New user "John Doe" was created',
-            timestamp: new Date(Date.now() - 10 * 60 * 1000),
-            user: 'Admin'
-          },
-          {
-            id: '2',
-            type: 'task_completed',
-            description: 'Task "Client Visit - ABC Clinic" was completed',
-            timestamp: new Date(Date.now() - 30 * 60 * 1000),
-            user: 'MR001'
-          },
-          {
-            id: '3',
-            type: 'client_added',
-            description: 'New client "XYZ Hospital" was added',
-            timestamp: new Date(Date.now() - 60 * 60 * 1000),
-            user: 'LEAD001'
-          },
-          {
-            id: '4',
-            type: 'user_updated',
-            description: 'User "Jane Smith" role was updated to Lead MR',
-            timestamp: new Date(Date.now() - 120 * 60 * 1000),
-            user: 'Admin'
-          },
-        ];
-        setRecentActivities(mockActivities);
+        // Remove hardcoded Recent Activity; leave empty until real data is wired
+        setRecentActivities([]);
         
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -332,57 +303,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* System Status */}
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Recent Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentActivities.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Clock className="h-10 w-10 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No recent activities found</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {recentActivities.map((activity) => {
-                const getActivityIcon = () => {
-                  switch (activity.type) {
-                    case 'user_created':
-                    case 'user_updated':
-                      return <Users className="h-4 w-4 text-blue-500" />;
-                    case 'task_completed':
-                      return <CheckSquare className="h-4 w-4 text-green-500" />;
-                    case 'client_added':
-                      return <Building2 className="h-4 w-4 text-purple-500" />;
-                    default:
-                      return <Activity className="h-4 w-4" />;
-                  }
-                };
-
-                return (
-                  <div key={activity.id} className="flex items-start gap-2 border-b border-gray-100 pb-4">
-                    <div className="mt-1">{getActivityIcon()}</div>
-                    <div className="flex-1">
-                      <p className="text-sm">{activity.description}</p>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                        <span>{activity.user}</span>
-                        <span>•</span>
-                        <span title={format(activity.timestamp, 'PPpp')}>
-                          {formatDistance(activity.timestamp, new Date(), { addSuffix: true })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Recent Activity removed (placeholder until real data is wired) */}
 
       {/* System Status */}
       <Card>

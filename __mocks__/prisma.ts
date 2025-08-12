@@ -10,12 +10,27 @@ export const prisma = {
   gPSLog: {
     create: jest.fn(),
     createMany: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
   },
   dailySummary: {
     upsert: jest.fn(),
   },
   user: {
     findUnique: jest.fn(),
+    count: jest.fn(),
+    findMany: jest.fn(),
+  },
+  client: {
+    count: jest.fn(),
+  },
+  task: {
+    findMany: jest.fn(),
+    count: jest.fn(),
+    groupBy: jest.fn(),
+  },
+  businessEntry: {
+    groupBy: jest.fn(),
   },
 };
 

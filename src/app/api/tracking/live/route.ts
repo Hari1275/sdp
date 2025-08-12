@@ -33,9 +33,8 @@ export async function GET(request: NextRequest) {
         allowedUserWhere = { id: user.id };
         break;
       case UserRole.LEAD_MR:
-        allowedUserWhere = {
-          OR: [{ regionId: user.regionId || undefined }, { leadMrId: user.id }],
-        };
+        // Restrict to self + direct team only (no full region)
+        allowedUserWhere = { OR: [{ id: user.id }, { leadMrId: user.id }] };
         break;
       case UserRole.ADMIN:
       default:
@@ -50,9 +49,7 @@ export async function GET(request: NextRequest) {
         userWhere = { id: user.id };
         break;
       case UserRole.LEAD_MR:
-        userWhere = {
-          OR: [{ regionId: user.regionId || undefined }, { leadMrId: user.id }],
-        };
+        userWhere = { OR: [{ id: user.id }, { leadMrId: user.id }] };
         break;
       case UserRole.ADMIN:
       default:

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import * as Sentry from "@sentry/nextjs";
 import { Inter } from "next/font/google";
 import NextAuthSessionProvider from "@/providers/session-provider";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,6 +15,9 @@ export const metadata: Metadata = {
   description: "Field management solution for SDP Ayurveda with GPS tracking and performance analytics",
   keywords: ["ayurveda", "field management", "GPS tracking", "dashboard", "MR management"],
   authors: [{ name: "SDP Ayurveda" }],
+  other: {
+    ...Sentry.getTraceData(),
+  },
   icons: {
     icon: [
       { url: "/favicon.png", type: "image/png", sizes: "32x32" },

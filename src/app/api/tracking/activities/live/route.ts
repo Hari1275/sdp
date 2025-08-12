@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         break;
       case UserRole.LEAD_MR:
         userWhere = {
-          OR: [{ regionId: user.regionId || undefined }, { leadMrId: user.id }],
+          OR: [{ id: user.id }, { leadMrId: user.id }],
         };
         break;
       case UserRole.ADMIN:

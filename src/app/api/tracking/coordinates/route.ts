@@ -238,10 +238,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify session ownership
+    // Verify session ownership or team access for Lead MR
     const gpsSession = await prisma.gPSSession.findUnique({
       where: { id: sessionId },
-      select: { userId: true, checkIn: true, checkOut: true }
+      select: { userId: true, checkIn: true, checkOut: true, user: { select: { leadMrId: true } } }
     });
 
     if (!gpsSession) {
@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
     // Check access permissions
     const hasAccess = gpsSession.userId === session.user.id || 
                      session.user.role === 'ADMIN' || 
-                     session.user.role === 'LEAD_MR';
+                     (session.user.role === 'LEAD_MR' && gpsSession.user?.leadMrId === session.user.id);
 
     if (!hasAccess) {
       return NextResponse.json(

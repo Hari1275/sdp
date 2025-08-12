@@ -33,8 +33,9 @@ function getUserWhereByRole(user: {
     case UserRole.MR:
       return { id: user.id };
     case UserRole.LEAD_MR:
+      // Restrict to self + direct team only (no full region)
       return {
-        OR: [{ regionId: user.regionId || undefined }, { leadMrId: user.id }],
+        OR: [{ id: user.id }, { leadMrId: user.id }],
       } as Record<string, unknown>;
     case UserRole.ADMIN:
     default:
@@ -51,9 +52,10 @@ function getClientWhereByRole(user: {
     case UserRole.MR:
       return { mrId: user.id };
     case UserRole.LEAD_MR:
+      // Clients for self or team, not entire region
       return {
         OR: [
-          { regionId: user.regionId || undefined },
+          { mrId: user.id },
           { mr: { leadMrId: user.id } },
         ],
       } as Record<string, unknown>;
@@ -72,9 +74,9 @@ function getTaskWhereByRole(user: {
     case UserRole.MR:
       return { assigneeId: user.id };
     case UserRole.LEAD_MR:
+      // Tasks for self + team (assignee/creator) only
       return {
         OR: [
-          { regionId: user.regionId || undefined },
           { assignee: { leadMrId: user.id } },
           { assigneeId: user.id },
           { createdById: user.id },
@@ -159,12 +161,9 @@ export async function GET(request: NextRequest) {
             ...(user.role === UserRole.MR
               ? { id: user.id }
               : user.role === UserRole.LEAD_MR
-              ? {
-                  OR: [
-                    { regionId: user.regionId || undefined },
-                    { leadMrId: user.id },
-                  ],
-                }
+             ? {
+                 OR: [{ id: user.id }, { leadMrId: user.id }],
+               }
               : {}),
           },
         }),

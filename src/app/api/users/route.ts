@@ -9,7 +9,6 @@ import {
   validateRequest,
   logError,
   rateLimit,
-  applyRoleBasedFilters,
   parseQueryParams
 } from '@/lib/api-utils';
 import { createUserSchema, CreateUserInput } from '@/lib/validations';
@@ -41,12 +40,31 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { page, limit, role, status, regionId, leadMrId, search } = parseQueryParams(request);
+    const url = new URL(request.url);
+    const assignable = url.searchParams.get('assignable') === 'true';
 
-    // Build base query
-    let whereClause: Record<string, unknown> = {};
-
-    // Apply role-based filtering
-    whereClause = applyRoleBasedFilters(user, whereClause);
+    // Build base query with role-safe filters for User model
+    const whereClause: Record<string, unknown> = {};
+    if (user.role === UserRole.MR) {
+      // MR can only see themselves
+      whereClause.id = user.id;
+    } else if (user.role === UserRole.LEAD_MR) {
+      // Lead MR scope
+      if (assignable && role === UserRole.MR) {
+        // For task assignment: allow MRs in same region or direct team, plus self
+        whereClause.OR = [
+          { leadMrId: user.id },
+          { regionId: user.regionId || undefined },
+          { id: user.id },
+        ];
+      } else {
+        // Default list: self + direct team only
+        whereClause.OR = [
+          { id: user.id },
+          { leadMrId: user.id },
+        ];
+      }
+    }
 
     // Apply filters
     if (role && Object.values(UserRole).includes(role as UserRole)) {

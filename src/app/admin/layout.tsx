@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Settings, LogOut } from "lucide-react";
+import {  LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { filterNavByRole, isPathAllowed, NavItem } from "./navigation-config";
 
@@ -131,11 +131,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                {/* <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator /> */}
                 <DropdownMenuItem onClick={() => setSignoutOpen(true)}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>

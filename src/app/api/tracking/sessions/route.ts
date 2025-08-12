@@ -44,35 +44,35 @@ export async function GET(request: NextRequest) {
 
     // Determine which user's data to retrieve
     let targetUserId = user.id;
-    
     if (userId) {
-      // Check if current user can access other user's data
-      const canAccessOtherUsers = user.role === 'ADMIN' || user.role === 'LEAD_MR';
-      
-      if (userId !== user.id && !canAccessOtherUsers) {
+      // Admin can access anyone; MR only themselves; Lead MR only team/self
+      if (user.role === 'ADMIN') {
+        targetUserId = userId;
+      } else if (user.role === 'MR' && userId !== user.id) {
         return NextResponse.json(
           { error: 'Insufficient permissions to access other user data' },
           { status: 403 }
         );
+      } else if (user.role === 'LEAD_MR') {
+        if (userId === user.id) {
+          targetUserId = userId;
+        } else {
+          const targetUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { leadMrId: true },
+          });
+          if (!targetUser || targetUser.leadMrId !== user.id) {
+            return NextResponse.json(
+              { error: 'Can only access your team members data' },
+              { status: 403 }
+            );
+          }
+          targetUserId = userId;
+        }
       }
-      
-      targetUserId = userId;
     }
 
-    // If Lead MR, verify they can only access their team members
-    if (user.role === 'LEAD_MR' && userId && userId !== user.id) {
-      const targetUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { leadMrId: true }
-      });
-
-      if (!targetUser || targetUser.leadMrId !== user.id) {
-        return NextResponse.json(
-          { error: 'Can only access your team members data' },
-          { status: 403 }
-        );
-      }
-    }
+    // Note: Admin path already unrestricted; MR restricted to self above; Lead MR validated above
 
     // Build query conditions
     const whereConditions: Record<string, unknown> = {

@@ -40,32 +40,36 @@ export async function GET(request: NextRequest) {
     let targetUserId = user.id;
     
     if (userId) {
-      const canAccessOtherUsers = user.role === 'ADMIN' || user.role === 'LEAD_MR';
-      
-      if (userId !== user.id && !canAccessOtherUsers) {
-        return NextResponse.json(
-          { error: 'Insufficient permissions' },
-          { status: 403 }
-        );
+      if (user.role === 'ADMIN') {
+        targetUserId = userId;
+      } else if (user.role === 'MR') {
+        if (userId !== user.id) {
+          return NextResponse.json(
+            { error: 'Insufficient permissions' },
+            { status: 403 }
+          );
+        }
+        targetUserId = userId;
+      } else if (user.role === 'LEAD_MR') {
+        if (userId === user.id) {
+          targetUserId = userId;
+        } else {
+          const targetUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { leadMrId: true },
+          });
+          if (!targetUser || targetUser.leadMrId !== user.id) {
+            return NextResponse.json(
+              { error: 'Can only access your team members data' },
+              { status: 403 }
+            );
+          }
+          targetUserId = userId;
+        }
       }
-      
-      targetUserId = userId;
     }
 
-    // For Lead MR, verify team access
-    if (user.role === 'LEAD_MR' && userId && userId !== user.id) {
-      const targetUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { leadMrId: true }
-      });
-
-      if (!targetUser || targetUser.leadMrId !== user.id) {
-        return NextResponse.json(
-          { error: 'Can only access your team members data' },
-          { status: 403 }
-        );
-      }
-    }
+    // Lead MR team validation handled above
 
     // Parse target date
     const targetDate = new Date(date);
