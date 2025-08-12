@@ -255,7 +255,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       <div className="flex items-start">
         {/* Sidebar */}
-        <nav className="hidden lg:block fixed left-0 top-[64px] w-64 bg-white border-r border-gray-200 h-[calc(100vh-64px)] overflow-y-auto z-40">
+        <nav className="hidden lg:block fixed left-0 top-14 lg:top-16 w-64 bg-white border-r border-gray-200 h-[calc(100vh-56px)] lg:h-[calc(100vh-64px)] overflow-y-auto z-40">
           <div className="p-6">
             <div className="space-y-1">
               {allowedNav.map((item: NavItem) => {
