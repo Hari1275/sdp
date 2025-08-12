@@ -82,32 +82,65 @@ export function errorResponse(
 // Rate Limiting
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
+/**
+ * Extract a reliable client IP from common proxy headers.
+ * Falls back to "anonymous" if none are present.
+ */
+export function getClientIp(request: NextRequest): string {
+  const cfIp = request.headers.get("cf-connecting-ip");
+  if (cfIp) return cfIp;
+
+  const xff = request.headers.get("x-forwarded-for");
+  if (xff) {
+    // First IP in the XFF list is the original client IP
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp;
+
+  const clientIp = request.headers.get("x-client-ip");
+  if (clientIp) return clientIp;
+
+  // NextRequest doesn't always expose a direct IP; keep a sane fallback
+  return "anonymous";
+}
+
+/**
+ * Simple in-memory rate limiter keyed by IP, with optional suffix to create a composite key
+ * (e.g., IP + username) to avoid shared-IP thundering herd issues.
+ */
 export function rateLimit(
   request: NextRequest,
   limit = 100,
-  windowMs = 15 * 60 * 1000
+  windowMs = 15 * 60 * 1000,
+  keySuffix?: string
 ): boolean {
-  const ip =
-    request.headers.get("x-forwarded-for") ||
-    request.headers.get("x-real-ip") ||
-    "anonymous";
+  const ip = getClientIp(request);
+  const key = keySuffix ? `${ip}:${keySuffix}` : ip;
   const now = Date.now();
-  const userLimit = rateLimitMap.get(ip);
+  const bucket = rateLimitMap.get(key);
 
-  if (!userLimit || now > userLimit.resetTime) {
-    rateLimitMap.set(ip, {
+  if (!bucket || now > bucket.resetTime) {
+    rateLimitMap.set(key, {
       count: 1,
       resetTime: now + windowMs,
     });
     return true;
   }
 
-  if (userLimit.count >= limit) {
+  if (bucket.count >= limit) {
     return false;
   }
 
-  userLimit.count++;
+  bucket.count++;
   return true;
+}
+
+// Test helper to reset the in-memory rate limit store
+export function __resetRateLimitStore() {
+  rateLimitMap.clear();
 }
 
 // Authentication helpers

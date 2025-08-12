@@ -53,8 +53,12 @@ function generateMobileToken(user: UserForToken) {
 // POST /api/auth/mobile/login - Mobile login endpoint
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    if (!rateLimit(request, 10, 15 * 60 * 1000)) { // 10 requests per 15 minutes
+    // Read request body first to allow composite keying (IP + username)
+    const body = await request.json()
+
+    // Rate limiting (10 requests per 15 minutes per IP+username; falls back to IP if username missing)
+    const keySuffix = typeof body?.username === 'string' ? body.username : undefined
+    if (!rateLimit(request, 10, 15 * 60 * 1000, keySuffix)) {
       return errorResponse(
         'RATE_LIMIT_EXCEEDED',
         'Too many login attempts. Please try again later.',
@@ -63,7 +67,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate request body
-    const body = await request.json()
     const validation = validateRequest(loginSchema, body)
     
     if (!validation.success) {

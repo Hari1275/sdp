@@ -15,7 +15,7 @@ import {
 // POST /api/auth/mobile/refresh - Refresh JWT token
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting - more generous for refresh requests
+    // Rate limiting - more generous for refresh requests (key by IP)
     if (!rateLimit(request, 20, 15 * 60 * 1000)) { // 20 requests per 15 minutes
       return errorResponse(
         'RATE_LIMIT_EXCEEDED',

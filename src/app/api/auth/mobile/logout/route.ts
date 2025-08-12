@@ -14,7 +14,7 @@ import {
 // POST /api/auth/mobile/logout - Mobile logout endpoint
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
+    // Rate limiting (key by IP)
     if (!rateLimit(request, 20, 15 * 60 * 1000)) { // 20 requests per 15 minutes
       return errorResponse(
         'RATE_LIMIT_EXCEEDED',
