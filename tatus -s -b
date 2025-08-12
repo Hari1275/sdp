@@ -1,0 +1,78 @@
+2825a16Mon Aug 11 18:05:31 2025Hariprasad Knew update
+ public/favicon.ico       | Bin [31m0[m -> [32m25931[m bytes
+ src/app/admin/layout.tsx |  26 [32m+++++++++++++++++++++++[m[31m---[m
+ 2 files changed, 23 insertions(+), 3 deletions(-)
+
+63a3937Mon Aug 11 17:48:33 2025Hariprasad Knew update
+ public/favicon.png       | Bin [31m0[m -> [32m1292[m bytes
+ public/file.svg          |   1 [31m-[m
+ public/globe.svg         |   1 [31m-[m
+ public/logo.png          | Bin [31m0[m -> [32m105374[m bytes
+ public/next.svg          |   1 [31m-[m
+ public/vercel.svg        |   1 [31m-[m
+ public/window.svg        |   1 [31m-[m
+ src/app/admin/layout.tsx |  26 [32m++++++[m[31m----[m
+ src/app/favicon-old.ico  | Bin [31m0[m -> [32m25931[m bytes
+ src/app/favicon.png      | Bin [31m0[m -> [32m1292[m bytes
+ src/app/icon.png         | Bin [31m0[m -> [32m1292[m bytes
+ src/app/layout.tsx       |  12 [32m+++++[m
+ src/app/login/page.tsx   |   2 [32m+[m[31m-[m
+ src/app/page.tsx         | 122 [32m++[m[31m---------------------------------------------[m
+ 14 files changed, 33 insertions(+), 134 deletions(-)
+
+7bdb5b3Mon Aug 11 16:36:50 2025Hariprasad Knew update
+ src/app/admin/clients/page.tsx                     | 222 [32m++++++++++++[m[31m---------[m
+ src/app/admin/layout.tsx                           |   4 [32m+[m[31m-[m
+ src/app/admin/navigation-config.ts                 |   3 [32m+[m[31m-[m
+ src/app/admin/tasks/page.tsx                       | 129 [32m+++++++++[m[31m---[m
+ src/app/admin/tasks/task-details-modal.tsx         |  80 [32m++++++++[m
+ src/app/admin/tasks/task-form.tsx                  |  50 [32m+++[m[31m--[m
+ src/app/api/reports/route.ts                       |   1 [31m-[m
+ .../api/tracking/__tests__/checkout-auth.test.ts   | 100 [32m++++++++++[m
+ src/app/api/tracking/analytics/daily/route.ts      |  23 [32m+[m[31m--[m
+ src/app/api/tracking/analytics/monthly/route.ts    |  23 [32m+[m[31m--[m
+ src/app/api/tracking/analytics/weekly/route.ts     |  23 [32m+[m[31m--[m
+ src/app/api/tracking/checkout/route.ts             |  45 [32m++[m[31m---[m
+ src/store/client-store.ts                          |  59 [32m+++++[m[31m-[m
+ src/store/task-store.ts                            |  60 [32m++++[m[31m--[m
+ 14 files changed, 596 insertions(+), 226 deletions(-)
+
+2aef42fMon Aug 11 15:27:05 2025Hariprasad Krole base menu
+ src/app/admin/__tests__/navigation-config.test.ts | 29 [32m++++++++[m
+ src/app/admin/layout.tsx                          | 80 [32m++++[m[31m------------------[m
+ src/app/admin/navigation-config.ts                | 83 [32m+++++++++++++++++++++++[m
+ src/app/login/page.tsx                            |  2 [32m+[m[31m-[m
+ src/app/unauthorized/page.tsx                     |  2 [32m+[m[31m-[m
+ src/middleware.ts                                 | 14 [32m++[m[31m--[m
+ 6 files changed, 136 insertions(+), 74 deletions(-)
+
+b3856b0Mon Aug 11 15:14:23 2025Hariprasad Knew update form
+ src/components/ui/input.tsx                   | 2 [32m+[m[31m-[m
+ src/components/ui/scrollable-form-content.tsx | 2 [32m+[m[31m-[m
+ src/components/ui/select.tsx                  | 2 [32m+[m[31m-[m
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+65b755cMon Aug 11 15:00:19 2025Hariprasad Knew update
+ sentry.client.config.ts                     | 2 [31m--[m
+ src/app/api/reports/export/route.ts         | 2 [32m+[m[31m-[m
+ src/app/api/reports/route.ts                | 2 [32m+[m[31m-[m
+ src/components/reports/export-interface.tsx | 2 [32m+[m[31m-[m
+ 4 files changed, 3 insertions(+), 5 deletions(-)
+
+4bbd591Mon Aug 11 14:47:10 2025Hariprasad Knew update
+ src/app/api/tracking/coordinates/batch/route.ts | 2 [32m++[m
+ src/app/api/tracking/coordinates/route.ts       | 2 [32m++[m
+ 2 files changed, 4 insertions(+)
+
+f82f236Mon Aug 11 14:37:37 2025Hariprasad Knew update
+ docs/API-Simple-Endpoints.md                    | 147 [32m++++++++++++++++++++++++[m
+ src/app/admin/layout.tsx                        |  39 [32m++[m[31m-----[m
+ src/app/admin/tracking/page.tsx                 |  34 [32m++++[m[31m--[m
+ src/app/api/tracking/checkin/route.ts           |   1 [32m+[m
+ src/app/api/tracking/coordinates/batch/route.ts |  40 [32m++[m[31m-----[m
+ src/app/api/tracking/coordinates/route.ts       |  39 [32m++[m[31m-----[m
+ src/app/api/tracking/live/route.ts              |  46 [32m+++++++[m[31m-[m
+ src/app/api/tracking/sessions/route.ts          |  17 [32m+[m[31m--[m
+ src/app/layout.tsx                              |   1 [32m+[m
+ src/components/tracking/live-map.tsx            | 100 [32m+++++++++[m[31m-------[m
+ 10 files changed, 313 insertions(+), 151 deletions(-)

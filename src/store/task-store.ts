@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { apiPost, apiPut, apiDelete, safeApiCall } from "@/lib/api-client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api-client";
 import type { Task } from "@/types";
 
 export type TaskFilters = {
@@ -52,7 +52,6 @@ interface TaskStore {
     status: "PENDING" | "IN_PROGRESS" | "CANCELLED"
   ) => Promise<void>;
   completeTask: (taskId: string, notes?: string) => Promise<void>;
-  updateTask: (taskId: string, data: Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
 }
 
@@ -67,44 +66,24 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   selectedTask: null,
 
   fetchTasks: async (page = 1, limit = 10) => {
-    set({ isLoading: true, error: null, pagination: { ...get().pagination, page, limit } });
+    set({
+      isLoading: true,
+      error: null,
+      pagination: { ...get().pagination, page, limit },
+    });
     try {
-      const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
       const { filters } = get();
       Object.entries(filters).forEach(([k, v]) => {
         if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
       });
-      const result = await safeApiCall<{
-        data: Array<Task & { isOverdue?: boolean }>;
-        pagination: { page: number; limit: number; total: number; totalPages: number; hasNext: boolean; hasPrev: boolean };
-      }>(`/api/tasks?${params.toString()}`);
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      type PaginatedTasks = {
-        data: Array<Task & { isOverdue?: boolean }>;
-        pagination: { page: number; limit: number; total: number; totalPages: number; hasNext: boolean; hasPrev: boolean };
-      };
-      const payload = result.data as PaginatedTasks | Array<Task & { isOverdue?: boolean }>;
-      let list: Array<Task & { isOverdue?: boolean }> = [];
-      let pg = { page, limit, total: 0, totalPages: 0, hasNext: false, hasPrev: page > 1 };
-      if (Array.isArray(payload)) {
-        list = payload;
-        pg = { page, limit, total: payload.length, totalPages: Math.ceil(payload.length / limit), hasNext: false, hasPrev: page > 1 };
-      } else if (payload && Array.isArray(payload.data)) {
-        list = payload.data;
-        pg = payload.pagination;
-      }
-      set({
-        tasks: list,
-        isLoading: false,
-        pagination: {
-          page: pg.page ?? page,
-          limit: pg.limit ?? limit,
-          total: pg.total ?? list.length,
-          totalPages: pg.totalPages ?? Math.ceil((pg.total ?? list.length) / (pg.limit ?? limit)),
-        },
-      });
+      const list = await apiGet<Task & { isOverdue?: boolean }>(
+        `/api/tasks?${params.toString()}`
+      );
+      set({ tasks: list, isLoading: false });
     } catch (error) {
       console.error("Failed to fetch tasks", error);
       set({
@@ -146,12 +125,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     await get().fetchTasks(get().pagination.page, get().pagination.limit);
   },
 
-  // Additional actions
-  updateTask: async (taskId: string, data: Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>>) => {
-    await apiPut(`/api/tasks/${taskId}`, data);
-    await get().fetchTasks(get().pagination.page, get().pagination.limit);
-  },
-  deleteTask: async (taskId: string) => {
+  deleteTask: async (taskId) => {
     await apiDelete(`/api/tasks/${taskId}`);
     await get().fetchTasks(get().pagination.page, get().pagination.limit);
   },
