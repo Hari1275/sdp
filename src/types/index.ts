@@ -140,6 +140,10 @@ export interface Task {
     id: string
     name: string
     username: string
+    leadMr?: {
+      id: string
+      name: string
+    }
   }
   createdBy: {
     id: string

@@ -23,6 +23,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { TaskFormDynamic } from "@/components/portal-safe";
+import { apiGet } from "@/lib/api-client";
 import { TaskDetailsModal } from './task-details-modal';
 import { ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
 import {
@@ -58,11 +59,35 @@ export default function TasksAdminPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [priority, setPriority] = useState<PriorityFilter>("ALL");
+  const [assignee, setAssignee] = useState<string>("ALL");
+  const [mrOptions, setMrOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const setTodayDone = () => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    setFilters({
+      status: "COMPLETED",
+      completedFrom: start.toISOString(),
+      completedTo: end.toISOString(),
+    });
+    fetchTasks(1, pagination.limit);
+  };
   const [viewTask, setViewTask] = useState<(typeof tasks)[number] | null>(null);
 
   useEffect(() => {
     fetchTasks(1, 10);
   }, [fetchTasks]);
+
+  useEffect(() => {
+    const loadMRs = async () => {
+      const users = await apiGet<{ id: string; name: string }>(
+        "/api/users?role=MR&assignable=true&limit=100"
+      );
+      setMrOptions(users);
+    };
+    loadMRs();
+  }, []);
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -76,6 +101,7 @@ export default function TasksAdminPage() {
   const applyFilters = () => {
     const statusValue = status === "ALL" ? undefined : status;
     const priorityValue = priority === "ALL" ? undefined : priority;
+    const assigneeValue = assignee === "ALL" ? undefined : assignee;
     setFilters({
       search: search || undefined,
       status: statusValue as
@@ -90,6 +116,7 @@ export default function TasksAdminPage() {
         | "HIGH"
         | "URGENT"
         | undefined,
+      assigneeId: assigneeValue,
     });
     fetchTasks(1, pagination.limit);
   };
@@ -163,9 +190,9 @@ export default function TasksAdminPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="relative w-full h-10">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
               <Input
                 placeholder="Search tasks..."
                 value={search}
@@ -177,7 +204,7 @@ export default function TasksAdminPage() {
               value={status}
               onValueChange={(v) => setStatus(v as StatusFilter)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -192,7 +219,7 @@ export default function TasksAdminPage() {
               value={priority}
               onValueChange={(v) => setPriority(v as PriorityFilter)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
@@ -203,20 +230,42 @@ export default function TasksAdminPage() {
                 <SelectItem value="URGENT">Urgent</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={applyFilters}>
+            <Select value={assignee} onValueChange={(v) => setAssignee(v)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All MRs</SelectItem>
+                {mrOptions.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="col-span-1 sm:col-span-2 lg:col-span-1 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
+              <Button className="w-full sm:w-auto" size="sm" variant="outline" onClick={applyFilters}>
                 Apply
               </Button>
+                <Button className="w-full sm:w-auto" size="sm" variant="secondary" onClick={setTodayDone}>
+                  Today Done
+                </Button>
               <Button
+                className="w-full sm:w-auto"
+                size="sm"
                 variant="ghost"
                 onClick={() => {
                   setSearch("");
                   setStatus("ALL");
                   setPriority("ALL");
+                  setAssignee("ALL");
                   setFilters({
                     search: undefined,
                     status: undefined,
                     priority: undefined,
+                    assigneeId: undefined,
+                      completedFrom: undefined,
+                      completedTo: undefined,
                   });
                   fetchTasks(1, pagination.limit);
                 }}
@@ -273,19 +322,19 @@ export default function TasksAdminPage() {
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
-                      <th className="py-2 pr-4">Title</th>
-                      <th className="py-2 pr-4">Assignee</th>
-                      <th className="py-2 pr-4">Region / Area</th>
-                      <th className="py-2 pr-4">Priority</th>
-                      <th className="py-2 pr-4">Status</th>
-                      <th className="py-2 pr-4">Due</th>
-                      <th className="py-2 pr-4 text-right">Actions</th>
+                      <th className="py-2 pr-4 whitespace-nowrap">Title</th>
+                      <th className="py-2 pr-4 whitespace-nowrap">Assignee</th>
+                      <th className="py-2 pr-4 whitespace-nowrap hidden sm:table-cell">Region / Area</th>
+                      <th className="py-2 pr-4 whitespace-nowrap">Priority</th>
+                      <th className="py-2 pr-4 whitespace-nowrap">Status</th>
+                      <th className="py-2 pr-4 whitespace-nowrap hidden sm:table-cell">Due</th>
+                      <th className="py-2 pr-4 text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {tasks.map((task) => (
                       <tr key={task.id} className="border-t">
-                        <td className="py-2 pr-4">
+                        <td className="py-2 pr-4 align-top">
                           <div className="font-medium">{task.title}</div>
                           {task.description && (
                             <div className="text-xs text-muted-foreground line-clamp-1">
@@ -293,14 +342,14 @@ export default function TasksAdminPage() {
                             </div>
                           )}
                         </td>
-                        <td className="py-2 pr-4">
+                        <td className="py-2 pr-4 align-top whitespace-nowrap">
                           {task.assignee?.name || "-"}
                         </td>
-                        <td className="py-2 pr-4">
+                        <td className="py-2 pr-4 align-top hidden sm:table-cell whitespace-nowrap">
                           {task.region?.name}
                           {task.area ? ` / ${task.area.name}` : ""}
                         </td>
-                        <td className="py-2 pr-4">
+                        <td className="py-2 pr-4 align-top">
                           <Badge
                             variant={
                               task.priority === "HIGH" ||
@@ -312,7 +361,7 @@ export default function TasksAdminPage() {
                             {task.priority}
                           </Badge>
                         </td>
-                        <td className="py-2 pr-4">
+                        <td className="py-2 pr-4 align-top">
                           <Badge
                             variant={
                               task.status === "COMPLETED"
@@ -330,13 +379,13 @@ export default function TasksAdminPage() {
                             </Badge>
                           )}
                         </td>
-                        <td className="py-2 pr-4">
+                        <td className="py-2 pr-4 align-top hidden sm:table-cell whitespace-nowrap">
                           {task.dueDate
                             ? new Date(task.dueDate).toLocaleDateString()
                             : "-"}
                         </td>
                         <td className="py-2 pr-0 text-right">
-                          <div className="flex gap-2 justify-end">
+                          <div className="flex gap-2 justify-end flex-wrap sm:flex-nowrap">
                             {/* View details: always available */}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>

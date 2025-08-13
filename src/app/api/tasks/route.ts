@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || undefined;
     const dueDateFrom = searchParams.get("dueDateFrom") || undefined;
     const dueDateTo = searchParams.get("dueDateTo") || undefined;
+    const completedFrom = searchParams.get("completedFrom") || undefined;
+    const completedTo = searchParams.get("completedTo") || undefined;
 
     // Build base query with role-based filtering
     const whereClause: Record<string, unknown> = {};
@@ -74,8 +76,23 @@ export async function GET(request: NextRequest) {
       whereClause.status = status;
     }
 
-    if (assignedTo && user.role === UserRole.ADMIN) {
-      whereClause.assigneeId = assignedTo;
+    if (assignedTo) {
+      if (user.role === UserRole.ADMIN) {
+        whereClause.assigneeId = assignedTo;
+      } else if (user.role === UserRole.LEAD_MR) {
+        // Lead MR can filter by assignee within their accessible scope
+        (whereClause as { assigneeId?: string }).assigneeId = assignedTo;
+      } else if (user.role === UserRole.MR) {
+        // MR can only filter by themselves
+        if (assignedTo !== user.id) {
+          return errorResponse(
+            "FORBIDDEN",
+            "MR users can only filter their own tasks",
+            403
+          );
+        }
+        whereClause.assigneeId = user.id;
+      }
     }
 
     if (regionId) {
@@ -135,6 +152,15 @@ export async function GET(request: NextRequest) {
         dueDateFilter;
     }
 
+    // Completed date range filters
+    if (completedFrom || completedTo) {
+      const completedFilter: { gte?: Date; lte?: Date } = {};
+      if (completedFrom) completedFilter.gte = new Date(completedFrom);
+      if (completedTo) completedFilter.lte = new Date(completedTo);
+      (whereClause as { completedAt?: { gte?: Date; lte?: Date } }).completedAt =
+        completedFilter;
+    }
+
     // Get total count
     const total = await prisma.task.count({ where: whereClause });
 
@@ -168,6 +194,12 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             username: true,
+            leadMr: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         createdBy: {

@@ -12,6 +12,8 @@ export type TaskFilters = {
   createdById?: string;
   dueDateFrom?: string;
   dueDateTo?: string;
+  completedFrom?: string;
+  completedTo?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 };

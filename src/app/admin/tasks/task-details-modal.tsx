@@ -59,6 +59,7 @@ export function TaskDetailsModal({ task, open, onClose }: TaskDetailsModalProps)
 
         <div className="mt-2 divide-y">
           {infoRow("Assignee", task.assignee?.name)}
+          {infoRow("Lead MR", task.assignee?.leadMr?.name)}
           {infoRow(
             "Region / Area",
             <span>
