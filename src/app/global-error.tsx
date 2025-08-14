@@ -16,3 +16,4 @@ export default function GlobalError({ error }: { error: unknown }) {
     </html>
   );
 }
+

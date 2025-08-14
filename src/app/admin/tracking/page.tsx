@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { calculateTotalDistance } from "@/lib/gps-utils";
 
 type LiveSession = {
   sessionId: string;
@@ -83,6 +84,7 @@ export default function TrackingPage() {
     { lat: number; lng: number } | undefined
   >(undefined);
   const [follow, setFollow] = useState<boolean>(true);
+  const mapSectionRef = useRef<HTMLDivElement | null>(null);
   // Configurable refresh interval (defaults to 30s). Can be overridden via env.
   const REFRESH_MS = useMemo(() => {
     const v = Number(process.env.NEXT_PUBLIC_LIVE_REFRESH_MS ?? 30000);
@@ -119,6 +121,7 @@ export default function TrackingPage() {
   }, [filteredActivities, page]);
 
   const load = async () => {
+    // Initial load with skeleton
     setLoading(true);
     setError(null);
     const res = await safeApiCall<{
@@ -156,6 +159,40 @@ export default function TrackingPage() {
     setLoading(false);
   };
 
+  // Lightweight refresh that avoids skeleton flicker and only updates data
+  const refreshLive = async () => {
+    const res = await safeApiCall<{
+      activeSessions: LiveSession[];
+      summary: {
+        activeCount: number;
+        totalKmToday: number;
+        lastUpdate: string;
+      };
+      teamLocations: typeof locations;
+    }>("/api/tracking/live");
+    if (!res.success) return;
+
+    // Update without toggling loading; preserve UI stability
+    setSessions(res.data.activeSessions);
+    setSummary(res.data.summary);
+    setLocations(res.data.teamLocations || []);
+    setTrails(
+      (
+        res.data.activeSessions as unknown as {
+          userId: string;
+          userName: string;
+          trail?: { lat: number; lng: number; timestamp: string }[];
+        }[]
+      )
+        .filter((s) => Array.isArray(s.trail) && s.trail.length > 1)
+        .map((s) => ({
+          userId: s.userId,
+          userName: s.userName,
+          trail: s.trail!,
+        }))
+    );
+  };
+
   const loadActivities = async () => {
     const params = new URLSearchParams();
     params.set("limit", "200");
@@ -174,8 +211,10 @@ export default function TrackingPage() {
   };
 
   useEffect(() => {
+    // Initial load shows skeleton once
     load();
-    const id = setInterval(load, REFRESH_MS);
+    // Subsequent refreshes update only map-related data and counters
+    const id = setInterval(refreshLive, REFRESH_MS);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [REFRESH_MS]);
@@ -191,7 +230,9 @@ export default function TrackingPage() {
     <div className="p-6 space-y-6" suppressHydrationWarning>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold">Real-Time Tracking</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold">
+            Real-Time Tracking
+          </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
             Live view of active GPS sessions
           </p>
@@ -199,7 +240,11 @@ export default function TrackingPage() {
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-start sm:justify-end mt-2 sm:mt-0">
           {summary && (
             <>
-              <Badge variant="secondary" className="text-xs" suppressHydrationWarning>
+              <Badge
+                variant="secondary"
+                className="text-xs"
+                suppressHydrationWarning
+              >
                 Active: {summary.activeCount}
               </Badge>
               <Badge variant="secondary" className="text-xs">
@@ -207,9 +252,12 @@ export default function TrackingPage() {
                   Total Km: {summary.totalKmToday}
                 </span>
               </Badge>
-                  <span className="text-[11px] sm:text-xs text-muted-foreground" suppressHydrationWarning>
-                    Updated: {new Date(summary.lastUpdate).toLocaleTimeString()}
-                  </span>
+              <span
+                className="text-[11px] sm:text-xs text-muted-foreground"
+                suppressHydrationWarning
+              >
+                Updated: {new Date(summary.lastUpdate).toLocaleTimeString()}
+              </span>
             </>
           )}
           <Button onClick={load} size="sm" className="w-full sm:w-auto">
@@ -228,51 +276,55 @@ export default function TrackingPage() {
         </Card>
       ) : (
         <>
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <CardTitle className="text-base sm:text-lg">Live Map</CardTitle>
-                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                  {selectedTrailUserId && (
-                    <span className="text-[11px] sm:text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700">
-                      Selected:{" "}
-                      {sessions.find((s) => s.userId === selectedTrailUserId)
-                        ?.userName || "User"}
+          <div ref={mapSectionRef}>
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="text-base sm:text-lg">
+                    Live Map
+                  </CardTitle>
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    {selectedTrailUserId && (
+                      <span className="text-[11px] sm:text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700">
+                        Selected:{" "}
+                        {sessions.find((s) => s.userId === selectedTrailUserId)
+                          ?.userName || "User"}
+                      </span>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full sm:w-auto"
+                      onClick={() => setSelectedTrailUserId(null)}
+                      disabled={!selectedTrailUserId}
+                    >
+                      Clear selection
+                    </Button>
+                    <span className="text-[11px] sm:text-xs text-muted-foreground">
+                      Follow selected
                     </span>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    onClick={() => setSelectedTrailUserId(null)}
-                    disabled={!selectedTrailUserId}
-                  >
-                    Clear selection
-                  </Button>
-                  <span className="text-[11px] sm:text-xs text-muted-foreground">
-                    Follow selected
-                  </span>
-                  <Button
-                    variant={follow ? "default" : "outline"}
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    onClick={() => setFollow((v) => !v)}
-                  >
-                    {follow ? "On" : "Off"}
-                  </Button>
+                    <Button
+                      variant={follow ? "default" : "outline"}
+                      size="sm"
+                      className="w-full sm:w-auto"
+                      onClick={() => setFollow((v) => !v)}
+                    >
+                      {follow ? "On" : "Off"}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <LiveMap
-                locations={locations}
-                trails={trails}
-                focus={mapFocus}
-                selectedUserId={selectedTrailUserId}
-                follow={follow}
-              />
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <LiveMap
+                  locations={locations}
+                  trails={trails}
+                  focus={mapFocus}
+                  selectedUserId={selectedTrailUserId}
+                  follow={follow}
+                />
+              </CardContent>
+            </Card>
+          </div>
 
           <Card>
             <CardHeader>
@@ -351,7 +403,7 @@ export default function TrackingPage() {
               <CardTitle>Live Activity Feed</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="mb-2 grid grid-cols-1 md:grid-cols-4 gap-3">
                 <Select
                   value={filterType}
                   onValueChange={(v) => {
@@ -417,6 +469,89 @@ export default function TrackingPage() {
                     setPage(1);
                   }}
                 />
+              </div>
+
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground">
+                  {filterUser !== "ALL" ? (
+                    (() => {
+                      const session =
+                        sessions.find((s) => s.userId === filterUser) || null;
+                      const userTrail =
+                        trails.find((t) => t.userId === filterUser) || null;
+                      const last =
+                        locations
+                          .filter((l) => l.userId === filterUser)
+                          .slice(-1)[0] || null;
+                      return (
+                        <span>
+                          {session ? (
+                            <>
+                              {session.userName}: {session.totalKm.toFixed(2)}{" "}
+                              km today • last update{" "}
+                              {session.last
+                                ? new Date(
+                                    session.last.timestamp
+                                  ).toLocaleTimeString()
+                                : "-"}
+                            </>
+                          ) : userTrail ? (
+                            <>
+                              {userTrail.userName}:{" "}
+                              {(() => {
+                                const km = calculateTotalDistance(
+                                  userTrail.trail.map((p) => ({
+                                    latitude: p.lat,
+                                    longitude: p.lng,
+                                  }))
+                                );
+                                return `${km.toFixed(2)} km`;
+                              })()}{" "}
+                              • points {userTrail.trail.length}
+                            </>
+                          ) : last ? (
+                            <>
+                              {last.userName}: {last.latitude.toFixed(4)},{" "}
+                              {last.longitude.toFixed(4)}
+                            </>
+                          ) : (
+                            <>No live data for selected user</>
+                          )}
+                        </span>
+                      );
+                    })()
+                  ) : (
+                    <span>Select a user to see a concise route summary</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={filterUser === "ALL"}
+                    onClick={() => {
+                      if (filterUser === "ALL") return;
+                      setSelectedTrailUserId(filterUser);
+                      setFollow(true);
+                      // Focus map on last known location for the user if available
+                      const last = locations
+                        .filter((l) => l.userId === filterUser)
+                        .slice(-1)[0];
+                      if (last)
+                        setMapFocus({
+                          lat: last.latitude,
+                          lng: last.longitude,
+                        });
+                      // Smooth scroll to the map section
+                      mapSectionRef.current?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
+                    }}
+                  >
+                    Map view
+                  </Button>
+                </div>
               </div>
 
               <div className="max-h-80 overflow-y-auto space-y-3">
