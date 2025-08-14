@@ -157,8 +157,9 @@ export async function GET(request: NextRequest) {
       const completedFilter: { gte?: Date; lte?: Date } = {};
       if (completedFrom) completedFilter.gte = new Date(completedFrom);
       if (completedTo) completedFilter.lte = new Date(completedTo);
-      (whereClause as { completedAt?: { gte?: Date; lte?: Date } }).completedAt =
-        completedFilter;
+      (
+        whereClause as { completedAt?: { gte?: Date; lte?: Date } }
+      ).completedAt = completedFilter;
     }
 
     // Get total count
@@ -360,7 +361,8 @@ export async function POST(request: NextRequest) {
       data: {
         ...taskData,
         createdById: user.id,
-        status: TaskStatus.PENDING,
+        // Default to IN_PROGRESS so no explicit start step is required
+        status: TaskStatus.IN_PROGRESS,
         dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
       },
       select: {

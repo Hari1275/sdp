@@ -80,7 +80,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       });
       const { filters } = get();
       Object.entries(filters).forEach(([k, v]) => {
-        if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
+        if (v === undefined || v === null || v === "") return;
+        // Backend expects "assignedTo" query param for assignee filter
+        if (k === "assigneeId") {
+          params.set("assignedTo", String(v));
+          return;
+        }
+        params.set(k, String(v));
       });
       const list = await apiGet<Task & { isOverdue?: boolean }>(
         `/api/tasks?${params.toString()}`
