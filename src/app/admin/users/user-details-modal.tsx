@@ -871,7 +871,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                       <div className="mt-1">
                         <DateDisplay
                           date={user.createdAt}
-                          format="PPP 'at' p"
+                          format="PPP 'at' HH:mm"
                           className="text-sm"
                         />
                       </div>
@@ -883,7 +883,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                       <div className="mt-1">
                         <DateDisplay
                           date={user.updatedAt}
-                          format="PPP 'at' p"
+                          format="PPP 'at' HH:mm"
                           className="text-sm"
                         />
                       </div>
@@ -938,10 +938,15 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                               )}-${idx}`}
                               value={s.id}
                             >
-                              {new Date(s.checkIn).toLocaleString()}{" "}
+                              {new Date(s.checkIn).toLocaleString('en-GB', {
+                                day: '2-digit', month: '2-digit', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit', hour12: false
+                              })}{" "}
                               {s.checkOut
                                 ? "→ " +
-                                  new Date(s.checkOut).toLocaleTimeString()
+                                  new Date(s.checkOut).toLocaleTimeString('en-GB', {
+                                    hour: '2-digit', minute: '2-digit', hour12: false
+                                  })
                                 : ""}
                             </option>
                           ))}
@@ -1011,11 +1016,16 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                               <div className="font-medium">
                                 {new Date(
                                   hs.checkIn as string
-                                ).toLocaleString()}{" "}
+                                ).toLocaleString('en-GB', {
+                                  day: '2-digit', month: '2-digit', year: 'numeric',
+                                  hour: '2-digit', minute: '2-digit', hour12: false
+                                })}{" "}
                                 {hs.checkOut
                                   ? `→ ${new Date(
                                       hs.checkOut as string
-                                    ).toLocaleTimeString()}`
+                                    ).toLocaleTimeString('en-GB', {
+                                      hour: '2-digit', minute: '2-digit', hour12: false
+                                    })}`
                                   : ""}
                               </div>
                               <div className="text-muted-foreground">

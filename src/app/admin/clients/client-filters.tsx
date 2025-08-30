@@ -16,13 +16,27 @@ import { Card, CardContent } from '@/components/ui/card';
 import { X, Calendar, MapPin, Building2, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
+// Types for regions and areas
+type Region = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
+type Area = {
+  id: string;
+  name: string;
+  description?: string;
+  regionId: string;
+};
+
 interface ClientFiltersProps {
   filters: FilterType;
   onFiltersChange: (filters: Partial<FilterType>) => void;
   onClearFilters: () => void;
 }
 
-// Mock data for dropdowns - in a real app, these would come from APIs
+// Business types are static
 const businessTypes = [
   { value: 'CLINIC', label: 'Clinic' },
   { value: 'HOSPITAL', label: 'Hospital' },
@@ -31,29 +45,78 @@ const businessTypes = [
   { value: 'HEALTHCARE_CENTER', label: 'Healthcare Center' },
 ];
 
-const regions = [
-  { value: 'region-1', label: 'Mumbai' },
-  { value: 'region-2', label: 'Delhi' },
-  { value: 'region-3', label: 'Bangalore' },
-  { value: 'region-4', label: 'Chennai' },
-];
+// Types for MRs
+type MR = {
+  id: string;
+  name: string;
+  email?: string;
+  role: string;
+  regionId?: string;
+};
 
-const areas = [
-  { value: 'area-1', label: 'Bandra', regionId: 'region-1' },
-  { value: 'area-2', label: 'Andheri', regionId: 'region-1' },
-  { value: 'area-3', label: 'Connaught Place', regionId: 'region-2' },
-  { value: 'area-4', label: 'Karol Bagh', regionId: 'region-2' },
-];
+// Fetch regions and areas data
+const fetchRegions = async (): Promise<Region[]> => {
+  try {
+    const response = await fetch('/api/public/regions');
+    if (!response.ok) throw new Error('Failed to fetch regions');
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('Error fetching regions:', error);
+    return [];
+  }
+};
 
-const mrs = [
-  { value: 'mr-1', label: 'John Doe' },
-  { value: 'mr-2', label: 'Jane Smith' },
-  { value: 'mr-3', label: 'Mike Johnson' },
-  { value: 'mr-4', label: 'Sarah Wilson' },
-];
+const fetchAreas = async (): Promise<Area[]> => {
+  try {
+    const response = await fetch('/api/public/areas');
+    if (!response.ok) throw new Error('Failed to fetch areas');
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('Error fetching areas:', error);
+    return [];
+  }
+};
+
+const fetchMRs = async (): Promise<MR[]> => {
+  try {
+    const response = await fetch('/api/public/users?role=MR');
+    if (!response.ok) throw new Error('Failed to fetch MRs');
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('Error fetching MRs:', error);
+    return [];
+  }
+};
 
 export function ClientFilters({ filters, onFiltersChange, onClearFilters }: ClientFiltersProps) {
   const [localFilters, setLocalFilters] = useState<FilterType>(filters);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [mrs, setMrs] = useState<MR[]>([]);
+  const [isLoadingRegions, setIsLoadingRegions] = useState(true);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(true);
+  const [isLoadingMrs, setIsLoadingMrs] = useState(true);
+
+  // Fetch regions, areas, and MRs on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      const [regionsData, areasData, mrsData] = await Promise.all([
+        fetchRegions(),
+        fetchAreas(),
+        fetchMRs()
+      ]);
+      setRegions(regionsData);
+      setAreas(areasData);
+      setMrs(mrsData);
+      setIsLoadingRegions(false);
+      setIsLoadingAreas(false);
+      setIsLoadingMrs(false);
+    };
+    loadData();
+  }, []);
 
   // Update local state when filters prop changes
   useEffect(() => {
@@ -134,7 +197,7 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
               {localFilters.regionId && (
                 <Badge variant="secondary" className="flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  {regions.find(r => r.value === localFilters.regionId)?.label}
+                  {regions.find(r => r.id === localFilters.regionId)?.name}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -148,7 +211,7 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
               {localFilters.areaId && (
                 <Badge variant="secondary" className="flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  {filteredAreas.find(a => a.value === localFilters.areaId)?.label}
+                  {filteredAreas.find(a => a.id === localFilters.areaId)?.name}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -162,7 +225,7 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
               {localFilters.mrId && (
                 <Badge variant="secondary" className="flex items-center gap-1">
                   <Users className="h-3 w-3" />
-                  {mrs.find(mr => mr.value === localFilters.mrId)?.label}
+                  {mrs.find(mr => mr.id === localFilters.mrId)?.name}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -218,8 +281,8 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
                 <SelectContent>
                   <SelectItem value="all">All regions</SelectItem>
                   {regions.map((region) => (
-                    <SelectItem key={region.value} value={region.value}>
-                      {region.label}
+                    <SelectItem key={region.id} value={region.id}>
+                      {region.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -243,8 +306,8 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
                 <SelectContent>
                   <SelectItem value="all">All areas</SelectItem>
                   {filteredAreas.map((area) => (
-                    <SelectItem key={area.value} value={area.value}>
-                      {area.label}
+                    <SelectItem key={area.id} value={area.id}>
+                      {area.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -267,8 +330,8 @@ export function ClientFilters({ filters, onFiltersChange, onClearFilters }: Clie
                 <SelectContent>
                   <SelectItem value="all">All MRs</SelectItem>
                   {mrs.map((mr) => (
-                    <SelectItem key={mr.value} value={mr.value}>
-                      {mr.label}
+                    <SelectItem key={mr.id} value={mr.id}>
+                      {mr.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -31,9 +31,9 @@ export function TaskDetailsModal({ task, open, onClose }: TaskDetailsModalProps)
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between gap-3">
+          <DialogTitle className="flex items-center justify-between gap-3 pr-8">
             <span className="truncate">{task.title}</span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Badge
                 variant={
                   task.status === "COMPLETED"
@@ -67,10 +67,19 @@ export function TaskDetailsModal({ task, open, onClose }: TaskDetailsModalProps)
               {task.area ? ` / ${task.area.name}` : ""}
             </span>
           )}
-          {infoRow("Due Date", task.dueDate ? new Date(task.dueDate).toLocaleString() : "-")}
+          {infoRow("Due Date", task.dueDate ? new Date(task.dueDate).toLocaleString('en-GB', { 
+            day: '2-digit', month: '2-digit', year: 'numeric', 
+            hour: '2-digit', minute: '2-digit', hour12: false 
+          }) : "-")}
           {infoRow("Created By", task.createdBy?.name)}
-          {infoRow("Created At", new Date(task.createdAt).toLocaleString())}
-          {infoRow("Updated At", new Date(task.updatedAt).toLocaleString())}
+          {infoRow("Created At", new Date(task.createdAt).toLocaleString('en-GB', { 
+            day: '2-digit', month: '2-digit', year: 'numeric', 
+            hour: '2-digit', minute: '2-digit', hour12: false 
+          }))}
+          {infoRow("Updated At", new Date(task.updatedAt).toLocaleString('en-GB', { 
+            day: '2-digit', month: '2-digit', year: 'numeric', 
+            hour: '2-digit', minute: '2-digit', hour12: false 
+          }))}
           {task.isOverdue && task.status !== "COMPLETED" && infoRow("Overdue", <Badge variant="destructive">Overdue</Badge>)}
         </div>
       </DialogContent>

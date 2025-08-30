@@ -239,9 +239,6 @@ export default function ClientManagementPage() {
               <DropdownMenuItem onClick={() => handleExport('csv')}>
                 Export as CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                Export as Excel
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button onClick={() => openClientSheet()} className="w-full sm:w-auto">

@@ -12,7 +12,7 @@ import {
   Activity,
   AlertCircle,
 } from "lucide-react";
-import { apiGet } from "@/lib/api-client";
+import { apiGet, safeApiCall } from "@/lib/api-client";
 // import Link from 'next/link';
 // import { format, formatDistance } from 'date-fns';
 
@@ -24,6 +24,7 @@ interface DashboardStats {
   pendingTasks: number;
   completedTasks: number;
   totalAreas: number;
+  totalKm: number;
 }
 
 interface RecentActivity {
@@ -43,6 +44,7 @@ export default function AdminDashboard() {
     pendingTasks: 0,
     completedTasks: 0,
     totalAreas: 0,
+    totalKm: 0,
   });
   // Recent activity removed; keep setter no-op to avoid unused var
   const [, setRecentActivities] = useState<RecentActivity[]>([]);
@@ -55,33 +57,31 @@ export default function AdminDashboard() {
       setError(null);
 
       try {
-        // Fetch stats concurrently
-        const [
-          usersResponse,
-          clientsResponse,
-          regionsResponse,
-          areasResponse,
-          tasksResponse,
-        ] = await Promise.allSettled([
-          apiGet<{ id: string; status: string }>("/api/users"),
-          apiGet<{ id: string }>("/api/clients"),
+        // Use dedicated overview API for proper role-filtered statistics
+        const overviewResult = await safeApiCall<{
+          kpis: {
+            totalUsers: number;
+            activeUsers: number;
+            totalClients: number;
+            pendingTasks: number;
+            completedTasks: number;
+            totalKm: number;
+          };
+          trends: Array<{ date: string; tasksCreated: number }>;
+          dateRange: { from: string; to: string };
+        }>("/api/reports/overview");
+
+        if (!overviewResult.success) {
+          throw new Error(overviewResult.error);
+        }
+
+        const overviewData = overviewResult.data;
+
+        // Fetch regions and areas separately as they're not in overview API
+        const [regionsResponse, areasResponse] = await Promise.allSettled([
           apiGet<{ id: string }>("/api/regions"),
           apiGet<{ id: string }>("/api/areas"),
-          apiGet<{ id: string; status: string }>("/api/tasks"),
         ]);
-
-        let totalUsers = 0;
-        let activeUsers = 0;
-        if (usersResponse.status === "fulfilled") {
-          const users = usersResponse.value;
-          totalUsers = users.length;
-          activeUsers = users.filter((user) => user.status === "ACTIVE").length;
-        }
-
-        let totalClients = 0;
-        if (clientsResponse.status === "fulfilled") {
-          totalClients = clientsResponse.value.length;
-        }
 
         let totalRegions = 0;
         if (regionsResponse.status === "fulfilled") {
@@ -93,26 +93,15 @@ export default function AdminDashboard() {
           totalAreas = areasResponse.value.length;
         }
 
-        let pendingTasks = 0;
-        let completedTasks = 0;
-        if (tasksResponse.status === "fulfilled") {
-          const tasks = tasksResponse.value;
-          pendingTasks = tasks.filter(
-            (task) => task.status === "PENDING"
-          ).length;
-          completedTasks = tasks.filter(
-            (task) => task.status === "COMPLETED"
-          ).length;
-        }
-
         setStats({
-          totalUsers,
-          activeUsers,
-          totalClients,
+          totalUsers: overviewData.kpis.totalUsers,
+          activeUsers: overviewData.kpis.activeUsers,
+          totalClients: overviewData.kpis.totalClients,
           totalRegions,
           totalAreas,
-          pendingTasks,
-          completedTasks,
+          pendingTasks: overviewData.kpis.pendingTasks,
+          completedTasks: overviewData.kpis.completedTasks,
+          totalKm: overviewData.kpis.totalKm,
         });
 
         // Remove hardcoded Recent Activity; leave empty until real data is wired
@@ -125,15 +114,16 @@ export default function AdminDashboard() {
             : "Failed to load dashboard data"
         );
 
-        // Fallback to mock data
+        // Fallback to empty data on error
         setStats({
-          totalUsers: 125,
-          activeUsers: 98,
-          totalClients: 450,
-          totalRegions: 12,
-          totalAreas: 35,
-          pendingTasks: 34,
-          completedTasks: 187,
+          totalUsers: 0,
+          activeUsers: 0,
+          totalClients: 0,
+          totalRegions: 0,
+          totalAreas: 0,
+          pendingTasks: 0,
+          completedTasks: 0,
+          totalKm: 0,
         });
       } finally {
         setIsLoading(false);
@@ -155,8 +145,8 @@ export default function AdminDashboard() {
       <div className="p-8">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-64 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {[...Array(6)].map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(7)].map((_, i) => (
               <Card key={i}>
                 <CardHeader className="space-y-2">
                   <div className="h-4 bg-gray-200 rounded w-24"></div>
@@ -183,7 +173,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -251,17 +241,30 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
+              GPS Tracking
+            </CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalKm.toFixed(1)} km</div>
+            <p className="text-xs text-muted-foreground">Total distance</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
               Completion Rate
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Math.round(
+              {stats.completedTasks + stats.pendingTasks > 0 ? Math.round(
                 (stats.completedTasks /
                   (stats.completedTasks + stats.pendingTasks)) *
                   100
-              )}
+              ) : 0}
               %
             </div>
             <p className="text-xs text-muted-foreground">Task completion</p>
