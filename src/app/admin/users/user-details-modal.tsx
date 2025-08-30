@@ -268,7 +268,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     } finally {
       setIsLoadingTasks(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   const fetchUserClients = useCallback(async () => {
     if (!user) return;
@@ -289,7 +289,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     } finally {
       setIsLoadingClients(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Fetch latest GPS session (active if exists), including logs, to build trail
   const fetchUserTrail = useCallback(async () => {
@@ -340,7 +340,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     } finally {
       setIsLoadingMap(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Fetch recent completed sessions (with logs) for historical routes
   const fetchCompletedSessions = useCallback(async () => {
@@ -391,7 +391,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     } catch {
       // ignore silently; mapError will reflect primary trail fetch if needed
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Fetch user's completed sessions (summary only) for history totals and quick access
   const fetchHistorySessions = useCallback(async () => {
@@ -412,7 +412,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Ensure a selected session has logs by fetching details when needed
   const ensureSessionWithLogs = useCallback(
@@ -487,7 +487,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     }
   }, [
     open,
-    user,
+    user?.id,
     fetchPendingTasks,
     fetchUserClients,
     fetchUserTrail,

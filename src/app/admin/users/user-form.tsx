@@ -32,7 +32,7 @@ import { ScrollableFormContent, StickyFormFooter, FormContainer } from "@/compon
 const baseUserFormSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
   phone: z.string().optional(),
   password: z.string(), // We'll handle validation separately
   role: z.enum(["MR", "LEAD_MR", "ADMIN"]),
@@ -80,8 +80,8 @@ export function UserForm() {
     if (!isEdit && (!password || password.length === 0)) {
       return "Password is required for new users";
     }
-    if (password && password.length > 0 && password.length < 6) {
-      return "Password must be at least 6 characters";
+    if (password && password.length > 0 && password.length < 8) {
+      return "Password must be at least 8 characters";
     }
     return true;
   };
@@ -134,7 +134,7 @@ export function UserForm() {
       // Clean up empty optional fields
       const cleanedData = {
         ...data,
-        email: data.email || undefined,
+        email: data.email, // email is now required, so don't convert to undefined
         phone: data.phone || undefined,
         regionId: data.regionId === "none" || !data.regionId ? undefined : data.regionId,
         leadMrId: data.leadMrId === "none" || !data.leadMrId ? undefined : data.leadMrId,
@@ -232,7 +232,7 @@ export function UserForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Email *</FormLabel>
                   <FormControl>
                     <Input
                       type="email"

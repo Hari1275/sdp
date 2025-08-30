@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
     const userData = validation.data as CreateUserInput;
 
     // Check for duplicate username/email
-    const whereConditions = [
+    const whereConditions: Array<{ username?: string; email?: string }> = [
       { username: userData.username }
     ];
     

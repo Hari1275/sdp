@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, Suspense } from 'react'
-import { signIn, getSession } from 'next-auth/react'
+import { useState, Suspense, useEffect } from 'react'
+import { signIn, getSession, useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, LogIn, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, LogIn, Loader2, AlertCircle } from 'lucide-react'
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -18,11 +18,34 @@ type LoginForm = z.infer<typeof loginSchema>
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mrLoginAttempt, setMrLoginAttempt] = useState(false)
 
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+
+  // Auto-redirect if already logged in (but not MR users)
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const { role } = session.user
+      switch (role) {
+        case 'ADMIN':
+        case 'LEAD_MR':
+          router.push('/admin')
+          break
+        case 'MR':
+          // Don't redirect MR users, show them the restriction message instead
+          setMrLoginAttempt(true)
+          // Sign them out immediately
+          fetch('/api/auth/signout', { method: 'POST' })
+          break
+        default:
+          router.push(callbackUrl)
+      }
+    }
+  }, [status, session, router, callbackUrl])
 
   const {
     register,
@@ -49,32 +72,26 @@ function LoginForm() {
         // Get the updated session to check user role
         const session = await getSession()
         
-        // console.log('Login successful, session:', session)
-        // console.log('User role:', session?.user?.role)
-        // console.log('Production mode:', process.env.NODE_ENV === 'production')
-        // console.log('Current URL:', window.location.href)
-        
         if (session?.user?.role) {
-          // Role-based redirect
+          // Check if MR is trying to login to web dashboard
+          if (session.user.role === 'MR') {
+            // Show MR restriction message
+            setMrLoginAttempt(true)
+            // Sign out the user since MRs can't use web dashboard
+            await fetch('/api/auth/signout', { method: 'POST' })
+            return
+          }
+          
+          // Role-based redirect for allowed users (ADMIN, LEAD_MR)
           switch (session.user.role) {
             case 'ADMIN':
-            // console.log('Redirecting to admin dashboard')
-              router.push('/admin')
-              break
             case 'LEAD_MR':
-            // console.log('Redirecting to lead MR dashboard')
               router.push('/admin')
-              break
-            case 'MR':
-            // console.log('Redirecting to MR dashboard')
-              router.push('/dashboard/mr')
               break
             default:
-            // console.log('Redirecting to default callback URL:', callbackUrl)
               router.push(callbackUrl)
           }
         } else {
-        // console.log('No role found, redirecting to callback URL:', callbackUrl)
           router.push(callbackUrl)
         }
       }
@@ -89,6 +106,18 @@ function LoginForm() {
   // Show error from URL params (redirect from middleware)
   const urlError = searchParams.get('error')
   const displayError = error || urlError
+
+  // Handle MR web access denied from middleware
+  useEffect(() => {
+    if (urlError === 'MR_WEB_ACCESS_DENIED') {
+      setMrLoginAttempt(true)
+    }
+  }, [urlError])
+
+  // Show loading if checking session
+  if (status === 'loading') {
+    return <LoginFallback />
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 px-4 sm:px-6 lg:px-8">
@@ -109,7 +138,18 @@ function LoginForm() {
         {/* Login Form */}
         <div className="bg-white py-8 px-6 shadow-lg rounded-xl">
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            {displayError && (
+            {mrLoginAttempt && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg text-sm">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <div>
+                    <p className="font-medium">MR Dashboard Access</p>
+                    <p>Marketing Representatives can only access the system through the mobile app. Please download and use the SDP Ayurveda mobile application to continue.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {displayError && !mrLoginAttempt && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {displayError === 'CredentialsSignin' 
                   ? 'Invalid username or password. Please try again.'

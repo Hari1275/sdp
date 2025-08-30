@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { validateCoordinateData, sanitizeCoordinate } from '@/lib/gps-validation';
 import { calculateTotalDistance, filterByAccuracy } from '@/lib/gps-utils';
@@ -85,7 +83,7 @@ export async function POST(request: NextRequest) {
     // Sanitize and filter coordinates
     const sanitizedCoords = coordinates
       .map((coord: Record<string, unknown>) => sanitizeCoordinate(coord))
-      .filter((coord: Record<string, unknown> | null): coord is Record<string, unknown> => coord !== null);
+      .filter((coord): coord is NonNullable<typeof coord> => coord !== null);
 
     if (sanitizedCoords.length === 0) {
       return NextResponse.json(
@@ -103,7 +101,15 @@ export async function POST(request: NextRequest) {
 
     // Create GPS logs in batch
     const gpsLogsToCreate = filteredCoords.map(coord => {
-      const logData: any = {
+      const logData: {
+        sessionId: string;
+        latitude: number;
+        longitude: number;
+        timestamp: Date;
+        accuracy?: number;
+        speed?: number;
+        altitude?: number;
+      } = {
         sessionId: gpsSession.id,
         latitude: Number(coord.latitude),
         longitude: Number(coord.longitude),

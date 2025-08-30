@@ -91,11 +91,13 @@ const ActionsCell = ({ client }: { client: Client }) => {
   }, [client.id, client.name, deleteClient]);
 
   const openMaps = useCallback(() => {
-    if (client.latitude && client.longitude) {
+    if (client.latitude && client.longitude && client.latitude !== 0 && client.longitude !== 0) {
       const url = `https://www.google.com/maps?q=${client.latitude},${client.longitude}`;
       window.open(url, '_blank');
     }
   }, [client.latitude, client.longitude]);
+
+  const hasValidLocation = client.latitude && client.longitude && client.latitude !== 0 && client.longitude !== 0;
 
   const handleViewDetails = useCallback(() => {
     // Open dialog after the dropdown menu closes to avoid focus/stacking conflicts
@@ -145,10 +147,15 @@ const ActionsCell = ({ client }: { client: Client }) => {
             Edit Client
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          {client.latitude && client.longitude && (
+          {hasValidLocation ? (
             <DropdownMenuItem onClick={handleOpenMaps}>
               <ExternalLink className="mr-2 h-4 w-4" />
               Open in Maps
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem disabled>
+              <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+              Location not set
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />

@@ -25,7 +25,10 @@ export const createUserSchema = z.object({
 
 export const updateUserSchema = createUserSchema
   .partial()
-  .omit({ password: true });
+  .omit({ password: true })
+  .extend({
+    status: z.nativeEnum(UserStatus).optional(),
+  });
 
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),

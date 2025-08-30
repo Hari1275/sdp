@@ -44,9 +44,15 @@ export default function RegionsPage() {
   } = useRegionsStore();
 
   useEffect(() => {
-    fetchRegions();
-    fetchAreas();
-  }, [fetchRegions, fetchAreas]);
+    const loadData = async () => {
+      console.log('Loading regions and areas...');
+      await fetchRegions();
+      await fetchAreas();
+      console.log('Loaded regions:', regions.length);
+      console.log('Loaded areas:', areas.length);
+    };
+    loadData();
+  }, [fetchRegions, fetchAreas, regions.length, areas.length]);
 
   const regionStats = useMemo(() => {
     const totalRegions = regions.length;
@@ -65,7 +71,9 @@ export default function RegionsPage() {
   }, [regions, areas]);
 
   const getAreasByRegion = (regionId: string) => {
-    return areas.filter(area => area.regionId === regionId);
+    const regionAreas = areas.filter(area => area.regionId === regionId);
+    console.log(`Areas for region ${regionId}:`, regionAreas);
+    return regionAreas;
   };
 
   const handleDeleteRegion = async (id: string) => {
@@ -318,7 +326,10 @@ export default function RegionsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openAreaDialog(undefined)}>
+                          <DropdownMenuItem onClick={() => {
+                            // Create a new area object with the region pre-selected
+                            openAreaDialog({ regionId: region.id })
+                          }}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add Area
                           </DropdownMenuItem>
