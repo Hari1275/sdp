@@ -16,14 +16,37 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { sessionId, coordinates } = body;
 
+    // Basic input validation
+    if (!sessionId) {
+      return NextResponse.json(
+        { 
+          error: 'Validation failed',
+          details: ['Session ID is required']
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!coordinates || !Array.isArray(coordinates) || coordinates.length === 0) {
+      return NextResponse.json(
+        { 
+          error: 'Validation failed',
+          details: ['Coordinates array is required and must not be empty']
+        },
+        { status: 400 }
+      );
+    }
+
     // Validate request data
     const validation = validateCoordinateData({ sessionId, coordinates });
     
     if (!validation.isValid) {
+      console.log('Validation failed:', validation.errors);
       return NextResponse.json(
         { 
           error: 'Validation failed',
-          details: validation.errors
+          details: validation.errors,
+          warnings: validation.warnings || []
         },
         { status: 400 }
       );
@@ -79,23 +102,42 @@ export async function POST(request: NextRequest) {
     const errors: string[] = [];
 
     // Create GPS logs in batch
-    const gpsLogsToCreate = filteredCoords.map(coord => ({
-      sessionId: gpsSession.id,
-      latitude: coord.latitude,
-      longitude: coord.longitude,
-      timestamp: coord.timestamp || new Date(),
-      accuracy: coord.accuracy,
-      speed: coord.speed,
-      altitude: coord.altitude
-    }));
+    const gpsLogsToCreate = filteredCoords.map(coord => {
+      const logData: any = {
+        sessionId: gpsSession.id,
+        latitude: Number(coord.latitude),
+        longitude: Number(coord.longitude),
+        timestamp: coord.timestamp ? new Date(coord.timestamp) : new Date()
+      };
+      
+      // Only include optional fields if they have valid values
+      if (coord.accuracy !== undefined && coord.accuracy !== null && !isNaN(Number(coord.accuracy))) {
+        logData.accuracy = Number(coord.accuracy);
+      }
+      
+      if (coord.speed !== undefined && coord.speed !== null && !isNaN(Number(coord.speed))) {
+        logData.speed = Number(coord.speed);
+      }
+      
+      if (coord.altitude !== undefined && coord.altitude !== null && !isNaN(Number(coord.altitude))) {
+        logData.altitude = Number(coord.altitude);
+      }
+      
+      return logData;
+    });
 
     try {
+      // Validate GPS logs data before insertion
+      console.log('Attempting to insert', gpsLogsToCreate.length, 'GPS logs');
+      console.log('Sample GPS log data:', gpsLogsToCreate[0]);
+      
       // Insert GPS logs
       const result = await prisma.gPSLog.createMany({
         data: gpsLogsToCreate
       });
 
       processedCount = result.count;
+      console.log('Successfully inserted', processedCount, 'GPS logs');
 
       // Calculate distance increment if we have previous coordinates
       if (gpsSession.gpsLogs.length > 0 && filteredCoords.length > 0) {
@@ -127,15 +169,18 @@ export async function POST(request: NextRequest) {
             }
           }
         });
+        console.log('Updated session with total distance:', totalDistance);
       }
 
-    } catch {
-  // console.error('Database error in coordinate logging:', dbError);
+    } catch (dbError) {
+      console.error('Database error in coordinate logging:', dbError);
+      logError(dbError, 'POST /api/tracking/coordinates - database', user.id);
       
       return NextResponse.json(
         { 
           error: 'Database error',
-          message: 'Failed to save GPS coordinates'
+          message: 'Failed to save GPS coordinates',
+          details: dbError instanceof Error ? dbError.message : 'Unknown database error'
         },
         { status: 500 }
       );
@@ -215,9 +260,9 @@ export async function POST(request: NextRequest) {
 // GET method to retrieve GPS logs for a session
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
+    // Auth supports both JWT (mobile) and session (web)
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -252,9 +297,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Check access permissions
-    const hasAccess = gpsSession.userId === session.user.id || 
-                     session.user.role === 'ADMIN' || 
-                     (session.user.role === 'LEAD_MR' && gpsSession.user?.leadMrId === session.user.id);
+    const hasAccess = gpsSession.userId === user.id || 
+                     user.role === 'ADMIN' || 
+                     (user.role === 'LEAD_MR' && gpsSession.user?.leadMrId === user.id) ||
+                     (user.role === 'MR' && gpsSession.userId === user.id);
 
     if (!hasAccess) {
       return NextResponse.json(

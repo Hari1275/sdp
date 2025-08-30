@@ -189,11 +189,17 @@ export async function GET(request: NextRequest) {
         businessHoursSessions: businessHoursSessions.length,
         periodBreakdown: {
           morning: {
-            sessions: sessions.filter(s => s.checkIn.getHours() < 12).length,
+            sessions: sessions.filter(s => {
+              const hour = s.checkIn.getHours();
+              return hour >= 0 && hour < 12;
+            }).length,
             totalKm: Math.round(morningDistance * 1000) / 1000
           },
           afternoon: {
-            sessions: sessions.filter(s => s.checkIn.getHours() >= 12).length,
+            sessions: sessions.filter(s => {
+              const hour = s.checkIn.getHours();
+              return hour >= 12 && hour < 24;
+            }).length,
             totalKm: Math.round(afternoonDistance * 1000) / 1000
           }
         }

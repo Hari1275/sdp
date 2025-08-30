@@ -351,9 +351,11 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
       );
       if (res && Array.isArray(res.sessions)) {
         setCompletedSessions(res.sessions);
-        if (!selectedSessionId && res.sessions.length > 0) {
+        // Only set initial session if we have sessions
+        if (res.sessions.length > 0) {
           const first = res.sessions[0];
           setSelectedSessionId(first.id);
+          // Apply first session data immediately
           const logs: GpsLogPoint[] = Array.isArray(first.gpsLogs)
             ? first.gpsLogs
             : [];
@@ -389,7 +391,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     } catch {
       // ignore silently; mapError will reflect primary trail fetch if needed
     }
-  }, [user, selectedSessionId]);
+  }, [user]);
 
   // Fetch user's completed sessions (summary only) for history totals and quick access
   const fetchHistorySessions = useCallback(async () => {
@@ -459,6 +461,20 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     },
     [completedSessions]
   );
+
+  // Reset session state when modal opens or user changes
+  useEffect(() => {
+    if (open && user) {
+      // Reset map state when switching users or opening modal
+      setSelectedSessionId(null);
+      setTrailPoints([]);
+      setLastLocation(null);
+      setCompletedSessions([]);
+      setHistorySessions([]);
+      setMapError(null);
+      setHistoryTotalKm(0);
+    }
+  }, [open, user?.id]);
 
   // Fetch data when modal opens
   useEffect(() => {

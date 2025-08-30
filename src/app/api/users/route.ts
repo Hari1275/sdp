@@ -12,6 +12,7 @@ import {
   parseQueryParams
 } from '@/lib/api-utils';
 import { createUserSchema, CreateUserInput } from '@/lib/validations';
+import { hashPassword } from '@/lib/password';
 
 // GET /api/users - List users with role-based filtering
 export async function GET(request: NextRequest) {
@@ -186,12 +187,18 @@ export async function POST(request: NextRequest) {
     const userData = validation.data as CreateUserInput;
 
     // Check for duplicate username/email
+    const whereConditions = [
+      { username: userData.username }
+    ];
+    
+    // Only check for email duplicates if email is provided
+    if (userData.email) {
+      whereConditions.push({ email: userData.email });
+    }
+    
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { username: userData.username },
-          { email: userData.email }
-        ]
+        OR: whereConditions
       }
     });
 
@@ -219,9 +226,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Hash password before storing
+    const hashedPassword = await hashPassword(userData.password);
+
     // Create user
     const newUser = await prisma.user.create({
-      data: userData,
+      data: {
+        ...userData,
+        password: hashedPassword
+      },
       select: {
         id: true,
         username: true,

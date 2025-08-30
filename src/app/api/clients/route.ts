@@ -45,8 +45,13 @@ export async function GET(request: NextRequest) {
     // Apply role-based data access
     switch (user.role) {
       case UserRole.MR:
-        // MR can only see their own clients
-        whereClause.mrId = user.id;
+        // MR can see all clients in their region
+        if (user.regionId) {
+          whereClause.regionId = user.regionId;
+        } else {
+          // If MR has no region assigned, they can't see any clients
+          whereClause.id = 'non-existent-id';
+        }
         break;
       case UserRole.LEAD_MR:
         // Lead MR can see their region's clients and their team's clients
