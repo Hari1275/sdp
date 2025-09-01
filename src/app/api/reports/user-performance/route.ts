@@ -68,7 +68,13 @@ export async function GET(request: NextRequest) {
 
     const users = await prisma.user.findMany({
       where: scopedUserWhere,
-      select: { id: true, name: true, username: true, regionId: true },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        regionId: true,
+        region: { select: { id: true, name: true } },
+      },
     });
     if (users.length === 0) {
       return successResponse({ data: [], total: 0 });
@@ -118,6 +124,15 @@ export async function GET(request: NextRequest) {
       _count: { mrId: true },
     });
 
+    // Joined clients within range
+    const clients = await prisma.client.findMany({
+      where: {
+        mrId: { in: userIds },
+        createdAt: { gte: from, lte: to },
+      },
+      select: { id: true, name: true, createdAt: true, mrId: true },
+    });
+
     const mapAssigned = new Map(
       tasksAssigned.map((t) => [t.assigneeId, t._count.assigneeId])
     );
@@ -136,6 +151,19 @@ export async function GET(request: NextRequest) {
         { totalAmount: b._sum.amount || 0, entries: b._count.mrId },
       ])
     );
+    const mapClients = new Map<
+      string,
+      Array<{ id: string; name: string; date: string }>
+    >();
+    for (const c of clients) {
+      const arr = mapClients.get(c.mrId) || [];
+      arr.push({
+        id: c.id,
+        name: c.name,
+        date: new Date(c.createdAt).toISOString(),
+      });
+      mapClients.set(c.mrId, arr);
+    }
 
     const report = users.map((u) => {
       const assigned = mapAssigned.get(u.id) || 0;
@@ -144,11 +172,13 @@ export async function GET(request: NextRequest) {
         assigned > 0 ? Math.round((completed / assigned) * 100) : 0;
       const gps = mapSessions.get(u.id) || { totalKm: 0, totalSessions: 0 };
       const biz = mapBusiness.get(u.id) || { totalAmount: 0, entries: 0 };
+      const joined = mapClients.get(u.id) || [];
       return {
         userId: u.id,
         name: u.name,
         username: u.username,
         regionId: u.regionId,
+        regionName: u.region?.name || null,
         tasksAssigned: assigned,
         tasksCompleted: completed,
         completionRate,
@@ -156,6 +186,8 @@ export async function GET(request: NextRequest) {
         gpsSessions: gps.totalSessions || 0,
         businessEntries: biz.entries || 0,
         businessAmount: Math.round((biz.totalAmount || 0) * 100) / 100,
+        joinedClientsCount: joined.length,
+        joinedClients: joined,
       };
     });
 
