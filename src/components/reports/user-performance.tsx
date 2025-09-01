@@ -103,6 +103,7 @@ interface SessionData {
   startLng?: number;
   endLat?: number;
   endLng?: number;
+  totalKm?: number;
   startLocation?: { latitude: number; longitude: number };
   endLocation?: { latitude: number; longitude: number };
 }
