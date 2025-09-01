@@ -34,6 +34,8 @@ function makeReq(): Request {
   return new Request("http://localhost:3000/api/reports/admin-overview");
 }
 
+type AnyRecord = Record<string, unknown>;
+
 describe("Admin Overview Report API", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -109,12 +111,13 @@ describe("Admin Overview Report API", () => {
 
     const res = await GET(makeReq());
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as AnyRecord;
     expect(body.success).toBe(true);
-    const data = body.data;
+    const data = body.data as AnyRecord;
 
-    expect(Array.isArray(data.mrs)).toBe(true);
-    expect(data.mrs).toEqual(
+    expect(Array.isArray((data as AnyRecord).mrs)).toBe(true);
+    const mrs = (data as { mrs: AnyRecord[] }).mrs;
+    expect(mrs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           userId: "mr-1",
@@ -189,16 +192,19 @@ describe("Admin Overview Report API", () => {
 
     const res = await GET(makeReq());
     expect(res.status).toBe(200);
-    const body = await res.json();
-    const leads = body.data.leads;
+    const body = (await res.json()) as AnyRecord;
+    const leads = (body.data as { leads: AnyRecord[] }).leads;
     expect(Array.isArray(leads)).toBe(true);
-    const lead = leads.find((l: any) => l.userId === "lead-1");
+    const lead = (leads as AnyRecord[]).find(
+      (l) => (l as AnyRecord).userId === "lead-1"
+    ) as AnyRecord;
     expect(lead).toBeTruthy();
-    expect(lead.teamMembers.map((m: any) => m.userId).sort()).toEqual([
-      "mr-1",
-      "mr-2",
-    ]);
-    expect(lead.totalKm).toBe(85); // 50 + 25 + 10 (lead own)
+    expect(
+      ((lead.teamMembers as AnyRecord[]) || [])
+        .map((m) => (m as AnyRecord).userId)
+        .sort()
+    ).toEqual(["mr-1", "mr-2"]);
+    expect(lead.totalKm).toBe(85);
     expect(lead.businessEntries).toBe(3);
     expect(lead.businessAmount).toBe(7000);
   });

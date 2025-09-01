@@ -37,6 +37,8 @@ function makeReq(range?: { from?: string; to?: string }) {
   return new Request(url);
 }
 
+type AnyRecord = Record<string, unknown>;
+
 describe("user-performance joined clients", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -79,10 +81,12 @@ describe("user-performance joined clients", () => {
 
     const res = await GET(makeReq());
     expect(res.status).toBe(200);
-    const body = await res.json();
-    const rows = body.data?.data || body.data;
+    const body = (await res.json()) as AnyRecord;
+    const rows =
+      ((body.data as AnyRecord)?.data as AnyRecord[]) ||
+      (body.data as AnyRecord[]);
     expect(Array.isArray(rows)).toBe(true);
-    const a = rows.find((r: any) => r.userId === "u1");
+    const a = rows.find((r) => (r as AnyRecord).userId === "u1") as AnyRecord;
     expect(a.joinedClientsCount).toBe(2);
     expect(a.joinedClients).toEqual(
       expect.arrayContaining([
@@ -98,7 +102,7 @@ describe("user-performance joined clients", () => {
         }),
       ])
     );
-    const b = rows.find((r: any) => r.userId === "u2");
+    const b = rows.find((r) => (r as AnyRecord).userId === "u2") as AnyRecord;
     expect(b.joinedClientsCount).toBe(1);
   });
 
@@ -127,10 +131,13 @@ describe("user-performance joined clients", () => {
 
     const res = await GET(makeReq({ from: "2024-10-01", to: "2024-10-31" }));
     expect(res.status).toBe(200);
-    const body = await res.json();
-    const rows = body.data?.data || body.data;
-    const a = rows.find((r: any) => r.userId === "u1");
+    const body = (await res.json()) as AnyRecord;
+    const rows =
+      ((body.data as AnyRecord)?.data as AnyRecord[]) ||
+      (body.data as AnyRecord[]);
+    const a = rows.find((r) => (r as AnyRecord).userId === "u1") as AnyRecord;
     expect(a.joinedClientsCount).toBe(1);
-    expect(a.joinedClients[0].name).toBe("New Client");
+    const list = a.joinedClients as Array<AnyRecord>;
+    expect(list[0].name).toBe("New Client");
   });
 });

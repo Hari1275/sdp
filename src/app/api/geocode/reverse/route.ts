@@ -10,10 +10,27 @@ function makeKey(lat: number, lon: number): string {
   return `${lat.toFixed(5)},${lon.toFixed(5)}`;
 }
 
-function compactName(payload: any): string | null {
+interface NominatimAddress {
+  neighbourhood?: string;
+  suburb?: string;
+  locality?: string;
+  road?: string;
+  village?: string;
+  town?: string;
+  city?: string;
+  county?: string;
+  state?: string;
+  region?: string;
+  country?: string;
+}
+interface NominatimResponse {
+  display_name?: string;
+  address?: NominatimAddress;
+}
+
+function compactName(payload: NominatimResponse | null): string | null {
   if (!payload) return null;
   const addr = payload.address || {};
-  // Prefer neighborhood/suburb/locality, then city/town/village, then state
   const primary =
     addr.neighbourhood ||
     addr.suburb ||
@@ -25,7 +42,7 @@ function compactName(payload: any): string | null {
     addr.county;
   const secondary = addr.state || addr.county || addr.region;
   const country = addr.country;
-  const display = payload.display_name as string | undefined;
+  const display = payload.display_name;
   if (primary && secondary) return `${primary}, ${secondary}`;
   if (primary && country) return `${primary}, ${country}`;
   if (display) return display.split(",").slice(0, 2).join(", ").trim();
@@ -77,12 +94,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await resp.json();
+    const data = (await resp.json()) as NominatimResponse;
     const name = compactName(data) || "Unknown location";
     cache.set(key, { name, expires: now + TTL_MS });
 
     return NextResponse.json({ name, source: "nominatim" });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
       { error: "Internal error resolving location" },
       { status: 500 }

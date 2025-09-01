@@ -64,6 +64,12 @@ function exportCsv(filename: string, rows: Array<Record<string, unknown>>) {
   URL.revokeObjectURL(url);
 }
 
+function isAdminOverviewPayload(
+  x: unknown
+): x is { mrs: MRRow[]; leads: LeadRow[] } {
+  return typeof x === "object" && x !== null && "mrs" in x && "leads" in x;
+}
+
 export default function AdminOverviewReportPage() {
   const [mrs, setMrs] = useState<MRRow[]>([]);
   const [leads, setLeads] = useState<LeadRow[]>([]);
@@ -78,20 +84,23 @@ export default function AdminOverviewReportPage() {
       const data = await apiGet<{ mrs: MRRow[]; leads: LeadRow[] }>(
         "/api/reports/admin-overview"
       );
+      const dataUnknown: unknown = data;
       if (!mounted) return;
-      if (Array.isArray(data) && (data as unknown as any).mrs === undefined) {
-        // apiGet returns [] if unexpected; do nothing
+      if (Array.isArray(dataUnknown)) {
         setMrs([]);
         setLeads([]);
+      } else if (isAdminOverviewPayload(dataUnknown)) {
+        setMrs(dataUnknown.mrs || []);
+        setLeads(dataUnknown.leads || []);
       } else {
-        const payload = data as unknown as any;
-        setMrs(payload.mrs || []);
-        setLeads(payload.leads || []);
+        setMrs([]);
+        setLeads([]);
       }
       setLoading(false);
-    })().catch((e) => {
+    })().catch((e: unknown) => {
       if (!mounted) return;
-      setError(e?.message || "Failed to load report");
+      const msg = e instanceof Error ? e.message : "Failed to load report";
+      setError(msg);
       setLoading(false);
     });
     return () => {

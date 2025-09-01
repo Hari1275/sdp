@@ -60,6 +60,8 @@ type Session = {
   startLng?: number | null;
   endLat?: number | null;
   endLng?: number | null;
+  startName?: string | null;
+  endName?: string | null;
 };
 
 function exportCsv(filename: string, rows: Array<Record<string, unknown>>) {
@@ -186,8 +188,21 @@ function ViewUserDialog({
           const err = await resp.json().catch(() => ({} as any));
           throw new Error(err?.message || `HTTP ${resp.status}`);
         }
-        const data = (await resp.json()) as { sessions?: Array<any> };
-        const mapped: Session[] = (data.sessions || []).map((s: any) => ({
+        const data = (await resp.json()) as {
+          sessions?: Array<{
+            id: string;
+            checkIn: string;
+            checkOut: string | null;
+            totalKm: number;
+            startLat?: number | null;
+            startLng?: number | null;
+            endLat?: number | null;
+            endLng?: number | null;
+            startLocation?: { latitude: number; longitude: number } | null;
+            endLocation?: { latitude: number; longitude: number } | null;
+          }>;
+        };
+        const mapped: Session[] = (data.sessions || []).map((s) => ({
           id: s.id,
           checkIn: s.checkIn,
           checkOut: s.checkOut,
@@ -199,7 +214,7 @@ function ViewUserDialog({
         }));
 
         // Resolve names for start/end coordinates (best-effort, sequential with cache on server)
-        const withNames = await Promise.all(
+        const withNames: Session[] = await Promise.all(
           mapped.map(async (s) => {
             let startName: string | null = null;
             let endName: string | null = null;
@@ -209,7 +224,7 @@ function ViewUserDialog({
                   `/api/geocode/reverse?lat=${s.startLat}&lon=${s.startLng}`
                 );
                 if (r1.ok) {
-                  const j = await r1.json();
+                  const j = (await r1.json()) as { name?: string };
                   startName = j.name || null;
                 }
               }
@@ -218,21 +233,18 @@ function ViewUserDialog({
                   `/api/geocode/reverse?lat=${s.endLat}&lon=${s.endLng}`
                 );
                 if (r2.ok) {
-                  const j = await r2.json();
+                  const j = (await r2.json()) as { name?: string };
                   endName = j.name || null;
                 }
               }
             } catch {
               // ignore geocode errors
             }
-            return { ...s, startName, endName } as Session & {
-              startName?: string | null;
-              endName?: string | null;
-            };
+            return { ...s, startName, endName };
           })
         );
 
-        setSessions(withNames as any);
+        setSessions(withNames);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Failed to load sessions";
         setSessionsError(msg);
@@ -357,7 +369,7 @@ function ViewUserDialog({
                           </td>
                           <td className="p-2">
                             {s.startLat && s.startLng
-                              ? (s as any).startName ||
+                              ? s.startName ||
                                 `${s.startLat.toFixed(4)}, ${s.startLng.toFixed(
                                   4
                                 )}`
@@ -365,7 +377,7 @@ function ViewUserDialog({
                           </td>
                           <td className="p-2">
                             {s.endLat && s.endLng
-                              ? (s as any).endName ||
+                              ? s.endName ||
                                 `${s.endLat.toFixed(4)}, ${s.endLng.toFixed(4)}`
                               : "-"}
                           </td>
