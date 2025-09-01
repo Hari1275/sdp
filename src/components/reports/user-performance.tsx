@@ -97,6 +97,16 @@ const inr = new Intl.NumberFormat("en-IN", {
   currency: "INR",
 });
 
+interface SessionData {
+  checkIn: string;
+  startLat?: number;
+  startLng?: number;
+  endLat?: number;
+  endLng?: number;
+  startLocation?: { latitude: number; longitude: number };
+  endLocation?: { latitude: number; longitude: number };
+}
+
 async function summarizeRecentSessions(
   userId: string,
   dateFrom: string,
@@ -112,8 +122,8 @@ async function summarizeRecentSessions(
     });
     const resp = await fetch(`/api/tracking/sessions?${qs.toString()}`);
     if (!resp.ok) return "";
-    const data = (await resp.json()) as { sessions?: Array<any> };
-    const sessions = (data.sessions || []) as Array<any>;
+    const data = (await resp.json()) as { sessions?: SessionData[] };
+    const sessions = data.sessions || [];
     const parts: string[] = [];
     for (const s of sessions) {
       const date = new Date(s.checkIn).toISOString().slice(0, 10);
@@ -185,7 +195,9 @@ function ViewUserDialog({
       try {
         const resp = await fetch(`/api/tracking/sessions?${qs.toString()}`);
         if (!resp.ok) {
-          const err = await resp.json().catch(() => ({} as any));
+          const err = (await resp.json().catch(() => ({ message: "" }))) as {
+            message?: string;
+          };
           throw new Error(err?.message || `HTTP ${resp.status}`);
         }
         const data = (await resp.json()) as {
@@ -202,7 +214,19 @@ function ViewUserDialog({
             endLocation?: { latitude: number; longitude: number } | null;
           }>;
         };
-        const mapped: Session[] = (data.sessions || []).map((s) => ({
+        const sessionsArr = (data.sessions || []) as Array<{
+          id: string;
+          checkIn: string;
+          checkOut: string | null;
+          totalKm: number;
+          startLat?: number | null;
+          startLng?: number | null;
+          endLat?: number | null;
+          endLng?: number | null;
+          startLocation?: { latitude: number; longitude: number } | null;
+          endLocation?: { latitude: number; longitude: number } | null;
+        }>;
+        const mapped: Session[] = sessionsArr.map((s) => ({
           id: s.id,
           checkIn: s.checkIn,
           checkOut: s.checkOut,
@@ -464,6 +488,9 @@ export default function UserPerformance() {
       .map((j) => `${j.name} (${new Date(j.date).toISOString().slice(0, 10)})`)
       .join("; "),
   }));
+
+  // exportRows is used as a base to visualize current columns; keep to avoid unused warning
+  void exportRows;
 
   const handleExport = async () => {
     setExporting(true);
