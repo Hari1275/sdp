@@ -12,6 +12,7 @@ import {
   MapPin,
   Activity,
   Download,
+  RotateCcw,
 } from "lucide-react";
 import { safeApiCall } from "@/lib/api-client";
 import {
@@ -70,6 +71,15 @@ export default function DashboardOverview() {
     }
   };
 
+  const resetFilters = () => {
+    const defaultFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const defaultTo = new Date().toISOString().slice(0, 10);
+    setDateFrom(defaultFrom);
+    setDateTo(defaultTo);
+  };
+
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,29 +87,52 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-end gap-3 flex-wrap">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">From</label>
-          <Input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="w-[200px]"
-          />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:gap-3">
+        {/* Date Filter Section */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
+          <div className="min-w-0">
+            <label className="block text-xs text-gray-500 mb-1">From</label>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full sm:w-[180px] lg:w-[200px]"
+            />
+          </div>
+          <div className="min-w-0">
+            <label className="block text-xs text-gray-500 mb-1">To</label>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full sm:w-[180px] lg:w-[200px]"
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">To</label>
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="w-[200px]"
-          />
-        </div>
-        <Button onClick={loadData}>Apply</Button>
-        <div className="ml-auto">
-          <Button variant="secondary">
-            <Download className="h-4 w-4 mr-2" /> Export
+
+        {/* Action Buttons Section */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-2 lg:ml-auto">
+          <div className="flex gap-2">
+            <Button
+              onClick={loadData}
+              className="flex-1 sm:flex-none"
+              disabled={loading}
+            >
+              Apply
+            </Button>
+            <Button
+              variant="outline"
+              onClick={resetFilters}
+              className="flex-1 sm:flex-none"
+              disabled={loading}
+            >
+              <RotateCcw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Reset</span>
+            </Button>
+          </div>
+          <Button variant="secondary" className="w-full sm:w-auto">
+            <Download className="h-4 w-4 mr-2" />
+            <span>Export</span>
           </Button>
         </div>
       </div>

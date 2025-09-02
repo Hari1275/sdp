@@ -45,11 +45,22 @@ import { cn } from "@/lib/utils";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+  onPaginationChange?: (page: number, limit: number) => void;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  pagination,
+  onPaginationChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -61,7 +72,8 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    // Only use client-side pagination if no server-side pagination is provided
+    ...(pagination ? {} : { getPaginationRowModel: getPaginationRowModel() }),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
@@ -74,9 +86,11 @@ export function DataTable<TData, TValue>({
     },
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: pagination?.limit || 10,
       },
     },
+    manualPagination: !!pagination, // Use server-side pagination when provided
+    pageCount: pagination?.totalPages || -1,
   });
 
   const handleRoleFilter = (role: string) => {
@@ -98,7 +112,13 @@ export function DataTable<TData, TValue>({
   };
 
   const getResponsiveColumnClass = (columnId: string) => {
-    const hideOnMobile = new Set(["email", "region", "leadMr", "_count", "createdAt"]);
+    const hideOnMobile = new Set([
+      "email",
+      "region",
+      "leadMr",
+      "_count",
+      "createdAt",
+    ]);
     return hideOnMobile.has(columnId) ? "hidden md:table-cell" : "";
   };
 
@@ -111,7 +131,9 @@ export function DataTable<TData, TValue>({
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search users..."
-              value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+              value={
+                (table.getColumn("name")?.getFilterValue() as string) ?? ""
+              }
               onChange={(event) =>
                 table.getColumn("name")?.setFilterValue(event.target.value)
               }
@@ -141,10 +163,12 @@ export function DataTable<TData, TValue>({
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <Badge variant="secondary">
-            {table.getFilteredRowModel().rows.length} users
+            {pagination
+              ? `${pagination.total} users`
+              : `${table.getFilteredRowModel().rows.length} users`}
           </Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -186,7 +210,10 @@ export function DataTable<TData, TValue>({
                   return (
                     <TableHead
                       key={header.id}
-                      className={cn("px-4", getResponsiveColumnClass(header.column.id))}
+                      className={cn(
+                        "px-4",
+                        getResponsiveColumnClass(header.column.id)
+                      )}
                     >
                       {header.isPlaceholder
                         ? null
@@ -211,16 +238,25 @@ export function DataTable<TData, TValue>({
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={cn("px-4", getResponsiveColumnClass(cell.column.id))}
+                      className={cn(
+                        "px-4",
+                        getResponsiveColumnClass(cell.column.id)
+                      )}
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   No users found.
                 </TableCell>
               </TableRow>
@@ -234,13 +270,23 @@ export function DataTable<TData, TValue>({
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <p className="text-sm font-medium">Rows per page</p>
           <Select
-            value={`${table.getState().pagination.pageSize}`}
+            value={`${
+              pagination?.limit || table.getState().pagination.pageSize
+            }`}
             onValueChange={(value) => {
-              table.setPageSize(Number(value));
+              if (pagination && onPaginationChange) {
+                onPaginationChange(1, Number(value)); // Reset to page 1 when changing page size
+              } else {
+                table.setPageSize(Number(value));
+              }
             }}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectValue
+                placeholder={
+                  pagination?.limit || table.getState().pagination.pageSize
+                }
+              />
             </SelectTrigger>
             <SelectContent side="top">
               {[5, 10, 20, 30, 40, 50].map((pageSize) => (
@@ -251,18 +297,26 @@ export function DataTable<TData, TValue>({
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="flex items-center space-x-4 sm:space-x-6 lg:space-x-8 w-full sm:w-auto">
           <div className="flex w-[100px] items-center justify-center text-sm font-medium mx-auto sm:mx-0">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
+            Page {pagination?.page || table.getState().pagination.pageIndex + 1}{" "}
+            of {pagination?.totalPages || table.getPageCount()}
           </div>
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               className="h-8 w-8 p-0"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+              onClick={() => {
+                if (pagination && onPaginationChange) {
+                  onPaginationChange(pagination.page - 1, pagination.limit);
+                } else {
+                  table.previousPage();
+                }
+              }}
+              disabled={
+                pagination ? !pagination.hasPrev : !table.getCanPreviousPage()
+              }
             >
               <span className="sr-only">Go to previous page</span>
               <ChevronLeft className="h-4 w-4" />
@@ -270,8 +324,16 @@ export function DataTable<TData, TValue>({
             <Button
               variant="outline"
               className="h-8 w-8 p-0"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
+              onClick={() => {
+                if (pagination && onPaginationChange) {
+                  onPaginationChange(pagination.page + 1, pagination.limit);
+                } else {
+                  table.nextPage();
+                }
+              }}
+              disabled={
+                pagination ? !pagination.hasNext : !table.getCanNextPage()
+              }
             >
               <span className="sr-only">Go to next page</span>
               <ChevronRight className="h-4 w-4" />

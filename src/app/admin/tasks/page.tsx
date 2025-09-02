@@ -75,14 +75,43 @@ export default function TasksAdminPage() {
     start.setHours(0, 0, 0, 0);
     const end = new Date();
     end.setHours(23, 59, 59, 999);
+
+    // Reset other UI filters to show only today's completed tasks
+    setSearch("");
+    setStatus("COMPLETED");
+    setPriority("ALL");
+    setAssignee("ALL");
+    setSelectedMonth("ALL");
+
     setFilters({
       status: "COMPLETED",
       completedFrom: start.toISOString(),
       completedTo: end.toISOString(),
+      search: undefined,
+      priority: undefined,
+      assigneeId: undefined,
+      dueDateFrom: undefined,
+      dueDateTo: undefined,
     });
     fetchTasks(1, pagination.limit);
   };
   const [viewTask, setViewTask] = useState<(typeof tasks)[number] | null>(null);
+
+  // Check if Today Done filter is currently active
+  const isTodayDoneActive = () => {
+    const currentFilters = useTaskStore.getState().filters;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split("T")[0];
+
+    return (
+      currentFilters.status === "COMPLETED" &&
+      currentFilters.completedFrom &&
+      currentFilters.completedTo &&
+      currentFilters.completedFrom.startsWith(todayStr) &&
+      currentFilters.completedTo.startsWith(todayStr)
+    );
+  };
 
   useEffect(() => {
     fetchTasks(1, 10);
@@ -111,7 +140,12 @@ export default function TasksAdminPage() {
     const statusValue = status === "ALL" ? undefined : status;
     const priorityValue = priority === "ALL" ? undefined : priority;
     const assigneeValue = assignee === "ALL" ? undefined : assignee;
+
+    // Get current filters to preserve any that aren't handled by the UI form
+    const currentFilters = useTaskStore.getState().filters;
+
     setFilters({
+      ...currentFilters, // Preserve existing filters like completedFrom/completedTo
       search: search || undefined,
       status: statusValue as
         | "PENDING"
@@ -307,10 +341,15 @@ export default function TasksAdminPage() {
               <Button
                 className="w-full sm:w-auto"
                 size="sm"
-                variant="secondary"
+                variant={isTodayDoneActive() ? "default" : "secondary"}
                 onClick={setTodayDone}
               >
                 Today Done
+                {isTodayDoneActive() && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    Active
+                  </Badge>
+                )}
               </Button>
               <Button
                 className="w-full sm:w-auto"

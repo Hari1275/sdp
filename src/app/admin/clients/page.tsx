@@ -1,24 +1,24 @@
 "use client";
 
-import { useEffect, useMemo } from 'react';
-import { useClientStore } from '@/store/client-store';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { 
-  PlusCircle, 
-  Building2, 
-  TrendingUp, 
-  TrendingDown, 
+import { useEffect, useMemo } from "react";
+import { useClientStore } from "@/store/client-store";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  PlusCircle,
+  Building2,
+  TrendingUp,
+  TrendingDown,
   Activity,
   Search,
   Filter,
   Download,
   MapPin,
-  DollarSign
-} from 'lucide-react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+  DollarSign,
+} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,18 +26,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { ClientTable } from './client-table';
-import { ClientFilters } from './client-filters';
-import { ClientForm } from './client-form';
-import { useState } from 'react';
+} from "@/components/ui/select";
+import { ClientTable } from "./client-table";
+import { ClientFilters } from "./client-filters";
+import { ClientForm } from "./client-form";
+import { useState } from "react";
 
 export default function ClientManagementPage() {
   const {
@@ -63,11 +63,11 @@ export default function ClientManagementPage() {
     exportClients,
     clearError,
     setPage,
-    setLimit
+    setLimit,
   } = useClientStore();
 
   const [showFilters, setShowFilters] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState("");
 
   useEffect(() => {
     fetchStatistics();
@@ -119,16 +119,43 @@ export default function ClientManagementPage() {
     }
 
     if (filters.businessType) {
-      result = result.filter(client => client?.businessType === filters.businessType);
+      result = result.filter(
+        (client) => client?.businessType === filters.businessType
+      );
       // console.log('[ClientsPage] After businessType filter:', result.length);
     }
     if (filters.regionId) {
-      result = result.filter(client => client?.region?.id === filters.regionId);
+      result = result.filter(
+        (client) => client?.region?.id === filters.regionId
+      );
       // console.log('[ClientsPage] After regionId filter:', result.length);
     }
     if (filters.areaId) {
-      result = result.filter(client => client?.area?.id === filters.areaId);
+      result = result.filter((client) => client?.area?.id === filters.areaId);
       // console.log('[ClientsPage] After areaId filter:', result.length);
+    }
+    if (filters.mrId) {
+      result = result.filter((client) => client?.mr?.id === filters.mrId);
+      // console.log('[ClientsPage] After mrId filter:', result.length);
+    }
+
+    // Apply date filters
+    if (filters.dateFrom) {
+      const fromDate = new Date(filters.dateFrom);
+      result = result.filter((client) => {
+        const clientDate = new Date(client?.createdAt);
+        return clientDate >= fromDate;
+      });
+      // console.log('[ClientsPage] After dateFrom filter:', result.length);
+    }
+    if (filters.dateTo) {
+      const toDate = new Date(filters.dateTo);
+      toDate.setHours(23, 59, 59, 999); // Include the entire day
+      result = result.filter((client) => {
+        const clientDate = new Date(client?.createdAt);
+        return clientDate <= toDate;
+      });
+      // console.log('[ClientsPage] After dateTo filter:', result.length);
     }
 
     // Apply client-side search across key fields (aligns with Users table client-side search)
@@ -160,19 +187,19 @@ export default function ClientManagementPage() {
     return result;
   }, [clients, filters, searchInput]);
 
-  const handleExport = async (format: 'csv' | 'excel') => {
+  const handleExport = async (format: "csv" | "excel") => {
     try {
       await exportClients({ format, filters });
     } catch {
-    // console.error('Export failed:', error);
+      // console.error('Export failed:', error);
     }
   };
 
   const getGrowthIcon = (trend: string) => {
     switch (trend) {
-      case 'up':
+      case "up":
         return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'down':
+      case "down":
         return <TrendingDown className="h-4 w-4 text-red-600" />;
       default:
         return <Activity className="h-4 w-4 text-gray-600" />;
@@ -181,12 +208,12 @@ export default function ClientManagementPage() {
 
   const getGrowthColor = (trend: string) => {
     switch (trend) {
-      case 'up':
-        return 'text-green-600';
-      case 'down':
-        return 'text-red-600';
+      case "up":
+        return "text-green-600";
+      case "down":
+        return "text-red-600";
       default:
-        return 'text-gray-600';
+        return "text-gray-600";
     }
   };
 
@@ -228,40 +255,50 @@ export default function ClientManagementPage() {
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={isExporting} className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                disabled={isExporting}
+                className="w-full sm:w-auto"
+              >
                 <Download className="mr-2 h-4 w-4" />
-                {isExporting ? 'Exporting...' : 'Export'}
+                {isExporting ? "Exporting..." : "Export"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuLabel>Export Format</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
+              <DropdownMenuItem onClick={() => handleExport("csv")}>
                 Export as CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
+              <DropdownMenuItem onClick={() => handleExport("excel")}>
                 Export as Excel
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={() => openClientSheet()} className="w-full sm:w-auto">
+          <Button
+            onClick={() => openClientSheet()}
+            className="w-full sm:w-auto"
+          >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Client
           </Button>
         </div>
       </div>
 
-      {/* Statistics Cards */
-      }
+      {/* Statistics Cards */}
       {statistics && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Clients
+              </CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{statistics.overview.totalClients}</div>
+              <div className="text-2xl font-bold">
+                {statistics.overview.totalClients}
+              </div>
               <p className="text-xs text-muted-foreground">
                 {statistics.overview.recentClients} added this month
               </p>
@@ -270,7 +307,9 @@ export default function ClientManagementPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Active Clients
+              </CardTitle>
               <Activity className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
@@ -285,7 +324,9 @@ export default function ClientManagementPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Business Clients</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Business Clients
+              </CardTitle>
               <DollarSign className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
@@ -304,8 +345,12 @@ export default function ClientManagementPage() {
               {getGrowthIcon(statistics.growth.growthTrend)}
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${getGrowthColor(statistics.growth.growthTrend)}`}>
-                {statistics.growth.growthRate > 0 ? '+' : ''}
+              <div
+                className={`text-2xl font-bold ${getGrowthColor(
+                  statistics.growth.growthTrend
+                )}`}
+              >
+                {statistics.growth.growthRate > 0 ? "+" : ""}
                 {statistics.growth.growthRate}%
               </div>
               <p className="text-xs text-muted-foreground">
@@ -329,10 +374,13 @@ export default function ClientManagementPage() {
             <CardContent>
               <div className="space-y-3">
                 {statistics.businessTypes.map((type) => (
-                  <div key={type.businessType} className="flex items-center justify-between">
+                  <div
+                    key={type.businessType}
+                    className="flex items-center justify-between"
+                  >
                     <div className="flex items-center gap-2">
                       <div className="text-sm font-medium">
-                        {type.businessType.replace('_', ' ')}
+                        {type.businessType.replace("_", " ")}
                       </div>
                       <Badge variant="secondary" className="text-xs">
                         {type.count}
@@ -357,18 +405,17 @@ export default function ClientManagementPage() {
             <CardContent>
               <div className="space-y-3">
                 {statistics.areas.slice(0, 5).map((area) => (
-                  <div key={area.areaId} className="flex items-center justify-between">
+                  <div
+                    key={area.areaId}
+                    className="flex items-center justify-between"
+                  >
                     <div className="flex flex-col">
-                      <div className="text-sm font-medium">
-                        {area.areaName}
-                      </div>
+                      <div className="text-sm font-medium">{area.areaName}</div>
                       <div className="text-xs text-muted-foreground">
                         {area.regionName}
                       </div>
                     </div>
-                    <Badge variant="outline">
-                      {area.count}
-                    </Badge>
+                    <Badge variant="outline">{area.count}</Badge>
                   </div>
                 ))}
               </div>
@@ -408,7 +455,7 @@ export default function ClientManagementPage() {
             </div>
           </div>
         </CardHeader>
-        
+
         {showFilters && (
           <CardContent className="pt-0">
             <ClientFilters
@@ -418,9 +465,9 @@ export default function ClientManagementPage() {
             />
           </CardContent>
         )}
-        
+
         <CardContent className={showFilters ? "pt-0" : ""}>
-          <ClientTable 
+          <ClientTable
             clients={filteredClients}
             isLoading={isLoading || isSearching}
             searchQuery={searchInput}

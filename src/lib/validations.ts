@@ -23,12 +23,13 @@ export const createUserSchema = z.object({
   leadMrId: z.string().optional(),
 });
 
-export const updateUserSchema = createUserSchema
-  .partial()
-  .omit({ password: true })
-  .extend({
-    status: z.nativeEnum(UserStatus).optional(),
-  });
+export const updateUserSchema = createUserSchema.partial().extend({
+  status: z.nativeEnum(UserStatus).optional(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .optional(),
+});
 
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),

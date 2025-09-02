@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { UserRole, BusinessType } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { UserRole, BusinessType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import {
   getAuthenticatedUser,
   hasPermission,
@@ -9,9 +9,9 @@ import {
   validateRequest,
   logError,
   rateLimit,
-  parseQueryParams
-} from '@/lib/api-utils';
-import { createClientSchema, CreateClientInput } from '@/lib/validations';
+  parseQueryParams,
+} from "@/lib/api-utils";
+import { createClientSchema, CreateClientInput } from "@/lib/validations";
 
 // GET /api/clients - List clients with role-based filtering
 export async function GET(request: NextRequest) {
@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
     // Rate limiting
     if (!rateLimit(request)) {
       return errorResponse(
-        'RATE_LIMIT_EXCEEDED',
-        'Too many requests. Please try again later.',
+        "RATE_LIMIT_EXCEEDED",
+        "Too many requests. Please try again later.",
         429
       );
     }
@@ -30,14 +30,16 @@ export async function GET(request: NextRequest) {
     // Authentication
     user = await getAuthenticatedUser(request);
     if (!user) {
-      return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
+      return errorResponse("UNAUTHORIZED", "Authentication required", 401);
     }
 
     const { page, limit, search, regionId } = parseQueryParams(request);
     const { searchParams } = new URL(request.url);
-    const businessType = searchParams.get('businessType');
-    const areaId = searchParams.get('areaId');
-    const mrId = searchParams.get('mrId');
+    const businessType = searchParams.get("businessType");
+    const areaId = searchParams.get("areaId");
+    const mrId = searchParams.get("mrId");
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
 
     // Build base query with role-based filtering
     const whereClause: Record<string, unknown> = {};
@@ -50,14 +52,14 @@ export async function GET(request: NextRequest) {
           whereClause.regionId = user.regionId;
         } else {
           // If MR has no region assigned, they can't see any clients
-          whereClause.id = 'non-existent-id';
+          whereClause.id = "non-existent-id";
         }
         break;
       case UserRole.LEAD_MR:
         // Lead MR can see their region's clients and their team's clients
         whereClause.OR = [
           { regionId: user.regionId },
-          { mr: { leadMrId: user.id } }
+          { mr: { leadMrId: user.id } },
         ];
         break;
       case UserRole.ADMIN:
@@ -69,7 +71,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       whereClause.name = {
         contains: search,
-        mode: 'insensitive'
+        mode: "insensitive",
       };
     }
 
@@ -77,7 +79,10 @@ export async function GET(request: NextRequest) {
     if (regionId && user.role === UserRole.ADMIN) {
       whereClause.regionId = regionId;
     }
-    if (businessType && Object.values(BusinessType).includes(businessType as BusinessType)) {
+    if (
+      businessType &&
+      Object.values(BusinessType).includes(businessType as BusinessType)
+    ) {
       whereClause.businessType = businessType;
     }
     if (areaId) {
@@ -85,6 +90,22 @@ export async function GET(request: NextRequest) {
     }
     if (mrId && user.role === UserRole.ADMIN) {
       whereClause.mrId = mrId;
+    }
+
+    // Date range filtering
+    if (dateFrom || dateTo) {
+      whereClause.createdAt = {} as Record<string, Date>;
+      if (dateFrom) {
+        (whereClause.createdAt as Record<string, Date>).gte = new Date(
+          dateFrom
+        );
+      }
+      if (dateTo) {
+        // Add 23:59:59 to include the entire day
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        (whereClause.createdAt as Record<string, Date>).lte = endDate;
+      }
     }
 
     // Get total count
@@ -110,30 +131,30 @@ export async function GET(request: NextRequest) {
         region: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
         area: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
         mr: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
         _count: {
           select: {
-            businessEntries: true
-          }
-        }
+            businessEntries: true,
+          },
+        },
       },
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     const response = {
@@ -144,14 +165,14 @@ export async function GET(request: NextRequest) {
         total,
         totalPages: Math.ceil(total / limit),
         hasNext: page * limit < total,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     };
 
     return successResponse(response);
   } catch (error) {
-    logError(error, 'GET /api/clients', user?.id);
-    return errorResponse('INTERNAL_ERROR', 'Failed to fetch clients', 500);
+    logError(error, "GET /api/clients", user?.id);
+    return errorResponse("INTERNAL_ERROR", "Failed to fetch clients", 500);
   }
 }
 
@@ -163,8 +184,8 @@ export async function POST(request: NextRequest) {
     // Rate limiting
     if (!rateLimit(request)) {
       return errorResponse(
-        'RATE_LIMIT_EXCEEDED',
-        'Too many requests. Please try again later.',
+        "RATE_LIMIT_EXCEEDED",
+        "Too many requests. Please try again later.",
         429
       );
     }
@@ -172,12 +193,14 @@ export async function POST(request: NextRequest) {
     // Authentication
     user = await getAuthenticatedUser(request);
     if (!user) {
-      return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
+      return errorResponse("UNAUTHORIZED", "Authentication required", 401);
     }
 
     // Authorization - MR, Lead MR, and Admin can create clients
-    if (!hasPermission(user.role, [UserRole.ADMIN, UserRole.LEAD_MR, UserRole.MR])) {
-      return errorResponse('FORBIDDEN', 'Insufficient permissions', 403);
+    if (
+      !hasPermission(user.role, [UserRole.ADMIN, UserRole.LEAD_MR, UserRole.MR])
+    ) {
+      return errorResponse("FORBIDDEN", "Insufficient permissions", 403);
     }
 
     const body = await request.json();
@@ -185,7 +208,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validation = validateRequest(createClientSchema, body);
     if (!validation.success) {
-      return errorResponse('VALIDATION_ERROR', validation.error);
+      return errorResponse("VALIDATION_ERROR", validation.error);
     }
 
     let clientData = validation.data as CreateClientInput;
@@ -195,7 +218,7 @@ export async function POST(request: NextRequest) {
       clientData = {
         ...clientData,
         mrId: user.id,
-        regionId: user.regionId! // MR must have a region
+        regionId: user.regionId!, // MR must have a region
       };
     }
 
@@ -203,37 +226,43 @@ export async function POST(request: NextRequest) {
     if (user.role === UserRole.LEAD_MR && clientData.mrId !== user.id) {
       const assignedMr = await prisma.user.findUnique({
         where: { id: clientData.mrId },
-        select: { leadMrId: true, regionId: true }
+        select: { leadMrId: true, regionId: true },
       });
 
       if (!assignedMr || assignedMr.leadMrId !== user.id) {
-        return errorResponse('FORBIDDEN', 'You can only assign clients to your team members');
+        return errorResponse(
+          "FORBIDDEN",
+          "You can only assign clients to your team members"
+        );
       }
     }
 
     // Verify region exists
     const region = await prisma.region.findUnique({
-      where: { id: clientData.regionId }
+      where: { id: clientData.regionId },
     });
     if (!region) {
-      return errorResponse('INVALID_REGION', 'Region not found');
+      return errorResponse("INVALID_REGION", "Region not found");
     }
 
     // Verify area exists and belongs to the region
     const area = await prisma.area.findUnique({
-      where: { id: clientData.areaId }
+      where: { id: clientData.areaId },
     });
     if (!area || area.regionId !== clientData.regionId) {
-      return errorResponse('INVALID_AREA', 'Area not found or does not belong to the specified region');
+      return errorResponse(
+        "INVALID_AREA",
+        "Area not found or does not belong to the specified region"
+      );
     }
 
     // Verify MR exists and has proper role
     const assignedMr = await prisma.user.findUnique({
       where: { id: clientData.mrId },
-      select: { role: true, regionId: true }
+      select: { role: true, regionId: true },
     });
     if (!assignedMr || assignedMr.role !== UserRole.MR) {
-      return errorResponse('INVALID_MR', 'Assigned user is not an MR');
+      return errorResponse("INVALID_MR", "Assigned user is not an MR");
     }
 
     // Check for duplicate client (name + location + area)
@@ -241,12 +270,15 @@ export async function POST(request: NextRequest) {
       where: {
         name: clientData.name,
         areaId: clientData.areaId,
-        businessType: clientData.businessType
-      }
+        businessType: clientData.businessType,
+      },
     });
 
     if (existingClient) {
-      return errorResponse('CLIENT_EXISTS', 'Client with same name and business type already exists in this area');
+      return errorResponse(
+        "CLIENT_EXISTS",
+        "Client with same name and business type already exists in this area"
+      );
     }
 
     // Create client
@@ -269,34 +301,34 @@ export async function POST(request: NextRequest) {
         region: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
         area: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
         mr: {
           select: {
             id: true,
-            name: true
-          }
-        }
-      }
+            name: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Client created successfully',
-        data: newClient
+        message: "Client created successfully",
+        data: newClient,
       },
       { status: 201 }
     );
   } catch (error) {
-    logError(error, 'POST /api/clients', user?.id);
-    return errorResponse('INTERNAL_ERROR', 'Failed to create client', 500);
+    logError(error, "POST /api/clients", user?.id);
+    return errorResponse("INTERNAL_ERROR", "Failed to create client", 500);
   }
 }
