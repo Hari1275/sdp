@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       let totalDistance = 0;
       let totalDuration = 0;
       
-      route.legs.forEach((leg: any) => {
+      route.legs.forEach((leg: { distance: { value: number }; duration: { value: number } }) => {
         totalDistance += leg.distance.value;
         totalDuration += leg.duration.value;
       });

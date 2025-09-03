@@ -349,7 +349,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
   const [roadBasedTrails, setRoadBasedTrails] = useState<Map<string, { lat: number; lng: number }[]>>(new Map());
 
   // Function to get road-based path for a GPS trail
-  const getRoadBasedPath = useCallback(async (sessionId: string, gpsLogs: any[]) => {
+  const getRoadBasedPath = useCallback(async (sessionId: string, gpsLogs: { latitude: number; longitude: number; timestamp: string | Date; [key: string]: unknown }[]) => {
     if (gpsLogs.length < 2) return null;
     
     try {
@@ -376,7 +376,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
       }
       
       return null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }, []);

@@ -122,9 +122,9 @@ Check console for detailed logs!`);
           </div>
           <p>1. Open browser console (F12 → Console tab)</p>
           <p>2. Click one of the test buttons above</p>
-          <p>3. Watch for logs: "🌐 [GPS-UTILS] Calling server-side Google Maps API endpoint"</p>
-          <p>4. If you see "google_api" method = Google Maps is working!</p>
-          <p>5. If you see "haversine" method = Check your API key configuration</p>
+          <p>3. Watch for logs: &quot;🌐 [GPS-UTILS] Calling server-side Google Maps API endpoint&quot;</p>
+          <p>4. If you see &quot;google_api&quot; method = Google Maps is working!</p>
+          <p>5. If you see &quot;haversine&quot; method = Check your API key configuration</p>
         </CardContent>
       </Card>
     </div>
