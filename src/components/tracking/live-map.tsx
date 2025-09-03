@@ -132,18 +132,34 @@ export default function LiveMap({
             key={`trail-${t.userId}-${idx}`}
             path={t.trail.map((p) => ({ lat: p.lat, lng: p.lng }))}
             options={{
-              strokeColor:
-                selectedUserId && t.userId !== selectedUserId
-                  ? "#cbd5e1"  // Light gray for unselected
-                  : selectedUserId && t.userId === selectedUserId
-                  ? "#10b981"  // Bright green for selected session
-                  : "#3b82f6", // Default blue for overview mode
-              strokeOpacity:
-                selectedUserId && t.userId !== selectedUserId ? 0.3 : 0.9,
-              strokeWeight:
-                selectedUserId && t.userId !== selectedUserId ? 2 : 5,
-              zIndex:
-                selectedUserId && t.userId === selectedUserId ? 1000 : 1,
+              strokeColor: (() => {
+                if (!selectedUserId) {
+                  return "#3b82f6"; // Default blue when no selection
+                }
+                if (t.userId === selectedUserId) {
+                  return "#10b981"; // Bright green for selected session
+                }
+                return "#cbd5e1"; // Light gray for all unselected sessions
+              })(),
+              strokeOpacity: (() => {
+                if (!selectedUserId) {
+                  return 0.8; // Default opacity when no selection
+                }
+                if (t.userId === selectedUserId) {
+                  return 0.9; // High opacity for selected session
+                }
+                return 0.3; // Low opacity for unselected sessions
+              })(),
+              strokeWeight: (() => {
+                if (!selectedUserId) {
+                  return 3; // Default weight when no selection
+                }
+                if (t.userId === selectedUserId) {
+                  return 5; // Thick line for selected session
+                }
+                return 2; // Thin line for unselected sessions
+              })(),
+              zIndex: t.userId === selectedUserId ? 1000 : 1,
             }}
           />
         ))}

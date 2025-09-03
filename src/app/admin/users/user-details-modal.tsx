@@ -405,8 +405,11 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
           }));
           
         if (simplifiedTrail.length > 0) {
+          const trailUserId = user.id + '_' + sessionId;
+          console.log(`Session ${sessionId} - isSelected: ${isSelected}, trailUserId: ${trailUserId}`);
+          
           trails.push({
-            userId: user.id + '_' + sessionId,
+            userId: trailUserId,
             userName: isSelected ? `${user.name} (Selected)` : user.name,
             trail: simplifiedTrail,
             // Add custom properties for styling
@@ -417,10 +420,14 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
       }
     });
 
+    const finalSelectedUserId = selectedSessionId ? user.id + '_' + selectedSessionId : null;
+    console.log(`Selected Session ID: ${selectedSessionId}, Final Selected User ID: ${finalSelectedUserId}`);
+    console.log(`Total trails: ${trails.length}, Trails:`, trails.map(t => ({ userId: t.userId, isSelected: t.isSelected })));
+    
     return { 
       locations, 
       trails, 
-      selectedUserId: selectedSessionId ? user.id + '_' + selectedSessionId : null 
+      selectedUserId: finalSelectedUserId 
     };
   }, [gpsSessions, mapView, selectedSessionId, user]);
 
