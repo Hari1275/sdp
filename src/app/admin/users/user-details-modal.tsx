@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { DateDisplay } from '@/components/date-display';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import {
   User,
   Mail,
@@ -28,9 +29,37 @@ import {
   CheckCircle2,
   TrendingUp,
   Building2,
-  Activity
+  Activity,
+  Route,
+  Navigation
 } from 'lucide-react';
 import { apiGet } from '@/lib/api-client';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the map component to avoid SSR issues
+const LiveMap = dynamic(() => import('@/components/tracking/live-map'), {
+  ssr: false,
+  loading: () => <div className="w-full h-96 bg-gray-100 rounded-md flex items-center justify-center">Loading map...</div>
+});
+
+// Fallback component when Google Maps is not available
+const MapFallback = ({ session }: { session?: GPSSession }) => (
+  <div className="w-full h-96 bg-gray-50 rounded-md border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500">
+    <MapPin className="h-12 w-12 mb-4" />
+    <h3 className="text-lg font-medium mb-2">Map Visualization</h3>
+    <p className="text-sm text-center max-w-xs">
+      Google Maps integration is not configured. GPS data is available in the sessions list below.
+    </p>
+    {session && (
+      <div className="mt-4 text-xs bg-white p-3 rounded border">
+        <div className="font-medium">Session Details:</div>
+        <div>Distance: {session.totalKm.toFixed(1)} km</div>
+        <div>Duration: {Math.round(session.duration * 10) / 10} hours</div>
+        <div>GPS Points: {session.coordinateCount}</div>
+      </div>
+    )}
+  </div>
+);
 
 // Task interface for pending tasks
 interface Task {
@@ -76,6 +105,50 @@ interface Client {
     name: string;
   };
 }
+
+// GPS Session interface for tracking data
+interface GPSSession {
+  id: string;
+  checkIn: string;
+  checkOut?: string;
+  totalKm: number;
+  duration: number;
+  user: {
+    id: string;
+    name: string;
+    username: string;
+  };
+  coordinateCount: number;
+  gpsLogs?: Array<{
+    latitude: number;
+    longitude: number;
+    timestamp: string;
+    accuracy?: number;
+    speed?: number;
+    altitude?: number;
+  }>;
+}
+
+// Map data types
+type TeamLocation = {
+  userId: string;
+  userName: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string | Date;
+};
+
+type TrailPoint = { 
+  lat: number; 
+  lng: number; 
+  timestamp: string | Date; 
+};
+
+type SessionTrail = { 
+  userId: string; 
+  userName: string; 
+  trail: TrailPoint[]; 
+};
 
 type UserDetailsProps = {
   user: {
@@ -161,10 +234,15 @@ const getPriorityIcon = (priority: string) => {
 export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [gpsSessions, setGpsSessions] = useState<GPSSession[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [isLoadingGPS, setIsLoadingGPS] = useState(false);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [mapView, setMapView] = useState<'overview' | 'session'>('overview');
 
   const fetchPendingTasks = useCallback(async () => {
     if (!user) return;
@@ -204,13 +282,103 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     }
   }, [user]);
 
-  // Fetch pending tasks when modal opens
+  const fetchGPSSessions = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoadingGPS(true);
+    setGpsError(null);
+    
+    try {
+      // Fetch GPS sessions for this user (last 10 sessions)
+      const sessionsResponse = await apiGet<{ sessions: GPSSession[] }>(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`);
+      const sessionsData = sessionsResponse.sessions || [];
+      setGpsSessions(Array.isArray(sessionsData) ? sessionsData : []);
+    } catch (error) {
+      console.error('Error fetching GPS sessions:', error);
+      setGpsError('Failed to load GPS tracking data');
+      setGpsSessions([]);
+    } finally {
+      setIsLoadingGPS(false);
+    }
+  }, [user]);
+
+  // Fetch data when modal opens
   useEffect(() => {
     if (open && user) {
       fetchPendingTasks();
       fetchUserClients();
+      fetchGPSSessions();
     }
-  }, [open, user, fetchPendingTasks, fetchUserClients]);
+  }, [open, user, fetchPendingTasks, fetchUserClients, fetchGPSSessions]);
+
+  // Prepare map data from GPS sessions
+  const getMapData = useCallback(() => {
+    if (mapView === 'session' && selectedSessionId) {
+      // Show specific session trail
+      const session = gpsSessions.find(s => s.id === selectedSessionId);
+      if (session && session.gpsLogs) {
+        const trail: TrailPoint[] = session.gpsLogs.map(log => ({
+          lat: log.latitude,
+          lng: log.longitude,
+          timestamp: log.timestamp
+        }));
+        
+        const trails: SessionTrail[] = [{
+          userId: user.id,
+          userName: user.name,
+          trail
+        }];
+
+        // Get latest location for marker
+        const latestLocation: TeamLocation[] = session.gpsLogs.length > 0 ? [{
+          userId: user.id,
+          userName: user.name,
+          latitude: session.gpsLogs[session.gpsLogs.length - 1].latitude,
+          longitude: session.gpsLogs[session.gpsLogs.length - 1].longitude,
+          timestamp: session.gpsLogs[session.gpsLogs.length - 1].timestamp
+        }] : [];
+
+        return { locations: latestLocation, trails, selectedUserId: user.id };
+      }
+    }
+    
+    // Overview: show all recent locations
+    const locations: TeamLocation[] = [];
+    const trails: SessionTrail[] = [];
+    
+    // Get latest positions from each session
+    gpsSessions.slice(0, 5).forEach(session => {
+      if (session.gpsLogs && session.gpsLogs.length > 0) {
+        const latestLog = session.gpsLogs[session.gpsLogs.length - 1];
+        locations.push({
+          userId: user.id,
+          userName: user.name,
+          latitude: latestLog.latitude,
+          longitude: latestLog.longitude,
+          timestamp: latestLog.timestamp
+        });
+        
+        // Add simplified trail (every 10th point for performance)
+        const simplifiedTrail: TrailPoint[] = session.gpsLogs
+          .filter((_, index) => index % 10 === 0)
+          .map(log => ({
+            lat: log.latitude,
+            lng: log.longitude,
+            timestamp: log.timestamp
+          }));
+          
+        if (simplifiedTrail.length > 0) {
+          trails.push({
+            userId: user.id + '_' + session.id,
+            userName: user.name,
+            trail: simplifiedTrail
+          });
+        }
+      }
+    });
+
+    return { locations, trails, selectedUserId: null };
+  }, [gpsSessions, mapView, selectedSessionId, user]);
 
   if (!user) return null;
 
@@ -239,7 +407,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="flex-1">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="tasks">
               Pending Tasks
@@ -250,6 +418,10 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
               )}
             </TabsTrigger>
             <TabsTrigger value="clients">Clients</TabsTrigger>
+            <TabsTrigger value="map">
+              <Route className="h-4 w-4 mr-1" />
+              Map
+            </TabsTrigger>
             <TabsTrigger value="details">Details</TabsTrigger>
           </TabsList>
 
@@ -477,6 +649,134 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="map" className="space-y-4 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Route className="h-4 w-4" />
+                    User Route & GPS Tracking
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={mapView === 'overview' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setMapView('overview')}
+                    >
+                      Overview
+                    </Button>
+                    <Button
+                      variant={mapView === 'session' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setMapView('session')}
+                      disabled={gpsSessions.length === 0}
+                    >
+                      Session Details
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingGPS ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-pulse text-sm text-muted-foreground">Loading GPS data...</div>
+                    </div>
+                  ) : gpsError ? (
+                    <div className="text-center py-8 text-sm text-destructive">{gpsError}</div>
+                  ) : gpsSessions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Navigation className="h-8 w-8 mx-auto mb-2" />
+                      <p>No GPS tracking data available</p>
+                      <p className="text-xs">User hasn't started any tracking sessions yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Map Component */}
+                      {(() => {
+                        const mapData = getMapData();
+                        const hasGoogleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.length > 0;
+                        const selectedSession = selectedSessionId ? gpsSessions.find(s => s.id === selectedSessionId) : undefined;
+                        
+                        if (!hasGoogleMapsKey) {
+                          return <MapFallback session={selectedSession} />;
+                        }
+                        
+                        return (
+                          <LiveMap
+                            locations={mapData.locations}
+                            trails={mapData.trails}
+                            selectedUserId={mapData.selectedUserId}
+                            follow={mapView === 'session'}
+                          />
+                        );
+                      })()}
+                      
+                      {/* GPS Sessions List */}
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Recent Sessions ({gpsSessions.length})
+                        </h4>
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {gpsSessions.map((session) => (
+                            <div 
+                              key={session.id} 
+                              className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                                selectedSessionId === session.id 
+                                  ? 'border-blue-500 bg-blue-50' 
+                                  : 'hover:bg-gray-50'
+                              }`}
+                              onClick={() => {
+                                setSelectedSessionId(session.id);
+                                setMapView('session');
+                              }}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <DateDisplay 
+                                      date={new Date(session.checkIn)} 
+                                      format="MMM dd, yyyy" 
+                                      className="font-medium text-sm"
+                                    />
+                                    {!session.checkOut && (
+                                      <Badge variant="default" className="text-xs">Active</Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    <DateDisplay 
+                                      date={new Date(session.checkIn)} 
+                                      format="h:mm a" 
+                                    />
+                                    {session.checkOut && (
+                                      <>
+                                        {' - '}
+                                        <DateDisplay 
+                                          date={new Date(session.checkOut)} 
+                                          format="h:mm a" 
+                                        />
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right text-xs">
+                                  <div className="font-medium">{session.totalKm.toFixed(1)} km</div>
+                                  <div className="text-muted-foreground">
+                                    {Math.round(session.duration * 10) / 10}h
+                                  </div>
+                                  <div className="text-muted-foreground">
+                                    {session.coordinateCount} points
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
