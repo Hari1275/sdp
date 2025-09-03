@@ -28,13 +28,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     
-    console.log('🗺️ [API] Google Maps route calculation requested');
-    console.log(`   Waypoints: ${waypoints.length} points`);
-    console.log(`   Mode: ${mode}`);
-    console.log(`   API Key available: ${!!apiKey} ${apiKey ? `(length: ${apiKey.length})` : '(MISSING)'}`);
-
     if (!apiKey) {
-      console.warn('⚠️ [API] No Google Maps API key found! Cannot use Directions API');
       
       // Fallback to straight lines between points
       const path = waypoints.map(wp => ({ lat: wp.latitude, lng: wp.longitude }));

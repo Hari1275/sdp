@@ -31,14 +31,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     
-    console.log('🗺️ [API] Google Maps distance calculation requested');
-    console.log(`   Origin: ${origin.latitude}, ${origin.longitude}`);
-    console.log(`   Destination: ${destination.latitude}, ${destination.longitude}`);
-    console.log(`   Mode: ${mode}`);
-    console.log(`   API Key available: ${!!apiKey} ${apiKey ? `(length: ${apiKey.length})` : '(MISSING)'}`);
-
-    if (!apiKey) {
-      console.warn('⚠️ [API] No Google Maps API key found! Cannot use Distance Matrix API');
+      if (!apiKey) {
       
       // Calculate Haversine distance as fallback
       const haversineDistance = calculateHaversineDistance(origin, destination);
@@ -62,32 +55,25 @@ export async function POST(request: NextRequest) {
       url.searchParams.append('units', 'metric');
       url.searchParams.append('key', apiKey);
 
-      console.log(`🌐 [API] Calling Google Distance Matrix API from server`);
       const response = await fetch(url.toString());
       
       if (!response.ok) {
-        console.error(`❌ [API] Google API HTTP error: ${response.status}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log(`📊 [API] Google API response status: ${data.status}`);
 
       if (data.status !== 'OK') {
-        console.error(`❌ [API] Google API returned error: ${data.status} - ${data.error_message || 'Unknown error'}`);
         throw new Error(`API error: ${data.status} - ${data.error_message || 'Unknown error'}`);
       }
 
       const element = data.rows[0]?.elements[0];
       if (!element || element.status !== 'OK') {
-        console.error(`❌ [API] Route calculation failed: ${element?.status || 'Unknown error'}`);
         throw new Error(`Route not found: ${element?.status || 'Unknown error'}`);
       }
 
       const distanceKm = element.distance.value / 1000;
       const durationMinutes = element.duration.value / 60;
-
-      console.log(`✅ [API] Google API success! Distance: ${distanceKm}km, Duration: ${durationMinutes.toFixed(1)} min`);
 
       return NextResponse.json({
         distance: distanceKm,
@@ -97,12 +83,8 @@ export async function POST(request: NextRequest) {
       });
 
     } catch (error) {
-      console.error('❌ [API] Google API failed, falling back to Haversine calculation');
-      console.error(`   Error details: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      
       // Fallback to Haversine calculation
       const haversineDistance = calculateHaversineDistance(origin, destination);
-      console.log(`✅ [API] Haversine fallback calculated: ${haversineDistance}km`);
       
       return NextResponse.json({
         distance: haversineDistance,
@@ -113,7 +95,6 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('❌ [API] Request processing failed:', error);
     return NextResponse.json(
       { 
         success: false, 

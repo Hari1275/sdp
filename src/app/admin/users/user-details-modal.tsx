@@ -360,7 +360,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
       
       if (waypoints.length < 2) return null;
       
-      console.log(`🛣️ [USER-MODAL] Getting road-based path for session ${sessionId} with ${waypoints.length} waypoints`);
+
       
       const response = await fetch('/api/google-maps/route', {
         method: 'POST',
@@ -371,15 +371,12 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.path) {
-          console.log(`✅ [USER-MODAL] Road-based path obtained for session ${sessionId}: ${data.path.length} points`);
           return data.path;
         }
       }
       
-      console.warn(`⚠️ [USER-MODAL] Failed to get road-based path for session ${sessionId}, using GPS points`);
       return null;
     } catch (error) {
-      console.error(`❌ [USER-MODAL] Error getting road-based path for session ${sessionId}:`, error);
       return null;
     }
   }, []);
@@ -414,8 +411,6 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
 
   // Prepare map data from GPS sessions
   const getMapData = useCallback(() => {
-    console.log(`🗺️ getMapData called - mapView: ${mapView}, selectedSessionId: ${selectedSessionId}`);
-    
     if (!user) {
       return { locations: [], trails: [], selectedUserId: null };
     }
@@ -479,7 +474,6 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
             lng: point.lng,
             timestamp: session.gpsLogs?.[0]?.timestamp || ''
           }));
-          console.log(`🛣️ Using road-based path for session ${sessionId}: ${trailPoints.length} points`);
         } else {
           // Fallback to simplified GPS trail (every 10th point for performance)
           trailPoints = session.gpsLogs
@@ -489,12 +483,10 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
               lng: log.longitude,
               timestamp: log.timestamp
             }));
-          console.log(`📍 Using GPS points for session ${sessionId}: ${trailPoints.length} points`);
         }
           
         if (trailPoints.length > 0) {
           const trailUserId = user.id + '_' + sessionId;
-          console.log(`Session ${sessionId} - isSelected: ${isSelected}, trailUserId: ${trailUserId}`);
           
           trails.push({
             userId: trailUserId,
@@ -509,8 +501,6 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     });
 
     const finalSelectedUserId = selectedSessionId ? user.id + '_' + selectedSessionId : null;
-    console.log(`Selected Session ID: ${selectedSessionId}, Final Selected User ID: ${finalSelectedUserId}`);
-    console.log(`Total trails: ${trails.length}, Trails:`, trails.map(t => ({ userId: t.userId, isSelected: t.isSelected })));
     
     return { 
       locations, 
@@ -888,11 +878,9 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                               onClick={() => {
                                 const sessionId = session.sessionId || session.id;
                                 if (sessionId) {
-                                  console.log(`🔄 Selecting session: ${sessionId} (previous: ${selectedSessionId})`);
                                   setSelectedSessionId(sessionId);
                                   // Switch to overview mode to show selected session highlighted among others
                                   setMapView('overview');
-                                  console.log(`✅ Selection updated to: ${sessionId}`);
                                 }
                               }}
                             >

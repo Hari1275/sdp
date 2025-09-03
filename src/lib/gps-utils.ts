@@ -191,20 +191,9 @@ export async function calculateDistanceWithGoogle(
 ): Promise<DistanceCalculationResult> {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   
-  console.log('🗺️ [GPS-UTILS] calculateDistanceWithGoogle called');
-  console.log(`   Origin: ${origin.latitude}, ${origin.longitude}`);
-  console.log(`   Destination: ${destination.latitude}, ${destination.longitude}`);
-  console.log(`   Mode: ${mode}`);
-  console.log(`   API Key available: ${!!apiKey} ${apiKey ? `(length: ${apiKey.length})` : '(MISSING)'}`);
-  
   if (!apiKey) {
-    console.warn('⚠️ [GPS-UTILS] No Google Maps API key found! Falling back to Haversine calculation');
-    console.warn('   To fix: Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your .env.local file');
-    console.warn('   Get API key from: https://console.cloud.google.com/apis/credentials');
-    
     // Fallback to Haversine if no API key
     const distance = calculateDistance(origin, destination);
-    console.log(`✅ [GPS-UTILS] Haversine fallback calculated: ${distance}km`);
     return {
       distance,
       method: 'haversine',
