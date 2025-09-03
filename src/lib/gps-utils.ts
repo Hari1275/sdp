@@ -213,48 +213,42 @@ export async function calculateDistanceWithGoogle(
   }
 
   try {
-    const originStr = `${origin.latitude},${origin.longitude}`;
-    const destinationStr = `${destination.latitude},${destination.longitude}`;
+    console.log(`🌐 [GPS-UTILS] Calling server-side Google Maps API endpoint`);
     
-    const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json');
-    url.searchParams.append('origins', originStr);
-    url.searchParams.append('destinations', destinationStr);
-    url.searchParams.append('mode', mode);
-    url.searchParams.append('units', 'metric');
-    url.searchParams.append('key', apiKey);
-
-    console.log(`🌐 [GPS-UTILS] Calling Google Distance Matrix API: ${url.toString().replace(apiKey, 'API_KEY_HIDDEN')}`);
-    const response = await fetch(url.toString());
+    const response = await fetch('/api/google-maps/distance', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        origin,
+        destination,
+        mode
+      })
+    });
     
     if (!response.ok) {
-      console.error(`❌ [GPS-UTILS] Google API HTTP error: ${response.status}`);
+      console.error(`❌ [GPS-UTILS] Server API HTTP error: ${response.status}`);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data: DistanceMatrixResponse = await response.json();
-    console.log(`📊 [GPS-UTILS] Google API response status: ${data.status}`);
+    const data = await response.json();
+    console.log(`📊 [GPS-UTILS] Server API response:`, data);
 
-    if (data.status !== 'OK') {
-      console.error(`❌ [GPS-UTILS] Google API returned error: ${data.status} - ${data.error_message || 'Unknown error'}`);
-      throw new Error(`API error: ${data.status} - ${data.error_message || 'Unknown error'}`);
+    if (!data.success) {
+      console.error(`❌ [GPS-UTILS] Server API returned error: ${data.error || 'Unknown error'}`);
+      throw new Error(`API error: ${data.error || 'Unknown error'}`);
     }
 
-    const element = data.rows[0]?.elements[0];
-    if (!element || element.status !== 'OK') {
-      console.error(`❌ [GPS-UTILS] Route calculation failed: ${element?.status || 'Unknown error'}`);
-      throw new Error(`Route not found: ${element?.status || 'Unknown error'}`);
+    console.log(`✅ [GPS-UTILS] Distance calculation success! Distance: ${data.distance}km, Method: ${data.method}`);
+    if (data.duration) {
+      console.log(`   Duration: ${data.duration.toFixed(1)} min`);
     }
-
-    const distanceKm = element.distance.value / 1000;
-    const durationMinutes = element.duration.value / 60;
-
-    console.log(`✅ [GPS-UTILS] Google API success! Distance: ${distanceKm}km, Duration: ${durationMinutes.toFixed(1)} min`);
-    console.log(`   Distance text: ${element.distance.text}, Duration text: ${element.duration.text}`);
 
     return {
-      distance: distanceKm, // Convert meters to kilometers
-      duration: durationMinutes, // Convert seconds to minutes
-      method: 'google_api',
+      distance: data.distance,
+      duration: data.duration,
+      method: data.method,
       success: true
     };
 
