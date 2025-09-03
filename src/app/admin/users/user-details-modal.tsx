@@ -106,11 +106,12 @@ interface Client {
   };
 }
 
-// GPS Session interface for tracking data
+// GPS Session interface for tracking data (matching API response)
 interface GPSSession {
-  id: string;
-  checkIn: string;
-  checkOut?: string;
+  sessionId: string;
+  id?: string; // For backwards compatibility
+  checkIn: Date | string;
+  checkOut?: Date | string | null;
   totalKm: number;
   duration: number;
   user: {
@@ -122,10 +123,10 @@ interface GPSSession {
   gpsLogs?: Array<{
     latitude: number;
     longitude: number;
-    timestamp: string;
-    accuracy?: number;
-    speed?: number;
-    altitude?: number;
+    timestamp: Date | string;
+    accuracy?: number | null;
+    speed?: number | null;
+    altitude?: number | null;
   }>;
 }
 
@@ -291,11 +292,14 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     try {
       // Fetch GPS sessions for this user (last 10 sessions)
       const sessionsResponse = await apiGet<{ sessions: GPSSession[] }>(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`);
+      console.log('GPS Sessions API Response:', sessionsResponse);
       const sessionsData = sessionsResponse.sessions || [];
+      console.log('GPS Sessions Data:', sessionsData);
       setGpsSessions(Array.isArray(sessionsData) ? sessionsData : []);
     } catch (error) {
       console.error('Error fetching GPS sessions:', error);
-      setGpsError('Failed to load GPS tracking data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load GPS tracking data';
+      setGpsError(`Failed to load GPS tracking data: ${errorMessage}`);
       setGpsSessions([]);
     } finally {
       setIsLoadingGPS(false);
@@ -315,7 +319,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
   const getMapData = useCallback(() => {
     if (mapView === 'session' && selectedSessionId) {
       // Show specific session trail
-      const session = gpsSessions.find(s => s.id === selectedSessionId);
+      const session = gpsSessions.find(s => s.sessionId === selectedSessionId || s.id === selectedSessionId);
       if (session && session.gpsLogs) {
         const trail: TrailPoint[] = session.gpsLogs.map(log => ({
           lat: log.latitude,
@@ -369,7 +373,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
           
         if (simplifiedTrail.length > 0) {
           trails.push({
-            userId: user.id + '_' + session.id,
+            userId: user.id + '_' + (session.sessionId || session.id),
             userName: user.name,
             trail: simplifiedTrail
           });
@@ -699,7 +703,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                       {(() => {
                         const mapData = getMapData();
                         const hasGoogleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.length > 0;
-                        const selectedSession = selectedSessionId ? gpsSessions.find(s => s.id === selectedSessionId) : undefined;
+                        const selectedSession = selectedSessionId ? gpsSessions.find(s => s.sessionId === selectedSessionId || s.id === selectedSessionId) : undefined;
                         
                         if (!hasGoogleMapsKey) {
                           return <MapFallback session={selectedSession} />;
@@ -724,14 +728,14 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                         <div className="max-h-60 overflow-y-auto space-y-2">
                           {gpsSessions.map((session) => (
                             <div 
-                              key={session.id} 
+                              key={session.sessionId || session.id} 
                               className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                                selectedSessionId === session.id 
+                                selectedSessionId === (session.sessionId || session.id) 
                                   ? 'border-blue-500 bg-blue-50' 
                                   : 'hover:bg-gray-50'
                               }`}
                               onClick={() => {
-                                setSelectedSessionId(session.id);
+                                setSelectedSessionId(session.sessionId || session.id);
                                 setMapView('session');
                               }}
                             >
