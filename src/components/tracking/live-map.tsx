@@ -65,9 +65,12 @@ export default function LiveMap({
     return Array.from(latestByUser.values());
   }, [locations]);
 
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+  console.log('🗺️ [LIVE-MAP] Initializing Google Maps with API key:', !!apiKey ? `Available (${apiKey.length} chars)` : 'MISSING');
+
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    googleMapsApiKey: apiKey,
   });
 
   // Pan/zoom to explicit focus when provided

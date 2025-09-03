@@ -191,9 +191,20 @@ export async function calculateDistanceWithGoogle(
 ): Promise<DistanceCalculationResult> {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   
+  console.log('🗺️ [GPS-UTILS] calculateDistanceWithGoogle called');
+  console.log(`   Origin: ${origin.latitude}, ${origin.longitude}`);
+  console.log(`   Destination: ${destination.latitude}, ${destination.longitude}`);
+  console.log(`   Mode: ${mode}`);
+  console.log(`   API Key available: ${!!apiKey} ${apiKey ? `(length: ${apiKey.length})` : '(MISSING)'}`);
+  
   if (!apiKey) {
+    console.warn('⚠️ [GPS-UTILS] No Google Maps API key found! Falling back to Haversine calculation');
+    console.warn('   To fix: Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your .env.local file');
+    console.warn('   Get API key from: https://console.cloud.google.com/apis/credentials');
+    
     // Fallback to Haversine if no API key
     const distance = calculateDistance(origin, destination);
+    console.log(`✅ [GPS-UTILS] Haversine fallback calculated: ${distance}km`);
     return {
       distance,
       method: 'haversine',
@@ -212,35 +223,50 @@ export async function calculateDistanceWithGoogle(
     url.searchParams.append('units', 'metric');
     url.searchParams.append('key', apiKey);
 
+    console.log(`🌐 [GPS-UTILS] Calling Google Distance Matrix API: ${url.toString().replace(apiKey, 'API_KEY_HIDDEN')}`);
     const response = await fetch(url.toString());
     
     if (!response.ok) {
+      console.error(`❌ [GPS-UTILS] Google API HTTP error: ${response.status}`);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data: DistanceMatrixResponse = await response.json();
+    console.log(`📊 [GPS-UTILS] Google API response status: ${data.status}`);
 
     if (data.status !== 'OK') {
+      console.error(`❌ [GPS-UTILS] Google API returned error: ${data.status} - ${data.error_message || 'Unknown error'}`);
       throw new Error(`API error: ${data.status} - ${data.error_message || 'Unknown error'}`);
     }
 
     const element = data.rows[0]?.elements[0];
     if (!element || element.status !== 'OK') {
+      console.error(`❌ [GPS-UTILS] Route calculation failed: ${element?.status || 'Unknown error'}`);
       throw new Error(`Route not found: ${element?.status || 'Unknown error'}`);
     }
 
+    const distanceKm = element.distance.value / 1000;
+    const durationMinutes = element.duration.value / 60;
+
+    console.log(`✅ [GPS-UTILS] Google API success! Distance: ${distanceKm}km, Duration: ${durationMinutes.toFixed(1)} min`);
+    console.log(`   Distance text: ${element.distance.text}, Duration text: ${element.duration.text}`);
+
     return {
-      distance: element.distance.value / 1000, // Convert meters to kilometers
-      duration: element.duration.value / 60, // Convert seconds to minutes
+      distance: distanceKm, // Convert meters to kilometers
+      duration: durationMinutes, // Convert seconds to minutes
       method: 'google_api',
       success: true
     };
 
   } catch (error) {
-    console.warn('Google Distance Matrix API failed, falling back to Haversine:', error);
+    console.error('❌ [GPS-UTILS] Google Distance Matrix API failed, falling back to Haversine calculation');
+    console.error(`   Error details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.warn('   This means you\'ll get straight-line distance instead of road distance');
     
     // Fallback to Haversine formula
     const distance = calculateDistance(origin, destination);
+    console.log(`✅ [GPS-UTILS] Haversine fallback calculated: ${distance}km (straight-line distance)`);
+    
     return {
       distance,
       method: 'haversine',
@@ -263,7 +289,13 @@ export async function calculateTotalDistanceWithGoogle(
   mode: 'driving' | 'walking' | 'bicycling' | 'transit' = 'driving',
   maxWaypoints = 10 // Conservative limit to stay within API quotas
 ): Promise<DistanceCalculationResult> {
+  console.log('🗺️ [GPS-UTILS] calculateTotalDistanceWithGoogle called');
+  console.log(`   Coordinates count: ${coordinates.length}`);
+  console.log(`   Mode: ${mode}`);
+  console.log(`   Max waypoints: ${maxWaypoints}`);
+  
   if (coordinates.length < 2) {
+    console.log('ℹ️ [GPS-UTILS] Less than 2 coordinates, returning 0 distance');
     return {
       distance: 0,
       method: 'haversine',
@@ -272,10 +304,15 @@ export async function calculateTotalDistanceWithGoogle(
   }
 
   const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  console.log(`   API Key available: ${!!apiKey} ${apiKey ? `(length: ${apiKey.length})` : '(MISSING)'}`);
   
   if (!apiKey) {
+    console.warn('⚠️ [GPS-UTILS] No Google Maps API key found for route calculation! Falling back to Haversine');
+    console.warn('   To fix: Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your .env.local file');
+    
     // Fallback to Haversine if no API key
     const distance = calculateTotalDistance(coordinates);
+    console.log(`✅ [GPS-UTILS] Total distance via Haversine: ${distance}km (straight-line segments)`);
     return {
       distance,
       method: 'haversine',
@@ -286,12 +323,16 @@ export async function calculateTotalDistanceWithGoogle(
   try {
     // Simplify route to key waypoints to minimize API calls
     const simplifiedCoords = simplifyRouteForAPI(coordinates, maxWaypoints);
+    console.log(`🔗 [GPS-UTILS] Simplified ${coordinates.length} coordinates to ${simplifiedCoords.length} key waypoints`);
     
     let totalDistance = 0;
     let totalDuration = 0;
 
     // Process waypoints in chunks to respect API limits
+    console.log(`🚶 [GPS-UTILS] Processing ${simplifiedCoords.length - 1} route segments...`);
     for (let i = 0; i < simplifiedCoords.length - 1; i++) {
+      console.log(`   Segment ${i + 1}/${simplifiedCoords.length - 1}: Calculating distance...`);
+      
       const result = await calculateDistanceWithGoogle(
         simplifiedCoords[i],
         simplifiedCoords[i + 1],
@@ -299,9 +340,11 @@ export async function calculateTotalDistanceWithGoogle(
       );
       
       if (!result.success) {
+        console.error(`❌ [GPS-UTILS] Segment ${i + 1} calculation failed`);
         throw new Error(result.error || 'Failed to calculate segment distance');
       }
       
+      console.log(`   Segment ${i + 1} result: ${result.distance}km (method: ${result.method})`);
       totalDistance += result.distance;
       if (result.duration) {
         totalDuration += result.duration;
@@ -313,6 +356,10 @@ export async function calculateTotalDistanceWithGoogle(
       }
     }
 
+    console.log(`✅ [GPS-UTILS] Google API route calculation completed successfully!`);
+    console.log(`   Total distance: ${totalDistance}km, Total duration: ${totalDuration.toFixed(1)} min`);
+    console.log(`   Used Google API for ${simplifiedCoords.length - 1} segments`);
+
     return {
       distance: totalDistance,
       duration: totalDuration,
@@ -321,10 +368,14 @@ export async function calculateTotalDistanceWithGoogle(
     };
 
   } catch (error) {
-    console.warn('Google Distance Matrix API failed for route, falling back to Haversine:', error);
+    console.error('❌ [GPS-UTILS] Google API route calculation failed, falling back to Haversine');
+    console.error(`   Error details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.warn('   This means you\'ll get straight-line segments instead of road routing');
     
     // Fallback to Haversine formula
     const distance = calculateTotalDistance(coordinates);
+    console.log(`✅ [GPS-UTILS] Haversine route fallback calculated: ${distance}km (straight-line segments)`);
+    
     return {
       distance,
       method: 'haversine',
