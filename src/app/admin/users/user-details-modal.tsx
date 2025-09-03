@@ -345,6 +345,73 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     }
   }, [open, user, fetchPendingTasks, fetchUserClients, fetchGPSSessions]);
 
+  // State for road-based trail paths
+  const [roadBasedTrails, setRoadBasedTrails] = useState<Map<string, { lat: number; lng: number }[]>>(new Map());
+
+  // Function to get road-based path for a GPS trail
+  const getRoadBasedPath = useCallback(async (sessionId: string, gpsLogs: any[]) => {
+    if (gpsLogs.length < 2) return null;
+    
+    try {
+      // Simplify GPS points (take every 5th point to reduce API calls)
+      const waypoints = gpsLogs
+        .filter((_, index) => index % 5 === 0 || index === gpsLogs.length - 1)
+        .map(log => ({ latitude: log.latitude, longitude: log.longitude }));
+      
+      if (waypoints.length < 2) return null;
+      
+      console.log(`🛣️ [USER-MODAL] Getting road-based path for session ${sessionId} with ${waypoints.length} waypoints`);
+      
+      const response = await fetch('/api/google-maps/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ waypoints, mode: 'driving' })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.path) {
+          console.log(`✅ [USER-MODAL] Road-based path obtained for session ${sessionId}: ${data.path.length} points`);
+          return data.path;
+        }
+      }
+      
+      console.warn(`⚠️ [USER-MODAL] Failed to get road-based path for session ${sessionId}, using GPS points`);
+      return null;
+    } catch (error) {
+      console.error(`❌ [USER-MODAL] Error getting road-based path for session ${sessionId}:`, error);
+      return null;
+    }
+  }, []);
+
+  // Load road-based paths for GPS sessions
+  useEffect(() => {
+    if (gpsSessions.length === 0) return;
+    
+    const loadRoadPaths = async () => {
+      const newRoadTrails = new Map<string, { lat: number; lng: number }[]>();
+      
+      // Load road paths for up to 3 most recent sessions to avoid too many API calls
+      const sessionsToProcess = gpsSessions.slice(0, 3);
+      
+      for (const session of sessionsToProcess) {
+        if (session.gpsLogs && session.gpsLogs.length > 1) {
+          const sessionId = session.sessionId || session.id;
+          if (sessionId) {
+            const roadPath = await getRoadBasedPath(sessionId, session.gpsLogs);
+            if (roadPath) {
+              newRoadTrails.set(sessionId, roadPath);
+            }
+          }
+        }
+      }
+      
+      setRoadBasedTrails(newRoadTrails);
+    };
+    
+    loadRoadPaths();
+  }, [gpsSessions, getRoadBasedPath]);
+
   // Prepare map data from GPS sessions
   const getMapData = useCallback(() => {
     console.log(`🗺️ getMapData called - mapView: ${mapView}, selectedSessionId: ${selectedSessionId}`);
@@ -401,23 +468,38 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
           timestamp: latestLog.timestamp
         });
         
-        // Add simplified trail (every 10th point for performance)
-        const simplifiedTrail: TrailPoint[] = session.gpsLogs
-          .filter((_, index) => index % 10 === 0)
-          .map(log => ({
-            lat: log.latitude,
-            lng: log.longitude,
-            timestamp: log.timestamp
+        // Use road-based path if available, otherwise use simplified GPS trail
+        const roadPath = sessionId ? roadBasedTrails.get(sessionId) : undefined;
+        let trailPoints: TrailPoint[];
+        
+        if (roadPath && roadPath.length > 0) {
+          // Use road-based path from Google Directions API
+          trailPoints = roadPath.map(point => ({
+            lat: point.lat,
+            lng: point.lng,
+            timestamp: session.gpsLogs?.[0]?.timestamp || ''
           }));
+          console.log(`🛣️ Using road-based path for session ${sessionId}: ${trailPoints.length} points`);
+        } else {
+          // Fallback to simplified GPS trail (every 10th point for performance)
+          trailPoints = session.gpsLogs
+            .filter((_, index) => index % 10 === 0)
+            .map(log => ({
+              lat: log.latitude,
+              lng: log.longitude,
+              timestamp: log.timestamp
+            }));
+          console.log(`📍 Using GPS points for session ${sessionId}: ${trailPoints.length} points`);
+        }
           
-        if (simplifiedTrail.length > 0) {
+        if (trailPoints.length > 0) {
           const trailUserId = user.id + '_' + sessionId;
           console.log(`Session ${sessionId} - isSelected: ${isSelected}, trailUserId: ${trailUserId}`);
           
           trails.push({
             userId: trailUserId,
             userName: isSelected ? `${user.name} (Selected)` : user.name,
-            trail: simplifiedTrail,
+            trail: trailPoints,
             // Add custom properties for styling
             isSelected: isSelected,
             sessionIndex: index
@@ -435,7 +517,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
       trails, 
       selectedUserId: finalSelectedUserId 
     };
-  }, [gpsSessions, mapView, selectedSessionId, user]);
+  }, [gpsSessions, mapView, selectedSessionId, user, roadBasedTrails]);
 
   if (!user) return null;
 
@@ -464,12 +546,15 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="flex-1">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-5 gap-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="tasks">
+            <TabsTrigger value="tasks" className="inline-flex items-center gap-2">
               Pending Tasks
               {pendingTasks.length > 0 && (
-                <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+                <Badge 
+                  variant="destructive" 
+                  className="h-5 min-w-[20px] rounded-full p-0 text-xs flex items-center justify-center"
+                >
                   {pendingTasks.length}
                 </Badge>
               )}
