@@ -17,12 +17,18 @@ interface TaskDetailsModalProps {
   onClose: () => void;
 }
 
-export function TaskDetailsModal({ task, open, onClose }: TaskDetailsModalProps) {
+export function TaskDetailsModal({
+  task,
+  open,
+  onClose,
+}: TaskDetailsModalProps) {
   if (!task) return null;
 
   const infoRow = (label: string, value?: React.ReactNode) => (
     <div className="flex items-start justify-between py-2">
-      <div className="text-sm text-muted-foreground pr-4 min-w-[140px]">{label}</div>
+      <div className="text-sm text-muted-foreground pr-4 min-w-[140px]">
+        {label}
+      </div>
       <div className="text-sm flex-1 text-right">{value ?? "-"}</div>
     </div>
   );
@@ -31,27 +37,31 @@ export function TaskDetailsModal({ task, open, onClose }: TaskDetailsModalProps)
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between gap-3">
-            <span className="truncate">{task.title}</span>
-            <div className="flex items-center gap-2">
-              <Badge
-                variant={
-                  task.status === "COMPLETED"
-                    ? "secondary"
-                    : task.status === "IN_PROGRESS"
-                    ? "default"
-                    : "outline"
-                }
-              >
-                {task.status}
-              </Badge>
-              <Badge variant={
-                task.priority === "HIGH" || task.priority === "URGENT" ? "destructive" : "secondary"
-              }>
-                {task.priority}
-              </Badge>
-            </div>
+          <DialogTitle className="flex items-start gap-3 pr-8">
+            <span className="truncate flex-1">{task.title}</span>
           </DialogTitle>
+          <div className="flex items-center gap-2 mt-2">
+            <Badge
+              variant={
+                task.status === "COMPLETED"
+                  ? "secondary"
+                  : task.status === "IN_PROGRESS"
+                  ? "default"
+                  : "outline"
+              }
+            >
+              {task.status}
+            </Badge>
+            <Badge
+              variant={
+                task.priority === "HIGH" || task.priority === "URGENT"
+                  ? "destructive"
+                  : "secondary"
+              }
+            >
+              {task.priority}
+            </Badge>
+          </div>
           <DialogDescription className="truncate">
             {task.description || "No description"}
           </DialogDescription>
@@ -67,16 +77,18 @@ export function TaskDetailsModal({ task, open, onClose }: TaskDetailsModalProps)
               {task.area ? ` / ${task.area.name}` : ""}
             </span>
           )}
-          {infoRow("Due Date", task.dueDate ? new Date(task.dueDate).toLocaleString() : "-")}
+          {infoRow(
+            "Due Date",
+            task.dueDate ? new Date(task.dueDate).toLocaleString() : "-"
+          )}
           {infoRow("Created By", task.createdBy?.name)}
           {infoRow("Created At", new Date(task.createdAt).toLocaleString())}
           {infoRow("Updated At", new Date(task.updatedAt).toLocaleString())}
-          {task.isOverdue && task.status !== "COMPLETED" && infoRow("Overdue", <Badge variant="destructive">Overdue</Badge>)}
+          {task.isOverdue &&
+            task.status !== "COMPLETED" &&
+            infoRow("Overdue", <Badge variant="destructive">Overdue</Badge>)}
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-
-

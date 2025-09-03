@@ -7,15 +7,15 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
-import { DateDisplay } from '@/components/date-display';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { DateDisplay } from "@/components/date-display";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import {
   User,
   Mail,
@@ -32,12 +32,12 @@ import {
   Activity,
   Route,
   Navigation
-} from 'lucide-react';
-import { apiGet } from '@/lib/api-client';
-import dynamic from 'next/dynamic';
+} from "lucide-react";
+import { apiGet } from "@/lib/api-client";
+import dynamic from "next/dynamic";
 
 // Dynamically import the map component to avoid SSR issues
-const LiveMap = dynamic(() => import('@/components/tracking/live-map'), {
+const LiveMap = dynamic(() => import("@/components/tracking/live-map"), {
   ssr: false,
   loading: () => <div className="w-full h-96 bg-gray-100 rounded-md flex items-center justify-center">Loading map...</div>
 });
@@ -66,8 +66,8 @@ interface Task {
   id: string;
   title: string;
   description?: string;
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   dueDate?: string;
   completedAt?: string;
   createdAt: string;
@@ -98,7 +98,7 @@ interface Client {
   phone?: string;
   businessType: string;
   address?: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
   createdAt: string;
   area: {
     id: string;
@@ -157,8 +157,8 @@ type UserDetailsProps = {
     name: string;
     email: string | null;
     phone: string | null;
-    role: 'MR' | 'LEAD_MR' | 'ADMIN';
-    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    role: "MR" | "LEAD_MR" | "ADMIN";
+    status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
     regionId: string | null;
     region?: { id: string; name: string } | null;
     leadMrId: string | null;

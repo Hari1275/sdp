@@ -56,7 +56,7 @@ export function AreaForm() {
   } = useRegionsStore();
   
   const [isLoading, setIsLoading] = useState(false);
-  const isEditing = !!selectedArea;
+  const isEditing = !!selectedArea && 'id' in selectedArea;
 
   const form = useForm<AreaFormData>({
     resolver: zodResolver(areaSchema),
@@ -77,13 +77,28 @@ export function AreaForm() {
 
   useEffect(() => {
     if (selectedArea) {
-      form.reset({
-        name: selectedArea.name,
-        description: selectedArea.description || '',
-        regionId: selectedArea.regionId,
-        status: selectedArea.status,
-      });
+      // Check if this is an existing area (has an id) or just regionId for pre-selection
+      if ('id' in selectedArea) {
+        // Editing existing area
+        form.reset({
+          name: selectedArea.name,
+          description: selectedArea.description || '',
+          regionId: selectedArea.regionId,
+          status: selectedArea.status,
+        });
+      } else {
+        // Creating new area with pre-selected region
+        // TypeScript narrowing: we know selectedArea must have regionId if it's not an Area
+        const regionPreselect = selectedArea as { regionId: string };
+        form.reset({
+          name: '',
+          description: '',
+          regionId: regionPreselect.regionId || '',
+          status: 'ACTIVE',
+        });
+      }
     } else {
+      // Creating new area without pre-selection
       form.reset({
         name: '',
         description: '',
@@ -96,7 +111,7 @@ export function AreaForm() {
   const onSubmit = async (data: AreaFormData) => {
     setIsLoading(true);
     try {
-      if (isEditing && selectedArea) {
+      if (isEditing && selectedArea && 'id' in selectedArea) {
         await updateArea(selectedArea.id, data);
         toast({
           title: 'Success',

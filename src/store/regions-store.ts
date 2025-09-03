@@ -74,7 +74,7 @@ interface RegionsStore {
   isRegionDialogOpen: boolean;
   isAreaDialogOpen: boolean;
   selectedRegion: Region | null;
-  selectedArea: Area | null;
+  selectedArea: Area | { regionId: string } | null;
 
   // Actions
   fetchRegions: (page?: number, search?: string) => Promise<void>;
@@ -98,7 +98,7 @@ interface RegionsStore {
   // Dialog actions
   openRegionDialog: (region?: Region) => void;
   closeRegionDialog: () => void;
-  openAreaDialog: (area?: Area) => void;
+  openAreaDialog: (area?: Area | { regionId: string }) => void;
   closeAreaDialog: () => void;
 }
 
@@ -131,8 +131,8 @@ export const useRegionsStore = create<RegionsStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10'
+        page: '1',
+        limit: '1000'
       });
       
       if (searchQuery) {
@@ -144,8 +144,8 @@ export const useRegionsStore = create<RegionsStore>((set, get) => ({
       
       if (result.success) {
         set({ 
-          regions: result.data.data,
-          regionsPagination: result.data.pagination,
+          regions: result.data?.data || result.data || [],
+          regionsPagination: result.data?.pagination,
           currentRegionPage: currentPage,
           searchQuery,
           isLoading: false 
@@ -172,8 +172,8 @@ export const useRegionsStore = create<RegionsStore>((set, get) => ({
     
     try {
       const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10'
+        page: '1',
+        limit: '1000'
       });
       
       if (filterRegionId) {
@@ -188,9 +188,11 @@ export const useRegionsStore = create<RegionsStore>((set, get) => ({
       const result = await response.json();
       
       if (result.success) {
+        const areas = result.data?.data || result.data || [];
+        console.log('Fetched areas:', areas);
         set({ 
-          areas: result.data.data,
-          areasPagination: result.data.pagination,
+          areas,
+          areasPagination: result.data?.pagination,
           currentAreaPage: currentPage,
           selectedRegionFilter: filterRegionId,
           searchQuery
@@ -279,12 +281,14 @@ export const useRegionsStore = create<RegionsStore>((set, get) => ({
   // Create area
   createArea: async (data: CreateAreaData) => {
     try {
+      console.log('Creating area with data:', data);
       const result = await apiPost('/api/areas', data);
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to create area');
       }
 
+      console.log('Area created successfully:', result.data);
       // Refresh areas list
       await get().fetchAreas();
       // Also refresh regions to update counts
@@ -361,7 +365,7 @@ export const useRegionsStore = create<RegionsStore>((set, get) => ({
   },
 
   // Open area dialog
-  openAreaDialog: (area?: Area) => {
+  openAreaDialog: (area?: Area | { regionId: string }) => {
     set({ isAreaDialogOpen: true, selectedArea: area || null });
   },
 

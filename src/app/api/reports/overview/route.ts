@@ -54,10 +54,7 @@ function getClientWhereByRole(user: {
     case UserRole.LEAD_MR:
       // Clients for self or team, not entire region
       return {
-        OR: [
-          { mrId: user.id },
-          { mr: { leadMrId: user.id } },
-        ],
+        OR: [{ mrId: user.id }, { mr: { leadMrId: user.id } }],
       } as Record<string, unknown>;
     case UserRole.ADMIN:
     default:
@@ -109,12 +106,15 @@ export async function GET(request: NextRequest) {
     const { from, to } = parseDateRange(request);
 
     // Build filters
-    const userWhere = getUserWhereByRole({
-      id: user.id,
-      role: user.role,
-      regionId: user.regionId ?? null,
-      leadMrId: user.leadMrId ?? null,
-    });
+    const userWhere = {
+      ...getUserWhereByRole({
+        id: user.id,
+        role: user.role,
+        regionId: user.regionId ?? null,
+        leadMrId: user.leadMrId ?? null,
+      }),
+      createdAt: { gte: from, lte: to },
+    } as Record<string, unknown>;
     const clientWhere = {
       ...getClientWhereByRole({
         id: user.id,
@@ -158,12 +158,13 @@ export async function GET(request: NextRequest) {
         prisma.user.count({
           where: {
             status: UserStatus.ACTIVE,
+            createdAt: { gte: from, lte: to },
             ...(user.role === UserRole.MR
               ? { id: user.id }
               : user.role === UserRole.LEAD_MR
-             ? {
-                 OR: [{ id: user.id }, { leadMrId: user.id }],
-               }
+              ? {
+                  OR: [{ id: user.id }, { leadMrId: user.id }],
+                }
               : {}),
           },
         }),

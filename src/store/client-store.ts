@@ -334,8 +334,9 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         throw new Error(result.message || 'Failed to create client');
       }
 
-      // Refresh clients list
+      // Refresh clients list and statistics
       await get().fetchClients();
+      await get().fetchStatistics();
       set({ isLoading: false });
     } catch (error) {
       set({ 
@@ -371,6 +372,8 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       );
 
       set({ clients: updatedClients, isLoading: false });
+      // Refresh statistics after update
+      get().fetchStatistics();
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'An error occurred',
@@ -399,6 +402,8 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       const updatedClients = clients.filter(client => client.id !== id);
 
       set({ clients: updatedClients, isLoading: false });
+      // Refresh statistics after delete
+      get().fetchStatistics();
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'An error occurred',

@@ -76,9 +76,9 @@ export function validateCoordinate(coordinate: Coordinate): GPSValidationResult 
     errors.push('Longitude must be between -180 and 180 degrees');
   }
 
-  // Validate accuracy if provided
-  if (coordinate.accuracy !== undefined && coordinate.accuracy > GPS_ACCURACY_THRESHOLD) {
-    errors.push(`GPS accuracy (${coordinate.accuracy}m) exceeds threshold (${GPS_ACCURACY_THRESHOLD}m)`);
+  // Validate accuracy if provided - warning instead of error for poor accuracy
+  if (coordinate.accuracy !== undefined && coordinate.accuracy > GPS_ACCURACY_THRESHOLD * 5) {
+    errors.push(`GPS accuracy (${coordinate.accuracy}m) is extremely poor (threshold: ${GPS_ACCURACY_THRESHOLD}m)`);
   }
 
   // Validate speed if provided (reasonable range: 0-200 km/h)

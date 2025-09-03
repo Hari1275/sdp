@@ -4,6 +4,16 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
+  // Allow cross-origin requests in development for network access
+  allowedDevOrigins: process.env.NODE_ENV === "development" 
+    ? [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000", 
+        "http://0.0.0.0:3000",
+        "http://192.168.1.58:3000"
+      ] 
+    : undefined,
+  
   async headers() {
     return [
       {

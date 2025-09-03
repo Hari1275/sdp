@@ -11,8 +11,8 @@ import {
 // User validation schemas
 export const createUserSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters").max(30),
-  email: z.string().email("Invalid email address").optional(),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
   phone: z
     .string()
@@ -23,9 +23,13 @@ export const createUserSchema = z.object({
   leadMrId: z.string().optional(),
 });
 
-export const updateUserSchema = createUserSchema
-  .partial()
-  .omit({ password: true });
+export const updateUserSchema = createUserSchema.partial().extend({
+  status: z.nativeEnum(UserStatus).optional(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .optional(),
+});
 
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),

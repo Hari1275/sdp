@@ -6,6 +6,7 @@ export const prisma = {
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    groupBy: jest.fn(),
   },
   gPSLog: {
     create: jest.fn(),
@@ -23,6 +24,7 @@ export const prisma = {
   },
   client: {
     count: jest.fn(),
+    findMany: jest.fn(),
   },
   task: {
     findMany: jest.fn(),
@@ -33,4 +35,3 @@ export const prisma = {
     groupBy: jest.fn(),
   },
 };
-

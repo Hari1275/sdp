@@ -48,10 +48,16 @@ export default withAuth(
         case "LEAD_MR":
           return NextResponse.redirect(new URL("/admin", req.url));
         case "MR":
-          return NextResponse.redirect(new URL("/dashboard/mr", req.url));
+          // MR users should not access web dashboard - redirect to login with message
+          return NextResponse.redirect(new URL("/login?error=MR_WEB_ACCESS_DENIED", req.url));
         default:
           return NextResponse.redirect(new URL("/login", req.url));
       }
+    }
+
+    // Block MR users from accessing any dashboard routes
+    if (pathname.startsWith("/dashboard") && token?.role === "MR") {
+      return NextResponse.redirect(new URL("/login?error=MR_WEB_ACCESS_DENIED", req.url));
     }
 
     try {
