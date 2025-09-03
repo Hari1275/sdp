@@ -33,7 +33,7 @@ import {
   Route,
   Navigation
 } from "lucide-react";
-import { apiGet, safeApiCall } from "@/lib/api-client";
+import { apiGet } from "@/lib/api-client";
 import dynamic from "next/dynamic";
 
 // Dynamically import the map component to avoid SSR issues
@@ -291,23 +291,21 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     
     try {
       // Fetch GPS sessions for this user (last 10 sessions)
-      const result = await safeApiCall<{
-        sessions: GPSSession[];
-        pagination: any;
-        summary: any;
-      }>(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`);
+      const response = await fetch(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`);
       
       console.log('=== GPS Sessions Debug ===');
-      console.log('SafeApiCall result:', result);
+      console.log('Fetch response status:', response.status);
+      console.log('Fetch response ok:', response.ok);
       
-      if (!result.success) {
-        console.error('API call failed:', result.error);
-        setGpsError(`Failed to load GPS tracking data: ${result.error}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API response not ok:', response.status, errorText);
+        setGpsError(`Failed to load GPS tracking data: HTTP ${response.status}`);
         setGpsSessions([]);
         return;
       }
       
-      const sessionsResponse = result.data;
+      const sessionsResponse = await response.json();
       console.log('Full API Response:', JSON.stringify(sessionsResponse, null, 2));
       console.log('Response type:', typeof sessionsResponse);
       console.log('Has sessions property:', sessionsResponse && 'sessions' in sessionsResponse);
