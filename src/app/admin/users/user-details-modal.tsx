@@ -33,7 +33,7 @@ import {
   Route,
   Navigation
 } from "lucide-react";
-import { apiGet } from "@/lib/api-client";
+import { apiGet, safeApiCall } from "@/lib/api-client";
 import dynamic from "next/dynamic";
 
 // Dynamically import the map component to avoid SSR issues
@@ -291,11 +291,41 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     
     try {
       // Fetch GPS sessions for this user (last 10 sessions)
-      const sessionsResponse = await apiGet<{ sessions: GPSSession[] }>(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`);
-      console.log('GPS Sessions API Response:', sessionsResponse);
-      const sessionsData = sessionsResponse.sessions || [];
-      console.log('GPS Sessions Data:', sessionsData);
+      const result = await safeApiCall<{
+        sessions: GPSSession[];
+        pagination: any;
+        summary: any;
+      }>(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`);
+      
+      console.log('=== GPS Sessions Debug ===');
+      console.log('SafeApiCall result:', result);
+      
+      if (!result.success) {
+        console.error('API call failed:', result.error);
+        setGpsError(`Failed to load GPS tracking data: ${result.error}`);
+        setGpsSessions([]);
+        return;
+      }
+      
+      const sessionsResponse = result.data;
+      console.log('Full API Response:', JSON.stringify(sessionsResponse, null, 2));
+      console.log('Response type:', typeof sessionsResponse);
+      console.log('Has sessions property:', sessionsResponse && 'sessions' in sessionsResponse);
+      console.log('Sessions property:', sessionsResponse?.sessions);
+      console.log('Sessions is array:', Array.isArray(sessionsResponse?.sessions));
+      console.log('Sessions length:', sessionsResponse?.sessions?.length);
+      
+      const sessionsData = sessionsResponse?.sessions || [];
+      console.log('Final sessions data:', sessionsData);
+      console.log('Final sessions length:', sessionsData.length);
+      
       setGpsSessions(Array.isArray(sessionsData) ? sessionsData : []);
+      
+      if (sessionsData.length === 0) {
+        console.log('No sessions found - setting empty array');
+      } else {
+        console.log('Sessions found:', sessionsData.length);
+      }
     } catch (error) {
       console.error('Error fetching GPS sessions:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load GPS tracking data';
