@@ -349,6 +349,10 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
   const getMapData = useCallback(() => {
     console.log(`🗺️ getMapData called - mapView: ${mapView}, selectedSessionId: ${selectedSessionId}`);
     
+    if (!user) {
+      return { locations: [], trails: [], selectedUserId: null };
+    }
+    
     if (mapView === 'session' && selectedSessionId) {
       // Show specific session trail
       const session = gpsSessions.find(s => s.sessionId === selectedSessionId || s.id === selectedSessionId);
@@ -756,7 +760,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                     <div className="text-center py-8 text-muted-foreground">
                       <Navigation className="h-8 w-8 mx-auto mb-2" />
                       <p>No GPS tracking data available</p>
-                      <p className="text-xs">User hasn't started any tracking sessions yet</p>
+                      <p className="text-xs">User hasn&apos;t started any tracking sessions yet</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -798,11 +802,13 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                               }`}
                               onClick={() => {
                                 const sessionId = session.sessionId || session.id;
-                                console.log(`🔄 Selecting session: ${sessionId} (previous: ${selectedSessionId})`);
-                                setSelectedSessionId(sessionId);
-                                // Switch to overview mode to show selected session highlighted among others
-                                setMapView('overview');
-                                console.log(`✅ Selection updated to: ${sessionId}`);
+                                if (sessionId) {
+                                  console.log(`🔄 Selecting session: ${sessionId} (previous: ${selectedSessionId})`);
+                                  setSelectedSessionId(sessionId);
+                                  // Switch to overview mode to show selected session highlighted among others
+                                  setMapView('overview');
+                                  console.log(`✅ Selection updated to: ${sessionId}`);
+                                }
                               }}
                             >
                               <div className="flex items-start justify-between">
@@ -868,12 +874,12 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-3">
+                  {/* <div className="flex items-center gap-3">
                     <div className="text-sm">
                       <span className="text-muted-foreground">User ID:</span>
                       <span className="ml-2 font-mono text-xs">{user.id}</span>
                     </div>
-                  </div>
+                  </div> */}
                   <Separator />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
