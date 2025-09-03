@@ -347,6 +347,8 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
 
   // Prepare map data from GPS sessions
   const getMapData = useCallback(() => {
+    console.log(`🗺️ getMapData called - mapView: ${mapView}, selectedSessionId: ${selectedSessionId}`);
+    
     if (mapView === 'session' && selectedSessionId) {
       // Show specific session trail
       const session = gpsSessions.find(s => s.sessionId === selectedSessionId || s.id === selectedSessionId);
@@ -729,6 +731,18 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                     >
                       {selectedSessionId ? 'Focus Selected' : 'Session Details'}
                     </Button>
+                    {selectedSessionId && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedSessionId(null);
+                          setMapView('overview');
+                        }}
+                      >
+                        Clear Selection
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -758,6 +772,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                         
                         return (
                           <LiveMap
+                            key={`livemap-${selectedSessionId || 'none'}-${mapView}`}
                             locations={mapData.locations}
                             trails={mapData.trails}
                             selectedUserId={mapData.selectedUserId}
@@ -783,9 +798,11 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                               }`}
                               onClick={() => {
                                 const sessionId = session.sessionId || session.id;
+                                console.log(`🔄 Selecting session: ${sessionId} (previous: ${selectedSessionId})`);
                                 setSelectedSessionId(sessionId);
                                 // Switch to overview mode to show selected session highlighted among others
                                 setMapView('overview');
+                                console.log(`✅ Selection updated to: ${sessionId}`);
                               }}
                             >
                               <div className="flex items-start justify-between">
