@@ -134,12 +134,16 @@ export default function LiveMap({
             options={{
               strokeColor:
                 selectedUserId && t.userId !== selectedUserId
-                  ? "#94a3b8"
-                  : "#2563eb",
+                  ? "#cbd5e1"  // Light gray for unselected
+                  : selectedUserId && t.userId === selectedUserId
+                  ? "#10b981"  // Bright green for selected session
+                  : "#3b82f6", // Default blue for overview mode
               strokeOpacity:
-                selectedUserId && t.userId !== selectedUserId ? 0.4 : 0.8,
+                selectedUserId && t.userId !== selectedUserId ? 0.3 : 0.9,
               strokeWeight:
-                selectedUserId && t.userId !== selectedUserId ? 2 : 4,
+                selectedUserId && t.userId !== selectedUserId ? 2 : 5,
+              zIndex:
+                selectedUserId && t.userId === selectedUserId ? 1000 : 1,
             }}
           />
         ))}

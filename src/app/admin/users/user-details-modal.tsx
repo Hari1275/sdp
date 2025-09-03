@@ -148,7 +148,9 @@ type TrailPoint = {
 type SessionTrail = { 
   userId: string; 
   userName: string; 
-  trail: TrailPoint[]; 
+  trail: TrailPoint[];
+  isSelected?: boolean;
+  sessionIndex?: number;
 };
 
 type UserDetailsProps = {
@@ -374,14 +376,17 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
       }
     }
     
-    // Overview: show all recent locations
+    // Overview: show all recent locations with highlighting for selected session
     const locations: TeamLocation[] = [];
     const trails: SessionTrail[] = [];
     
     // Get latest positions from each session
-    gpsSessions.slice(0, 5).forEach(session => {
+    gpsSessions.slice(0, 5).forEach((session, index) => {
       if (session.gpsLogs && session.gpsLogs.length > 0) {
+        const sessionId = session.sessionId || session.id;
+        const isSelected = selectedSessionId === sessionId;
         const latestLog = session.gpsLogs[session.gpsLogs.length - 1];
+        
         locations.push({
           userId: user.id,
           userName: user.name,
@@ -401,15 +406,22 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
           
         if (simplifiedTrail.length > 0) {
           trails.push({
-            userId: user.id + '_' + (session.sessionId || session.id),
-            userName: user.name,
-            trail: simplifiedTrail
+            userId: user.id + '_' + sessionId,
+            userName: isSelected ? `${user.name} (Selected)` : user.name,
+            trail: simplifiedTrail,
+            // Add custom properties for styling
+            isSelected: isSelected,
+            sessionIndex: index
           });
         }
       }
     });
 
-    return { locations, trails, selectedUserId: null };
+    return { 
+      locations, 
+      trails, 
+      selectedUserId: selectedSessionId ? user.id + '_' + selectedSessionId : null 
+    };
   }, [gpsSessions, mapView, selectedSessionId, user]);
 
   if (!user) return null;
@@ -706,9 +718,9 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                       variant={mapView === 'session' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setMapView('session')}
-                      disabled={gpsSessions.length === 0}
+                      disabled={!selectedSessionId}
                     >
-                      Session Details
+                      {selectedSessionId ? 'Focus Selected' : 'Session Details'}
                     </Button>
                   </div>
                 </CardHeader>
@@ -763,8 +775,10 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                                   : 'hover:bg-gray-50'
                               }`}
                               onClick={() => {
-                                setSelectedSessionId(session.sessionId || session.id);
-                                setMapView('session');
+                                const sessionId = session.sessionId || session.id;
+                                setSelectedSessionId(sessionId);
+                                // Switch to overview mode to show selected session highlighted among others
+                                setMapView('overview');
                               }}
                             >
                               <div className="flex items-start justify-between">
@@ -777,6 +791,11 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                                     />
                                     {!session.checkOut && (
                                       <Badge variant="default" className="text-xs">Active</Badge>
+                                    )}
+                                    {selectedSessionId === (session.sessionId || session.id) && (
+                                      <Badge variant="outline" className="text-xs border-green-500 text-green-600">
+                                        📍 On Map
+                                      </Badge>
                                     )}
                                   </div>
                                   <div className="text-xs text-muted-foreground mt-1">
