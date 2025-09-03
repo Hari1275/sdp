@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sanitizeCoordinate, validateSessionData } from '@/lib/gps-validation';
-import { calculateTotalDistance } from '@/lib/gps-utils';
+import { calculateTotalDistance, calculateTotalDistanceWithGoogle, calculateTotalRouteWithGoogle } from '@/lib/gps-utils';
 import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
@@ -91,8 +91,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate total distance from GPS logs
+    // Calculate total distance from GPS logs using Google Routes API with traffic awareness
     let totalKm = 0;
+    let calculationMethod = 'haversine';
+    let calculationError: string | undefined;
+    let routePolyline: string | undefined;
+    let trafficDuration: number | undefined;
+    let staticDuration: number | undefined;
+
     if (gpsSession.gpsLogs.length > 1) {
       const coordinates = gpsSession.gpsLogs.map(log => ({
         latitude: log.latitude,
@@ -100,7 +106,47 @@ export async function POST(request: NextRequest) {
         timestamp: log.timestamp
       }));
       
-      totalKm = calculateTotalDistance(coordinates);
+      try {
+        // Use Google Routes API for most accurate road-based distance with traffic awareness
+        const result = await calculateTotalRouteWithGoogle(coordinates, 'DRIVE', {
+          routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
+          avoidTolls: false, // Allow tolls for field workers
+          avoidHighways: false, // Allow highways for efficiency
+          avoidFerries: true, // Avoid ferries for reliability
+          maxWaypoints: 10 // Conservative limit
+        });
+        
+        totalKm = result.distance;
+        calculationMethod = result.method;
+        calculationError = result.error;
+        routePolyline = result.polyline;
+        trafficDuration = result.duration;
+        staticDuration = result.staticDuration;
+        
+        console.log(`Distance calculated using ${result.method}: ${totalKm}km, ${trafficDuration}min (${staticDuration}min without traffic)`);
+        
+        if (result.warnings && result.warnings.length > 0) {
+          console.warn('Route calculation warnings:', result.warnings);
+        }
+      } catch (error) {
+        console.warn('Failed to calculate route with Google Routes API, trying Distance Matrix fallback:', error);
+        
+        try {
+          // Fallback to Distance Matrix API
+          const distanceResult = await calculateTotalDistanceWithGoogle(coordinates, 'driving');
+          totalKm = distanceResult.distance;
+          calculationMethod = distanceResult.method;
+          calculationError = distanceResult.error;
+          trafficDuration = distanceResult.duration;
+          
+          console.log(`Distance calculated using fallback ${distanceResult.method}: ${totalKm}km`);
+        } catch (fallbackError) {
+          console.warn('Failed to calculate distance with Distance Matrix API, using Haversine fallback:', fallbackError);
+          totalKm = calculateTotalDistance(coordinates);
+          calculationMethod = 'haversine';
+          calculationError = error instanceof Error ? error.message : 'Unknown error';
+        }
+      }
     }
 
     // Add final coordinate if provided
@@ -124,8 +170,27 @@ export async function POST(request: NextRequest) {
           longitude: gpsSession.gpsLogs[gpsSession.gpsLogs.length - 1].longitude
         };
         
-        const finalDistance = calculateTotalDistance([lastCoord, endCoord]);
-        totalKm += finalDistance;
+        try {
+          // Use Google Routes API for final segment if available
+          const finalResult = await calculateTotalRouteWithGoogle([lastCoord, endCoord], 'DRIVE', {
+            routingPreference: 'TRAFFIC_AWARE_OPTIMAL'
+          });
+          totalKm += finalResult.distance;
+          
+          // Update durations if we got them
+          if (finalResult.duration) {
+            trafficDuration = (trafficDuration || 0) + finalResult.duration;
+          }
+          if (finalResult.staticDuration) {
+            staticDuration = (staticDuration || 0) + finalResult.staticDuration;
+          }
+          
+          console.log(`Final segment calculated using ${finalResult.method}: ${finalResult.distance}km`);
+        } catch (error) {
+          console.warn('Failed to calculate final segment with Google Routes API, using Haversine:', error);
+          const finalDistance = calculateTotalDistance([lastCoord, endCoord]);
+          totalKm += finalDistance;
+        }
       }
     }
 
@@ -181,7 +246,7 @@ export async function POST(request: NextRequest) {
       // Log error but don't fail the checkout
     }
 
-    // Prepare response
+    // Prepare response with enhanced Routes API data
     const response = {
       sessionId: updatedSession.id,
       checkOut: updatedSession.checkOut,
@@ -189,13 +254,29 @@ export async function POST(request: NextRequest) {
       duration: Math.round(sessionDuration * 100) / 100, // hours
       avgSpeed: Math.round(avgSpeed * 100) / 100, // km/h
       coordinateCount: gpsSession.gpsLogs.length + (endCoord ? 1 : 0),
+      distanceCalculationMethod: calculationMethod,
       status: 'completed',
-      message: 'Check-out successful'
+      message: 'Check-out successful',
+      // Enhanced Routes API data
+      ...(trafficDuration && { 
+        estimatedTravelTime: Math.round(trafficDuration * 100) / 100 // minutes
+      }),
+      ...(staticDuration && { 
+        baselineTravelTime: Math.round(staticDuration * 100) / 100 // minutes
+      }),
+      ...(routePolyline && { 
+        routePolyline: routePolyline // For map visualization
+      })
     };
 
     // Add warnings if any
-    if (validation.warnings.length > 0) {
-      (response as Record<string, unknown>).warnings = validation.warnings;
+    const allWarnings = [...validation.warnings];
+    if (calculationError) {
+      allWarnings.push(`Distance calculation note: ${calculationError}`);
+    }
+    
+    if (allWarnings.length > 0) {
+      (response as Record<string, unknown>).warnings = allWarnings;
     }
 
     // Add location data if available

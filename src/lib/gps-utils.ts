@@ -11,6 +11,125 @@ export interface Coordinate {
   altitude?: number;
 }
 
+// Google Distance Matrix API interfaces
+export interface DistanceMatrixElement {
+  distance: {
+    text: string;
+    value: number; // in meters
+  };
+  duration: {
+    text: string;
+    value: number; // in seconds
+  };
+  status: 'OK' | 'NOT_FOUND' | 'ZERO_RESULTS' | 'MAX_ROUTE_LENGTH_EXCEEDED';
+}
+
+export interface DistanceMatrixRow {
+  elements: DistanceMatrixElement[];
+}
+
+export interface DistanceMatrixResponse {
+  destination_addresses: string[];
+  origin_addresses: string[];
+  rows: DistanceMatrixRow[];
+  status: 'OK' | 'INVALID_REQUEST' | 'MAX_ELEMENTS_EXCEEDED' | 'OVER_DAILY_LIMIT' | 'OVER_QUERY_LIMIT' | 'REQUEST_DENIED' | 'UNKNOWN_ERROR';
+  error_message?: string;
+}
+
+export interface DistanceCalculationResult {
+  distance: number; // in kilometers
+  duration?: number; // in minutes
+  method: 'haversine' | 'google_api' | 'google_routes';
+  success: boolean;
+  error?: string;
+}
+
+// Google Routes API interfaces (following the official documentation)
+export interface LatLng {
+  latitude: number;
+  longitude: number;
+}
+
+export interface Location {
+  latLng: LatLng;
+}
+
+export interface Waypoint {
+  location: Location;
+  via?: boolean; // If true, the waypoint is for routing purposes only
+}
+
+export interface RouteRequest {
+  origin: Waypoint;
+  destination: Waypoint;
+  intermediates?: Waypoint[];
+  travelMode: 'DRIVE' | 'WALK' | 'BICYCLE' | 'TRANSIT';
+  routingPreference?: 'TRAFFIC_UNAWARE' | 'TRAFFIC_AWARE' | 'TRAFFIC_AWARE_OPTIMAL';
+  computeAlternativeRoutes?: boolean;
+  routeModifiers?: {
+    avoidTolls?: boolean;
+    avoidHighways?: boolean;
+    avoidFerries?: boolean;
+    avoidIndoor?: boolean;
+  };
+}
+
+export interface RouteLeg {
+  distanceMeters: number;
+  duration: string; // ISO 8601 duration format
+  staticDuration: string;
+  polyline: {
+    encodedPolyline: string;
+  };
+  startLocation: Location;
+  endLocation: Location;
+}
+
+export interface Route {
+  legs: RouteLeg[];
+  distanceMeters: number;
+  duration: string;
+  staticDuration: string;
+  polyline: {
+    encodedPolyline: string;
+  };
+  description: string;
+  warnings: string[];
+}
+
+export interface GeocodingResult {
+  status: string;
+  place_id?: string;
+  types?: string[];
+  formatted_address?: string;
+}
+
+export interface RoutesResponse {
+  routes: Route[];
+  geocodingResults?: {
+    origin: GeocodingResult;
+    destination: GeocodingResult;
+    intermediates: GeocodingResult[];
+  };
+}
+
+export interface RouteCalculationResult {
+  distance: number; // in kilometers
+  duration: number; // in minutes
+  staticDuration: number; // in minutes (without traffic)
+  polyline: string; // encoded polyline for route visualization
+  legs: {
+    distance: number;
+    duration: number;
+    startLocation: LatLng;
+    endLocation: LatLng;
+  }[];
+  method: 'google_routes';
+  success: boolean;
+  error?: string;
+  warnings?: string[];
+}
+
 export interface GPSValidationResult {
   isValid: boolean;
   errors: string[];
@@ -56,6 +175,495 @@ export function calculateTotalDistance(coordinates: Coordinate[]): number {
   }
   
   return totalDistance;
+}
+
+/**
+ * Calculate distance using Google Distance Matrix API
+ * @param origin Starting coordinate
+ * @param destination Ending coordinate
+ * @param mode Travel mode (driving, walking, bicycling, transit)
+ * @returns Promise with distance calculation result
+ */
+export async function calculateDistanceWithGoogle(
+  origin: Coordinate,
+  destination: Coordinate,
+  mode: 'driving' | 'walking' | 'bicycling' | 'transit' = 'driving'
+): Promise<DistanceCalculationResult> {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  
+  if (!apiKey) {
+    // Fallback to Haversine if no API key
+    const distance = calculateDistance(origin, destination);
+    return {
+      distance,
+      method: 'haversine',
+      success: true
+    };
+  }
+
+  try {
+    const originStr = `${origin.latitude},${origin.longitude}`;
+    const destinationStr = `${destination.latitude},${destination.longitude}`;
+    
+    const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json');
+    url.searchParams.append('origins', originStr);
+    url.searchParams.append('destinations', destinationStr);
+    url.searchParams.append('mode', mode);
+    url.searchParams.append('units', 'metric');
+    url.searchParams.append('key', apiKey);
+
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: DistanceMatrixResponse = await response.json();
+
+    if (data.status !== 'OK') {
+      throw new Error(`API error: ${data.status} - ${data.error_message || 'Unknown error'}`);
+    }
+
+    const element = data.rows[0]?.elements[0];
+    if (!element || element.status !== 'OK') {
+      throw new Error(`Route not found: ${element?.status || 'Unknown error'}`);
+    }
+
+    return {
+      distance: element.distance.value / 1000, // Convert meters to kilometers
+      duration: element.duration.value / 60, // Convert seconds to minutes
+      method: 'google_api',
+      success: true
+    };
+
+  } catch (error) {
+    console.warn('Google Distance Matrix API failed, falling back to Haversine:', error);
+    
+    // Fallback to Haversine formula
+    const distance = calculateDistance(origin, destination);
+    return {
+      distance,
+      method: 'haversine',
+      success: true,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Calculate total distance for a route using Google Distance Matrix API
+ * Optimizes API calls by grouping waypoints efficiently
+ * @param coordinates Array of coordinates representing the route
+ * @param mode Travel mode (driving, walking, bicycling, transit)
+ * @param maxWaypoints Maximum waypoints per API call (Google limit is 25)
+ * @returns Promise with distance calculation result
+ */
+export async function calculateTotalDistanceWithGoogle(
+  coordinates: Coordinate[],
+  mode: 'driving' | 'walking' | 'bicycling' | 'transit' = 'driving',
+  maxWaypoints = 10 // Conservative limit to stay within API quotas
+): Promise<DistanceCalculationResult> {
+  if (coordinates.length < 2) {
+    return {
+      distance: 0,
+      method: 'haversine',
+      success: true
+    };
+  }
+
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  
+  if (!apiKey) {
+    // Fallback to Haversine if no API key
+    const distance = calculateTotalDistance(coordinates);
+    return {
+      distance,
+      method: 'haversine',
+      success: true
+    };
+  }
+
+  try {
+    // Simplify route to key waypoints to minimize API calls
+    const simplifiedCoords = simplifyRouteForAPI(coordinates, maxWaypoints);
+    
+    let totalDistance = 0;
+    let totalDuration = 0;
+
+    // Process waypoints in chunks to respect API limits
+    for (let i = 0; i < simplifiedCoords.length - 1; i++) {
+      const result = await calculateDistanceWithGoogle(
+        simplifiedCoords[i],
+        simplifiedCoords[i + 1],
+        mode
+      );
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to calculate segment distance');
+      }
+      
+      totalDistance += result.distance;
+      if (result.duration) {
+        totalDuration += result.duration;
+      }
+
+      // Add small delay to respect rate limits
+      if (i < simplifiedCoords.length - 2) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    return {
+      distance: totalDistance,
+      duration: totalDuration,
+      method: 'google_api',
+      success: true
+    };
+
+  } catch (error) {
+    console.warn('Google Distance Matrix API failed for route, falling back to Haversine:', error);
+    
+    // Fallback to Haversine formula
+    const distance = calculateTotalDistance(coordinates);
+    return {
+      distance,
+      method: 'haversine',
+      success: true,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Simplify route coordinates for API efficiency
+ * Keeps start, end, and key waypoints while staying within limits
+ * @param coordinates Original route coordinates
+ * @param maxPoints Maximum points to keep
+ * @returns Simplified coordinate array
+ */
+function simplifyRouteForAPI(coordinates: Coordinate[], maxPoints: number): Coordinate[] {
+  if (coordinates.length <= maxPoints) {
+    return coordinates;
+  }
+
+  const simplified = [coordinates[0]]; // Always keep start point
+  
+  // Calculate step size to distribute waypoints evenly
+  const step = Math.floor((coordinates.length - 2) / (maxPoints - 2));
+  
+  // Add intermediate waypoints
+  for (let i = step; i < coordinates.length - 1; i += step) {
+    if (simplified.length < maxPoints - 1) {
+      simplified.push(coordinates[i]);
+    }
+  }
+  
+  // Always keep end point
+  simplified.push(coordinates[coordinates.length - 1]);
+  
+  return simplified;
+}
+
+/**
+ * Calculate route using Google Routes API with real-time traffic awareness
+ * @param origin Starting coordinate
+ * @param destination Ending coordinate
+ * @param intermediates Optional waypoints along the route
+ * @param travelMode Travel mode (DRIVE, WALK, BICYCLE, TRANSIT)
+ * @param options Additional routing options
+ * @returns Promise with detailed route calculation result
+ */
+export async function calculateRouteWithGoogle(
+  origin: Coordinate,
+  destination: Coordinate,
+  intermediates: Coordinate[] = [],
+  travelMode: 'DRIVE' | 'WALK' | 'BICYCLE' | 'TRANSIT' = 'DRIVE',
+  options: {
+    routingPreference?: 'TRAFFIC_UNAWARE' | 'TRAFFIC_AWARE' | 'TRAFFIC_AWARE_OPTIMAL';
+    avoidTolls?: boolean;
+    avoidHighways?: boolean;
+    avoidFerries?: boolean;
+  } = {}
+): Promise<RouteCalculationResult> {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  
+  if (!apiKey) {
+    // Fallback to Distance Matrix API or Haversine
+    console.warn('No Google API key found, falling back to Distance Matrix API');
+    try {
+      const distanceResult = await calculateDistanceWithGoogle(origin, destination, travelMode.toLowerCase() as 'driving' | 'walking' | 'bicycling' | 'transit');
+      return {
+        distance: distanceResult.distance,
+        duration: distanceResult.duration || 0,
+        staticDuration: distanceResult.duration || 0,
+        polyline: '',
+        legs: [{
+          distance: distanceResult.distance,
+          duration: distanceResult.duration || 0,
+          startLocation: { latitude: origin.latitude, longitude: origin.longitude },
+          endLocation: { latitude: destination.latitude, longitude: destination.longitude }
+        }],
+        method: 'google_routes',
+        success: true,
+        error: 'No API key, used Distance Matrix fallback'
+      };
+    } catch (error) {
+      // Final fallback to Haversine
+      console.warn('Distance Matrix API also failed:', error);
+      const distance = calculateDistance(origin, destination);
+      return {
+        distance,
+        duration: 0,
+        staticDuration: 0,
+        polyline: '',
+        legs: [{
+          distance,
+          duration: 0,
+          startLocation: { latitude: origin.latitude, longitude: origin.longitude },
+          endLocation: { latitude: destination.latitude, longitude: destination.longitude }
+        }],
+        method: 'google_routes',
+        success: true,
+        error: 'No API key, used Haversine fallback'
+      };
+    }
+  }
+
+  try {
+    // Construct the request body following Google Routes API documentation
+    const requestBody: RouteRequest = {
+      origin: {
+        location: {
+          latLng: {
+            latitude: origin.latitude,
+            longitude: origin.longitude
+          }
+        }
+      },
+      destination: {
+        location: {
+          latLng: {
+            latitude: destination.latitude,
+            longitude: destination.longitude
+          }
+        }
+      },
+      travelMode,
+      routingPreference: options.routingPreference || 'TRAFFIC_AWARE',
+      computeAlternativeRoutes: false
+    };
+
+    // Add intermediate waypoints if provided
+    if (intermediates.length > 0) {
+      requestBody.intermediates = intermediates.map(coord => ({
+        location: {
+          latLng: {
+            latitude: coord.latitude,
+            longitude: coord.longitude
+          }
+        },
+        via: true // Mark as routing waypoints
+      }));
+    }
+
+    // Add route modifiers if specified
+    if (options.avoidTolls || options.avoidHighways || options.avoidFerries) {
+      requestBody.routeModifiers = {
+        avoidTolls: options.avoidTolls,
+        avoidHighways: options.avoidHighways,
+        avoidFerries: options.avoidFerries,
+        avoidIndoor: true // Generally good for field workers
+      };
+    }
+
+    // Make the API request following Google's guidelines
+    const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.duration,routes.legs.distanceMeters,routes.legs.startLocation,routes.legs.endLocation,routes.description,routes.warnings'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: RoutesResponse = await response.json();
+
+    if (!data.routes || data.routes.length === 0) {
+      throw new Error('No routes found');
+    }
+
+    const route = data.routes[0]; // Use the first (optimal) route
+
+    // Parse duration from ISO 8601 format (e.g., "1234s" to seconds)
+    const parseDuration = (duration: string): number => {
+      const match = duration.match(/(\d+)s/);
+      return match ? parseInt(match[1]) / 60 : 0; // Convert to minutes
+    };
+
+    const result: RouteCalculationResult = {
+      distance: route.distanceMeters / 1000, // Convert meters to kilometers
+      duration: parseDuration(route.duration),
+      staticDuration: parseDuration(route.staticDuration),
+      polyline: route.polyline.encodedPolyline,
+      legs: route.legs.map(leg => ({
+        distance: leg.distanceMeters / 1000,
+        duration: parseDuration(leg.duration),
+        startLocation: leg.startLocation.latLng,
+        endLocation: leg.endLocation.latLng
+      })),
+      method: 'google_routes',
+      success: true,
+      warnings: route.warnings
+    };
+
+    console.log(`Route calculated using Google Routes API: ${result.distance}km, ${result.duration}min (${result.staticDuration}min without traffic)`);
+    
+    return result;
+
+  } catch (error) {
+    console.warn('Google Routes API failed, falling back to Distance Matrix API:', error);
+    
+    try {
+      // Fallback to Distance Matrix API
+      const distanceResult = await calculateDistanceWithGoogle(origin, destination, travelMode.toLowerCase() as 'driving' | 'walking' | 'bicycling' | 'transit');
+      return {
+        distance: distanceResult.distance,
+        duration: distanceResult.duration || 0,
+        staticDuration: distanceResult.duration || 0,
+        polyline: '',
+        legs: [{
+          distance: distanceResult.distance,
+          duration: distanceResult.duration || 0,
+          startLocation: { latitude: origin.latitude, longitude: origin.longitude },
+          endLocation: { latitude: destination.latitude, longitude: destination.longitude }
+        }],
+        method: 'google_routes',
+        success: true,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    } catch (fallbackError) {
+      // Final fallback to Haversine
+      console.warn('All APIs failed, using Haversine fallback:', fallbackError);
+      const distance = calculateDistance(origin, destination);
+      return {
+        distance,
+        duration: 0,
+        staticDuration: 0,
+        polyline: '',
+        legs: [{
+          distance,
+          duration: 0,
+          startLocation: { latitude: origin.latitude, longitude: origin.longitude },
+          endLocation: { latitude: destination.latitude, longitude: destination.longitude }
+        }],
+        method: 'google_routes',
+        success: true,
+        error: `Routes API and Distance Matrix API failed, used Haversine fallback: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+}
+
+/**
+ * Calculate total route distance for multiple coordinates using Google Routes API
+ * Optimizes waypoints and provides traffic-aware routing
+ * @param coordinates Array of coordinates representing the route
+ * @param travelMode Travel mode (DRIVE, WALK, BICYCLE, TRANSIT)
+ * @param options Additional routing options
+ * @returns Promise with comprehensive route calculation result
+ */
+export async function calculateTotalRouteWithGoogle(
+  coordinates: Coordinate[],
+  travelMode: 'DRIVE' | 'WALK' | 'BICYCLE' | 'TRANSIT' = 'DRIVE',
+  options: {
+    routingPreference?: 'TRAFFIC_UNAWARE' | 'TRAFFIC_AWARE' | 'TRAFFIC_AWARE_OPTIMAL';
+    avoidTolls?: boolean;
+    avoidHighways?: boolean;
+    avoidFerries?: boolean;
+    maxWaypoints?: number;
+  } = {}
+): Promise<RouteCalculationResult> {
+  if (coordinates.length < 2) {
+    return {
+      distance: 0,
+      duration: 0,
+      staticDuration: 0,
+      polyline: '',
+      legs: [],
+      method: 'google_routes',
+      success: true
+    };
+  }
+
+  const maxWaypoints = options.maxWaypoints || 8; // Conservative limit for Routes API
+
+  try {
+    // For simple two-point routes, use direct calculation
+    if (coordinates.length === 2) {
+      return await calculateRouteWithGoogle(
+        coordinates[0],
+        coordinates[coordinates.length - 1],
+        [],
+        travelMode,
+        options
+      );
+    }
+
+    // For complex routes, optimize waypoints
+    const simplifiedCoords = simplifyRouteForAPI(coordinates, maxWaypoints + 2); // +2 for origin and destination
+    const origin = simplifiedCoords[0];
+    const destination = simplifiedCoords[simplifiedCoords.length - 1];
+    const intermediates = simplifiedCoords.slice(1, -1);
+
+    const result = await calculateRouteWithGoogle(
+      origin,
+      destination,
+      intermediates,
+      travelMode,
+      options
+    );
+
+    console.log(`Total route calculated using Google Routes API: ${result.distance}km, ${result.duration}min with ${intermediates.length} waypoints`);
+    
+    return result;
+
+  } catch (error) {
+    console.warn('Google Routes API failed for total route, falling back to Distance Matrix API:', error);
+    
+    try {
+      // Fallback to Distance Matrix API
+      const distanceResult = await calculateTotalDistanceWithGoogle(coordinates, travelMode.toLowerCase() as 'driving' | 'walking' | 'bicycling' | 'transit');
+      return {
+        distance: distanceResult.distance,
+        duration: distanceResult.duration || 0,
+        staticDuration: distanceResult.duration || 0,
+        polyline: '',
+        legs: [],
+        method: 'google_routes',
+        success: true,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    } catch (fallbackError) {
+      // Final fallback to Haversine
+      console.warn('All APIs failed for route calculation, using Haversine fallback:', fallbackError);
+      const distance = calculateTotalDistance(coordinates);
+      return {
+        distance,
+        duration: 0,
+        staticDuration: 0,
+        polyline: '',
+        legs: [],
+        method: 'google_routes',
+        success: true,
+        error: `Routes API and Distance Matrix API failed, used Haversine fallback: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
 }
 
 /**
