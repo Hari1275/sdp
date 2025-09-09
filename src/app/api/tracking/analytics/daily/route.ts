@@ -162,6 +162,63 @@ export async function GET(request: NextRequest) {
       .filter(s => s.checkIn.getHours() >= 12)
       .reduce((sum, s) => sum + (s.totalKm || 0), 0);
 
+    // Get clients added that day
+    const clientsAddedToday = await prisma.client.findMany({
+      where: {
+        mrId: targetUserId,
+        createdAt: {
+          gte: dayStart,
+          lte: dayEnd
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        businessType: true,
+        createdAt: true,
+        area: {
+          select: {
+            name: true
+          }
+        },
+        region: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Get business entries added that day
+    const businessEntriesAddedToday = await prisma.businessEntry.findMany({
+      where: {
+        mrId: targetUserId,
+        createdAt: {
+          gte: dayStart,
+          lte: dayEnd
+        }
+      },
+      select: {
+        id: true,
+        amount: true,
+        notes: true,
+        createdAt: true,
+        client: {
+          select: {
+            id: true,
+            name: true,
+            businessType: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
     // Get user info for response
     const userInfo = sessions.length > 0 ? sessions[0].user : await prisma.user.findUnique({
       where: { id: targetUserId },
@@ -213,6 +270,15 @@ export async function GET(request: NextRequest) {
           Math.round(((s.checkOut.getTime() - s.checkIn.getTime()) / (1000 * 60 * 60)) * 100) / 100 : 0,
         coordinateCount: s.gpsLogs.length
       })),
+      clientsAddedToday: {
+        count: clientsAddedToday.length,
+        clients: clientsAddedToday
+      },
+      businessEntriesAddedToday: {
+        count: businessEntriesAddedToday.length,
+        totalAmount: businessEntriesAddedToday.reduce((sum, entry) => sum + entry.amount, 0),
+        entries: businessEntriesAddedToday
+      },
       filters: {
         userId: targetUserId,
         date: date,

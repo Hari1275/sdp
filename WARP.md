@@ -137,6 +137,14 @@ Business entries and user sessions require GPS coordinates. Mobile apps should c
 2. Run `npm run db:generate` to update client
 3. Run `npm run db:push` to apply to database
 4. Update API routes and validations accordingly
+5. Run comprehensive database tests via `npm run db:test` endpoint
+
+### API Development Workflow
+1. Create API endpoint files in `/src/app/api/` following REST conventions
+2. Implement required HTTP methods (GET, POST, PUT, DELETE)
+3. Add authentication, rate limiting, and error handling patterns
+4. Create validation schemas in `/src/lib/validations.ts`
+5. Verify endpoint completeness with `node api-verification-test.js`
 
 ## Mobile Integration Notes
 
@@ -148,11 +156,44 @@ Business entries and user sessions require GPS coordinates. Mobile apps should c
 
 ## Testing & Debugging
 
-- Jest configured with TypeScript support
-- API verification scripts in root (`test-api-endpoints.js`)
-- Database test utilities in `/src/lib/db-test.ts`
-- Sentry integration for error monitoring
+### Test Configuration
+- Jest configured with TypeScript support and jsdom environment
+- Custom test setup in `jest.setup.ts` with mocking for Next.js components
+- Path mapping configured (`@/` points to `src/`)
+- Coverage collection for API routes and lib utilities
+
+### Database Testing
+- Comprehensive database test utilities in `/src/lib/db-test.ts`
+- Test functions for all model creation and relationships
+- Unique constraints validation testing
+- Sample data generation and cleanup utilities
+
+### API Verification
+- Production-level API verification script (`api-verification-test.js`)
+- Comprehensive endpoint structure validation
+- Production readiness scoring system
+- Automated checks for authentication, validation, and error handling patterns
+- Detailed JSON reports with recommendations
+
+### Running Tests
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Verify API endpoints structure
+node api-verification-test.js
+
+# Test database models and relationships
+curl http://localhost:3000/api/db-test
+```
+
+### Error Monitoring
+- Sentry integration for production error monitoring
 - Development server includes detailed error logging
+- Custom API error handling patterns in utilities
 
 ## Key Files for Context
 
