@@ -2,6 +2,8 @@
  * GPS analytics utilities for performance metrics and reporting
  */
 
+import { calculateTotalDistance } from './gps-utils';
+
 // GPS analytics utilities - distance calculations are handled in gps-utils
 
 export interface GPSPerformanceMetrics {
@@ -106,8 +108,11 @@ export function calculateGPSPerformanceMetrics(
   let totalActiveTime = 0;
 
   for (const session of sessions) {
-    // Calculate total distance
-    totalKm += session.totalKm || 0;
+    // Calculate total distance from GPS logs if available, fallback to stored value
+    const sessionDistance = session.gpsLogs && session.gpsLogs.length > 1
+      ? calculateTotalDistance(session.gpsLogs.map(l => ({ latitude: l.latitude, longitude: l.longitude })))
+      : session.totalKm || 0;
+    totalKm += sessionDistance;
 
     // Calculate session duration
     if (session.checkOut) {
@@ -357,14 +362,20 @@ export function generateSessionSummary(session: {
   const avgSpeed = speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
   const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
 
+  // Compute distance from GPS logs if available; fallback to stored totalKm
+  const computedKm = session.gpsLogs && session.gpsLogs.length > 1
+    ? calculateTotalDistance(session.gpsLogs.map(l => ({ latitude: l.latitude, longitude: l.longitude })))
+    : session.totalKm || 0;
+
   return {
     sessionId: session.id,
     userId: session.userId,
     date: session.checkIn.toISOString().split('T')[0],
     checkIn: session.checkIn,
     checkOut: session.checkOut,
+    // Duration must be strictly check-in to check-out
     duration: Math.round(duration * 100) / 100,
-    totalKm: Math.round(session.totalKm * 1000) / 1000,
+    totalKm: Math.round(computedKm * 1000) / 1000,
     avgSpeed: Math.round(avgSpeed * 100) / 100,
     maxSpeed: Math.round(maxSpeed * 100) / 100,
     coordinateCount: session.gpsLogs.length,

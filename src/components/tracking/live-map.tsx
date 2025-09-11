@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   GoogleMap,
   Marker,
@@ -20,6 +20,70 @@ type TeamLocation = {
 };
 type TrailPoint = { lat: number; lng: number; timestamp: string | Date };
 type SessionTrail = { userId: string; userName: string; trail: TrailPoint[] };
+
+// Google Roads API integration for efficient coordinate batching
+const processTrailWithGoogleRoads = async (trail: TrailPoint[]): Promise<TrailPoint[]> => {
+  if (trail.length < 2) return trail;
+  
+  // Google Roads API has a 100-point limit per request, but we'll use 25 for safety
+  const batchSize = 25;
+  let processedTrail: TrailPoint[] = [];
+  
+  for (let i = 0; i < trail.length; i += batchSize - 1) {
+    // Overlap by 1 point to ensure continuity
+    const batch = trail.slice(i, Math.min(i + batchSize, trail.length));
+    
+    try {
+      // Use our backend API to call Google Roads API
+      const response = await fetch('/api/google-maps/snap-to-roads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: batch.map(point => ({ lat: point.lat, lng: point.lng }))
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.snappedPoints) {
+          const snappedPoints = data.snappedPoints.map((point: any, index: number) => ({
+            lat: point.location.latitude,
+            lng: point.location.longitude,
+            timestamp: batch[Math.min(index, batch.length - 1)]?.timestamp || new Date()
+          }));
+          
+          // Avoid duplicates when merging batches
+          if (i > 0) {
+            snappedPoints.shift(); // Remove first point to avoid overlap
+          }
+          
+          processedTrail.push(...snappedPoints);
+        } else {
+          // Fallback to original batch if Roads API fails
+          if (i > 0) {
+            batch.shift(); // Remove first point to avoid overlap
+          }
+          processedTrail.push(...batch);
+        }
+      } else {
+        // Fallback to original batch if API request fails
+        if (i > 0) {
+          batch.shift(); // Remove first point to avoid overlap
+        }
+        processedTrail.push(...batch);
+      }
+    } catch (error) {
+      console.warn('Google Roads API error for batch:', error);
+      // Fallback to original batch
+      if (i > 0) {
+        batch.shift(); // Remove first point to avoid overlap
+      }
+      processedTrail.push(...batch);
+    }
+  }
+  
+  return processedTrail;
+};
 
 export default function LiveMap({
   locations,
@@ -50,6 +114,8 @@ export default function LiveMap({
     lat: number;
     lng: number;
   } | null>(null);
+  const [processedTrails, setProcessedTrails] = useState<Map<string, TrailPoint[]>>(new Map());
+  const [processingTrails, setProcessingTrails] = useState<Set<string>>(new Set());
 
   // Ensure unique markers per user by keeping the latest location per userId
   const uniqueLocations = useMemo(() => {
@@ -66,6 +132,48 @@ export default function LiveMap({
   }, [locations]);
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+
+  // Process trails with Google Roads API for better route accuracy
+  const processTrailsWithGoogleRoads = useCallback(async () => {
+    if (!trails || trails.length === 0) return;
+    
+    for (const trail of trails) {
+      const trailKey = `${trail.userId}_${trail.trail.length}`;
+      
+      // Skip if already processed or currently processing
+      if (processedTrails.has(trailKey) || processingTrails.has(trailKey)) {
+        continue;
+      }
+      
+      // Skip trails with too few points
+      if (trail.trail.length < 3) {
+        continue;
+      }
+      
+      // Mark as processing
+      setProcessingTrails(prev => new Set([...prev, trailKey]));
+      
+      try {
+        const roadSnappedTrail = await processTrailWithGoogleRoads(trail.trail);
+        setProcessedTrails(prev => new Map([...prev, [trailKey, roadSnappedTrail]]));
+        console.log(`✅ Processed trail for user ${trail.userId} with Google Roads API`);
+      } catch (error) {
+        console.warn(`❌ Failed to process trail for user ${trail.userId}:`, error);
+      } finally {
+        // Remove from processing set
+        setProcessingTrails(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(trailKey);
+          return newSet;
+        });
+      }
+    }
+  }, [trails, processedTrails, processingTrails]);
+  
+  // Process trails when they change
+  useEffect(() => {
+    processTrailsWithGoogleRoads();
+  }, [processTrailsWithGoogleRoads]);
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
@@ -129,42 +237,60 @@ export default function LiveMap({
         }}
         onLoad={(map) => setMapRef(map)}
       >
-        {trails?.map((t, idx) => (
-          <GPolyline
-            key={`trail-${t.userId}-${idx}`}
-            path={t.trail.map((p) => ({ lat: p.lat, lng: p.lng }))}
-            options={{
-              strokeColor: (() => {
-                if (!selectedUserId) {
-                  return "#3b82f6"; // Default blue when no selection
-                }
-                if (t.userId === selectedUserId) {
-                  return "#10b981"; // Bright green for selected session
-                }
-                return "#cbd5e1"; // Light gray for all unselected sessions
-              })(),
-              strokeOpacity: (() => {
-                if (!selectedUserId) {
-                  return 0.8; // Default opacity when no selection
-                }
-                if (t.userId === selectedUserId) {
-                  return 0.9; // High opacity for selected session
-                }
-                return 0.3; // Low opacity for unselected sessions
-              })(),
-              strokeWeight: (() => {
-                if (!selectedUserId) {
-                  return 3; // Default weight when no selection
-                }
-                if (t.userId === selectedUserId) {
-                  return 5; // Thick line for selected session
-                }
-                return 2; // Thin line for unselected sessions
-              })(),
-              zIndex: t.userId === selectedUserId ? 1000 : 1,
-            }}
-          />
-        ))}
+        {trails?.map((t, idx) => {
+          const trailKey = `${t.userId}_${t.trail.length}`;
+          const isProcessing = processingTrails.has(trailKey);
+          const processedTrail = processedTrails.get(trailKey);
+          
+          // Use processed trail if available, otherwise use original
+          const trailPath = processedTrail || t.trail;
+          
+          return (
+            <GPolyline
+              key={`trail-${t.userId}-${idx}`}
+              path={trailPath.map((p) => ({ lat: p.lat, lng: p.lng }))}
+              options={{
+                strokeColor: (() => {
+                  if (isProcessing) {
+                    return "#fbbf24"; // Orange while processing
+                  }
+                  if (!selectedUserId) {
+                    return processedTrail ? "#059669" : "#3b82f6"; // Green for road-snapped, blue for original
+                  }
+                  if (t.userId === selectedUserId) {
+                    return "#10b981"; // Bright green for selected session
+                  }
+                  return "#cbd5e1"; // Light gray for all unselected sessions
+                })(),
+                strokeOpacity: (() => {
+                  if (isProcessing) {
+                    return 0.6; // Lower opacity while processing
+                  }
+                  if (!selectedUserId) {
+                    return 0.8; // Default opacity when no selection
+                  }
+                  if (t.userId === selectedUserId) {
+                    return 0.9; // High opacity for selected session
+                  }
+                  return 0.3; // Low opacity for unselected sessions
+                })(),
+                strokeWeight: (() => {
+                  if (isProcessing) {
+                    return 2; // Thinner while processing
+                  }
+                  if (!selectedUserId) {
+                    return processedTrail ? 4 : 3; // Slightly thicker for road-snapped
+                  }
+                  if (t.userId === selectedUserId) {
+                    return 5; // Thick line for selected session
+                  }
+                  return 2; // Thin line for unselected sessions
+                })(),
+                zIndex: t.userId === selectedUserId ? 1000 : (processedTrail ? 500 : 1),
+              }}
+            />
+          );
+        })}
 
         {highlight && (
           <Marker

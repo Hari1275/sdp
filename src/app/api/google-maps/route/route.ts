@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { calculateGodLevelRoute } from '@/lib/advanced-gps-engine';
 
 export interface RouteRequest {
   waypoints: { latitude: number; longitude: number }[];
@@ -44,70 +45,46 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // Use Google Directions API for road-based routing
-      const origin = waypoints[0];
-      const destination = waypoints[waypoints.length - 1];
-      const waypointParams = waypoints.slice(1, -1);
-
-      const url = new URL('https://maps.googleapis.com/maps/api/directions/json');
-      url.searchParams.append('origin', `${origin.latitude},${origin.longitude}`);
-      url.searchParams.append('destination', `${destination.latitude},${destination.longitude}`);
+      // Use GOD-LEVEL routing engine for optimal results
+      console.log(`🧠 [GOD-LEVEL-API] Starting route calculation for ${waypoints.length} waypoints...`);
       
-      if (waypointParams.length > 0) {
-        const waypointsStr = waypointParams
-          .map(wp => `${wp.latitude},${wp.longitude}`)
-          .join('|');
-        url.searchParams.append('waypoints', waypointsStr);
+      // Convert waypoints to coordinates format
+      const coordinates = waypoints.map(wp => ({
+        latitude: wp.latitude,
+        longitude: wp.longitude
+      }));
+      
+      // Use the god-level routing engine
+      const result = await calculateGodLevelRoute(coordinates);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'God-level routing failed');
       }
       
-      url.searchParams.append('mode', mode);
-      url.searchParams.append('key', apiKey);
-
-      console.log(`🌐 [API] Calling Google Directions API from server`);
-      const response = await fetch(url.toString());
+      // Convert geometry back to path format
+      const path = result.geometry.map(coord => ({
+        lat: coord.latitude,
+        lng: coord.longitude
+      }));
       
-      if (!response.ok) {
-        console.error(`❌ [API] Google Directions API HTTP error: ${response.status}`);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log(`📊 [API] Google Directions API response status: ${data.status}`);
-
-      if (data.status !== 'OK') {
-        console.error(`❌ [API] Google Directions API returned error: ${data.status} - ${data.error_message || 'Unknown error'}`);
-        throw new Error(`API error: ${data.status} - ${data.error_message || 'Unknown error'}`);
-      }
-
-      const route = data.routes[0];
-      if (!route) {
-        console.error(`❌ [API] No route found in Directions API response`);
-        throw new Error('No route found');
-      }
-
-      // Decode the polyline to get the road path
-      const decodedPath = decodePolyline(route.overview_polyline.points);
-      
-      // Calculate total distance and duration
-      let totalDistance = 0;
-      let totalDuration = 0;
-      
-      route.legs.forEach((leg: { distance: { value: number }; duration: { value: number } }) => {
-        totalDistance += leg.distance.value;
-        totalDuration += leg.duration.value;
-      });
-
-      const distanceKm = totalDistance / 1000;
-      const durationMinutes = totalDuration / 60;
-
-      console.log(`✅ [API] Google Directions API success! Distance: ${distanceKm}km, Duration: ${durationMinutes.toFixed(1)} min`);
-      console.log(`   Path points: ${decodedPath.length}`);
+      console.log(`🎯 [GOD-LEVEL-API] Route calculation successful!`);
+      console.log(`   📊 Distance: ${result.distance.toFixed(3)}km`);
+      console.log(`   ⏱️  Duration: ${result.duration.toFixed(1)} minutes`);
+      console.log(`   🔧 Method: ${result.method}`);
+      console.log(`   📈 Accuracy: ${result.optimizations.accuracy}`);
+      console.log(`   🚀 Optimization: ${result.optimizations.originalPoints} → ${result.optimizations.processedPoints} points`);
+      console.log(`   💾 Cache hit: ${result.optimizations.cacheHit}`);
+      console.log(`   ⚡ Processing time: ${result.optimizations.calculationTime}ms`);
+      console.log(`   🗺️  Path points: ${path.length}`);
 
       return NextResponse.json({
-        path: decodedPath,
-        distance: distanceKm,
-        duration: durationMinutes,
-        success: true
+        path,
+        distance: result.distance,
+        duration: result.duration,
+        success: true,
+        method: result.method,
+        accuracy: result.optimizations.accuracy,
+        optimizations: result.optimizations
       });
 
     } catch (error) {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateCoordinateData, sanitizeCoordinate } from '@/lib/gps-validation';
-import { calculateTotalDistance, calculateTotalDistanceWithGoogle, calculateTotalRouteWithGoogle, filterByAccuracy } from '@/lib/gps-utils';
+import { calculateTotalDistance, filterByAccuracy } from '@/lib/gps-utils';
+import { calculateGodLevelRoute } from '@/lib/advanced-gps-engine';
 import { getAuthenticatedUser, errorResponse, logError } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
@@ -155,73 +156,56 @@ export async function POST(request: NextRequest) {
         };
 
         try {
-          // Calculate distance from last known point through new coordinates using Routes API
+          // Use GOD-LEVEL routing engine for coordinate distance calculation
           const coordsToCalculate = [lastKnownCoord, ...filteredCoords];
-          const result = await calculateTotalRouteWithGoogle(coordsToCalculate, 'DRIVE', {
-            routingPreference: 'TRAFFIC_AWARE', // Use traffic-aware for real-time updates
-            maxWaypoints: 8 // Conservative limit for coordinate updates
-          });
-          totalDistance = result.distance;
-          calculationMethod = result.method;
+          console.log(`🧠 [COORDS-GOD-LEVEL] Calculating distance for ${coordsToCalculate.length} coordinates...`);
           
-          console.log(`Coordinates distance calculated using ${result.method}: ${totalDistance}km`);
+          const result = await calculateGodLevelRoute(coordsToCalculate);
           
-          if (result.warnings && result.warnings.length > 0) {
-            console.warn('Coordinate route calculation warnings:', result.warnings);
+          if (result.success) {
+            totalDistance = result.distance;
+            calculationMethod = result.method;
+            
+            console.log(`✅ [COORDS-GOD-LEVEL] Distance calculated using ${result.method}: ${totalDistance.toFixed(3)}km`);
+            console.log(`   📈 Accuracy: ${result.optimizations.accuracy}`);
+            console.log(`   🚀 Optimization: ${result.optimizations.originalPoints} → ${result.optimizations.processedPoints} points`);
+            console.log(`   ⚡ Processing time: ${result.optimizations.calculationTime}ms`);
+          } else {
+            throw new Error(result.error || 'God-level routing failed');
           }
         } catch (error) {
-          console.warn('Failed to calculate coordinates distance with Google Routes API, trying Distance Matrix fallback:', error);
+          console.warn('❌ [COORDS-GOD-LEVEL] God-level routing failed, using Haversine fallback:', error);
           
-          try {
-            // Fallback to Distance Matrix API
-            const coordsToCalculate = [lastKnownCoord, ...filteredCoords];
-            const distanceResult = await calculateTotalDistanceWithGoogle(coordsToCalculate, 'driving');
-            totalDistance = distanceResult.distance;
-            calculationMethod = distanceResult.method;
-            
-            console.log(`Coordinates distance calculated using fallback ${distanceResult.method}: ${totalDistance}km`);
-          } catch (fallbackError) {
-            console.warn('Failed to calculate coordinates distance with Distance Matrix API, using Haversine:', fallbackError);
-            
-            // Final fallback to Haversine calculation
-            const firstNewCoord = filteredCoords[0];
-            const distanceToFirst = calculateTotalDistance([lastKnownCoord, firstNewCoord]);
-            const distanceBetweenNew = calculateTotalDistance(filteredCoords);
-            totalDistance = distanceToFirst + distanceBetweenNew;
-            calculationMethod = 'haversine';
-          }
+          // Final fallback to Haversine calculation
+          const firstNewCoord = filteredCoords[0];
+          const distanceToFirst = calculateTotalDistance([lastKnownCoord, firstNewCoord]);
+          const distanceBetweenNew = calculateTotalDistance(filteredCoords);
+          totalDistance = distanceToFirst + distanceBetweenNew;
+          calculationMethod = 'haversine_fallback';
         }
       } else if (filteredCoords.length > 1) {
         try {
-          // First coordinates for this session - use Google Routes API
-          const result = await calculateTotalRouteWithGoogle(filteredCoords, 'DRIVE', {
-            routingPreference: 'TRAFFIC_AWARE',
-            maxWaypoints: 8
-          });
-          totalDistance = result.distance;
-          calculationMethod = result.method;
+          // First coordinates for this session - use GOD-LEVEL routing engine
+          console.log(`🧠 [COORDS-GOD-LEVEL-INIT] Calculating initial route for ${filteredCoords.length} coordinates...`);
           
-          console.log(`Initial coordinates distance calculated using ${result.method}: ${totalDistance}km`);
+          const result = await calculateGodLevelRoute(filteredCoords);
           
-          if (result.warnings && result.warnings.length > 0) {
-            console.warn('Initial coordinate route calculation warnings:', result.warnings);
+          if (result.success) {
+            totalDistance = result.distance;
+            calculationMethod = result.method;
+            
+            console.log(`✅ [COORDS-GOD-LEVEL-INIT] Initial distance calculated using ${result.method}: ${totalDistance.toFixed(3)}km`);
+            console.log(`   📈 Accuracy: ${result.optimizations.accuracy}`);
+            console.log(`   🚀 Optimization: ${result.optimizations.originalPoints} → ${result.optimizations.processedPoints} points`);
+            console.log(`   ⚡ Processing time: ${result.optimizations.calculationTime}ms`);
+          } else {
+            throw new Error(result.error || 'God-level routing failed');
           }
         } catch (error) {
-          console.warn('Failed to calculate initial coordinates distance with Google Routes API, trying Distance Matrix fallback:', error);
-          
-          try {
-            // Fallback to Distance Matrix API
-            const distanceResult = await calculateTotalDistanceWithGoogle(filteredCoords, 'driving');
-            totalDistance = distanceResult.distance;
-            calculationMethod = distanceResult.method;
-            
-            console.log(`Initial coordinates distance calculated using fallback ${distanceResult.method}: ${totalDistance}km`);
-          } catch (fallbackError) {
-            console.warn('Failed to calculate initial coordinates distance with Distance Matrix API, using Haversine:', fallbackError);
-            totalDistance = calculateTotalDistance(filteredCoords);
-            calculationMethod = 'haversine';
-            console.log(`Initial coordinates distance calculated using fallback ${calculationMethod}: ${totalDistance}km`);
-          }
+          console.warn('❌ [COORDS-GOD-LEVEL-INIT] God-level routing failed, using Haversine fallback:', error);
+          totalDistance = calculateTotalDistance(filteredCoords);
+          calculationMethod = 'haversine_fallback';
+          console.log(`✅ [COORDS-GOD-LEVEL-INIT] Haversine fallback distance: ${totalDistance.toFixed(3)}km`);
         }
       }
 

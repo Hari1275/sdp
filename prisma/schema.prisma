@@ -144,24 +144,30 @@ model Task {
   @@map("tasks")
 }
 
-// GPS Session Model for Tracking Sessions
+// GPS Session Model for Tracking Sessions with God-Level Routing
 model GPSSession {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
-  checkIn   DateTime
-  checkOut  DateTime?
-  startLat  Float?
-  startLng  Float?
-  endLat    Float?
-  endLng    Float?
-  totalKm   Float?   @default(0)
-  createdAt DateTime @default(now())
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id])
+  checkIn       DateTime
+  checkOut      DateTime?
+  startLat      Float?
+  startLng      Float?
+  endLat        Float?
+  endLng        Float?
+  totalKm       Float?   @default(0)
+  // Enhanced route data from god-level routing engine
+  routeData     String?  // JSON containing route geometry, polyline, method, optimizations
+  estimatedDuration Float? // Travel time in minutes
+  calculationMethod String? // Routing method used (osrm, vincenty_advanced, etc.)
+  routeAccuracy String?  // Accuracy level: sub_meter, high, standard
+  createdAt     DateTime @default(now())
 
-  gpsLogs   GPSLog[]
+  gpsLogs       GPSLog[]
   
   @@index([userId])
   @@index([checkIn])
+  @@index([calculationMethod])
   @@map("gps_sessions")
 }
 

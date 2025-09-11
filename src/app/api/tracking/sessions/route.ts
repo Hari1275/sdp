@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils'
-import { validateAnalyticsQuery } from '@/lib/gps-validation';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils';
+import { validateSessionData, validateAnalyticsQuery } from '@/lib/gps-validation';
+import { calculateGodLevelRoute } from '@/lib/advanced-gps-engine';
 import { generateSessionSummary } from '@/lib/gps-analytics';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';

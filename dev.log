@@ -1071,3 +1071,193 @@ Google Routes API failed, falling back to Distance Matrix API: TypeError: Cannot
 ✅ [GPS-UTILS] Haversine fallback calculated: 0.009389052110339365km (straight-line distance)
 Final segment calculated using google_routes: 0.009389052110339365km
  POST /api/tracking/checkout 200 in 1681ms
+ ○ Compiling /api/auth/mobile/login ...
+ ✓ Compiled /api/auth/mobile/login in 1306ms (1819 modules)
+ ⨯ Error: Cannot find module './chunks/vendor-chunks/@opentelemetry.js'
+Require stack:
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/webpack-runtime.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/app/api/auth/mobile/login/route.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/require.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/load-components.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/utils.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/options.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/index.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/next-config-ts/transpile-config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/next.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/lib/start-server.js
+    at c.f.require (webpack://sdp-ayurveda-dashboard/webpack/runtime/require%20chunk%20loading:29:0)
+    at <unknown> (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:6:0)
+    at Array.reduce (<anonymous>)
+    at c.e (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:5:0)
+    at Array.map (<anonymous>)
+    at c.X (webpack://sdp-ayurveda-dashboard/webpack/runtime/startup%20entrypoint:5:0)
+    at <unknown> (.next/server/app/api/auth/mobile/login/route.js:661:47)
+    at Object.<anonymous> (.next/server/app/api/auth/mobile/login/route.js:664:3)
+  27 | 	if(!installedChunks[chunkId]) {
+  28 | 		if(7311 != chunkId) {
+> 29 | 			installChunk(require("./chunks/" + __webpack_require__.u(chunkId)));
+  30 | 		} else installedChunks[chunkId] = 1;
+  31 | 	}
+  32 | }; {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/api/auth/mobile/login'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 3.7s (3123 modules)
+ ⨯ Error: Cannot find module './chunks/vendor-chunks/next.js'
+Require stack:
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/webpack-runtime.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/pages/_document.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/require.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/load-components.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/utils.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/options.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/index.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/next-config-ts/transpile-config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/next.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/lib/start-server.js
+    at c.f.require (webpack://sdp-ayurveda-dashboard/webpack/runtime/require%20chunk%20loading:29:0)
+    at <unknown> (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:6:0)
+    at Array.reduce (<anonymous>)
+    at c.e (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:5:0)
+    at Array.map (<anonymous>)
+    at c.X (webpack://sdp-ayurveda-dashboard/webpack/runtime/startup%20entrypoint:5:0)
+    at <unknown> (.next/server/pages/_document.js:73:47)
+    at Object.<anonymous> (.next/server/pages/_document.js:76:3)
+  27 | 	if(!installedChunks[chunkId]) {
+  28 | 		if(7311 != chunkId) {
+> 29 | 			installChunk(require("./chunks/" + __webpack_require__.u(chunkId)));
+  30 | 		} else installedChunks[chunkId] = 1;
+  31 | 	}
+  32 | }; {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ POST /api/auth/mobile/login 500 in 9669ms
+ ⨯ Error: Cannot find module './chunks/vendor-chunks/@opentelemetry.js'
+Require stack:
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/webpack-runtime.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/pages/_document.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/require.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/load-components.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/utils.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/options.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/index.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/next-config-ts/transpile-config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/next.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/lib/start-server.js
+    at c.f.require (webpack://sdp-ayurveda-dashboard/webpack/runtime/require%20chunk%20loading:29:0)
+    at <unknown> (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:6:0)
+    at Array.reduce (<anonymous>)
+    at c.e (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:5:0)
+    at Array.map (<anonymous>)
+    at c.X (webpack://sdp-ayurveda-dashboard/webpack/runtime/startup%20entrypoint:5:0)
+    at <unknown> (.next/server/app/api/auth/mobile/login/route.js:661:47)
+    at Object.<anonymous> (.next/server/app/api/auth/mobile/login/route.js:664:3)
+  27 | 	if(!installedChunks[chunkId]) {
+  28 | 		if(7311 != chunkId) {
+> 29 | 			installChunk(require("./chunks/" + __webpack_require__.u(chunkId)));
+  30 | 		} else installedChunks[chunkId] = 1;
+  31 | 	}
+  32 | }; {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/api/auth/mobile/login'
+}
+ ⨯ Error: Cannot find module './chunks/vendor-chunks/next.js'
+Require stack:
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/webpack-runtime.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/pages/_document.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/require.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/load-components.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/utils.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/options.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/index.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/next-config-ts/transpile-config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/next.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/lib/start-server.js
+    at c.f.require (webpack://sdp-ayurveda-dashboard/webpack/runtime/require%20chunk%20loading:29:0)
+    at <unknown> (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:6:0)
+    at Array.reduce (<anonymous>)
+    at c.e (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:5:0)
+    at Array.map (<anonymous>)
+    at c.X (webpack://sdp-ayurveda-dashboard/webpack/runtime/startup%20entrypoint:5:0)
+    at <unknown> (.next/server/pages/_document.js:73:47)
+    at Object.<anonymous> (.next/server/pages/_document.js:76:3)
+  27 | 	if(!installedChunks[chunkId]) {
+  28 | 		if(7311 != chunkId) {
+> 29 | 			installChunk(require("./chunks/" + __webpack_require__.u(chunkId)));
+  30 | 		} else installedChunks[chunkId] = 1;
+  31 | 	}
+  32 | }; {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ POST /api/auth/mobile/login 500 in 82ms
+ ⨯ Error: Cannot find module './chunks/vendor-chunks/@opentelemetry.js'
+Require stack:
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/webpack-runtime.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/pages/_document.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/require.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/load-components.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/utils.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/options.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/index.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/next-config-ts/transpile-config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/next.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/lib/start-server.js
+    at c.f.require (webpack://sdp-ayurveda-dashboard/webpack/runtime/require%20chunk%20loading:29:0)
+    at <unknown> (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:6:0)
+    at Array.reduce (<anonymous>)
+    at c.e (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:5:0)
+    at Array.map (<anonymous>)
+    at c.X (webpack://sdp-ayurveda-dashboard/webpack/runtime/startup%20entrypoint:5:0)
+    at <unknown> (.next/server/app/api/auth/mobile/login/route.js:661:47)
+    at Object.<anonymous> (.next/server/app/api/auth/mobile/login/route.js:664:3)
+  27 | 	if(!installedChunks[chunkId]) {
+  28 | 		if(7311 != chunkId) {
+> 29 | 			installChunk(require("./chunks/" + __webpack_require__.u(chunkId)));
+  30 | 		} else installedChunks[chunkId] = 1;
+  31 | 	}
+  32 | }; {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/api/auth/mobile/login'
+}
+ ⨯ Error: Cannot find module './chunks/vendor-chunks/next.js'
+Require stack:
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/webpack-runtime.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/.next/server/pages/_document.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/require.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/load-components.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/utils.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/options.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/swc/index.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/build/next-config-ts/transpile-config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/config.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/next.js
+- /Users/appel/Documents/TWP/SDP Ayurved/backend/sdp/node_modules/next/dist/server/lib/start-server.js
+    at c.f.require (webpack://sdp-ayurveda-dashboard/webpack/runtime/require%20chunk%20loading:29:0)
+    at <unknown> (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:6:0)
+    at Array.reduce (<anonymous>)
+    at c.e (webpack://sdp-ayurveda-dashboard/webpack/runtime/ensure%20chunk:5:0)
+    at Array.map (<anonymous>)
+    at c.X (webpack://sdp-ayurveda-dashboard/webpack/runtime/startup%20entrypoint:5:0)
+    at <unknown> (.next/server/pages/_document.js:73:47)
+    at Object.<anonymous> (.next/server/pages/_document.js:76:3)
+  27 | 	if(!installedChunks[chunkId]) {
+  28 | 		if(7311 != chunkId) {
+> 29 | 			installChunk(require("./chunks/" + __webpack_require__.u(chunkId)));
+  30 | 		} else installedChunks[chunkId] = 1;
+  31 | 	}
+  32 | }; {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ POST /api/auth/mobile/login 500 in 129ms
