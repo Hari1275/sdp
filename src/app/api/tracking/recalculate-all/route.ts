@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     console.log('🔄 [BATCH-RECALC] Starting batch distance recalculation...');
 
     // Find sessions that need distance recalculation
-    const whereConditions: any = {
+    const whereConditions: Record<string, unknown> = {
       checkOut: { not: null }, // Only completed sessions
     };
 
@@ -57,7 +57,17 @@ export async function POST(request: NextRequest) {
       successful: 0,
       failed: 0,
       errors: [] as string[],
-      details: [] as any[]
+      details: [] as Array<{
+        sessionId: string;
+        userName: string;
+        originalDistance: number | null;
+        newDistance: number;
+        duration: number;
+        method: string;
+        accuracy?: string;
+        gpsPoints: number;
+        optimizedPoints?: number;
+      }>
     };
 
     for (const session of sessions) {
@@ -87,7 +97,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Update the session with new route data
-        const updatedSession = await prisma.gPSSession.update({
+        await prisma.gPSSession.update({
           where: { id: session.id },
           data: {
             totalKm: result.distance,

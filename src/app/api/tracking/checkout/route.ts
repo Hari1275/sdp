@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sanitizeCoordinate, validateSessionData } from '@/lib/gps-validation';
 import { calculateTotalDistance } from '@/lib/gps-utils';
-import { calculateGodLevelRoute } from '@/lib/advanced-gps-engine';
 import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils';
 
 // Efficient distance calculation using Google Directions API with batching
@@ -25,7 +24,7 @@ async function calculateDistanceWithDirections(coordinates: Array<{ latitude: nu
         const data = await response.json();
         if (data.status === 'OK' && data.routes.length > 0) {
           const route = data.routes[0];
-          const distanceInMeters = route.legs.reduce((sum: number, leg: any) => sum + leg.distance.value, 0);
+          const distanceInMeters = route.legs.reduce((sum: number, leg: { distance: { value: number } }) => sum + leg.distance.value, 0);
           totalDistance += distanceInMeters / 1000; // Convert to kilometers
           continue;
         }

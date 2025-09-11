@@ -27,7 +27,7 @@ const processTrailWithGoogleRoads = async (trail: TrailPoint[]): Promise<TrailPo
   
   // Google Roads API has a 100-point limit per request, but we'll use 25 for safety
   const batchSize = 25;
-  let processedTrail: TrailPoint[] = [];
+  const processedTrail: TrailPoint[] = [];
   
   for (let i = 0; i < trail.length; i += batchSize - 1) {
     // Overlap by 1 point to ensure continuity
@@ -46,7 +46,7 @@ const processTrailWithGoogleRoads = async (trail: TrailPoint[]): Promise<TrailPo
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.snappedPoints) {
-          const snappedPoints = data.snappedPoints.map((point: any, index: number) => ({
+          const snappedPoints = data.snappedPoints.map((point: { location: { latitude: number; longitude: number } }, index: number) => ({
             lat: point.location.latitude,
             lng: point.location.longitude,
             timestamp: batch[Math.min(index, batch.length - 1)]?.timestamp || new Date()

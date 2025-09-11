@@ -59,7 +59,7 @@ export function polylineToCoordinates(polylineData: PolylineData | null): Coordi
     return [];
   }
   
-  return polylineData.geometry.map((point, index) => ({
+  return polylineData.geometry.map(point => ({
     latitude: point.latitude,
     longitude: point.longitude,
     timestamp: new Date(), // Use current time as fallback
@@ -116,7 +116,7 @@ export function createCoordinateArrayFromSession(session: {
   startLng?: number | null;
   endLat?: number | null;
   endLng?: number | null;
-  routeData?: string | null;
+  routeData?: string | null | undefined;
   checkIn: Date | string;
   checkOut?: Date | string | null;
 }): Coordinate[] {
@@ -137,7 +137,7 @@ export function createCoordinateArrayFromSession(session: {
   }
   
   // Add polyline points if available
-  const polylineData = parseRouteData(session.routeData);
+  const polylineData = parseRouteData(session.routeData || null);
   if (polylineData?.geometry && polylineData.geometry.length > 2) {
     // Add intermediate points (skip first and last to avoid duplicates)
     const intermediatePoints = polylineData.geometry.slice(1, -1);
@@ -178,14 +178,14 @@ export function createCoordinateArrayFromSession(session: {
  * Check if session has sufficient route data
  */
 export function hasValidRouteData(session: {
-  routeData?: string | null;
+  routeData?: string | null | undefined;
   startLat?: number | null;
   startLng?: number | null;
   endLat?: number | null;
   endLng?: number | null;
 }): boolean {
   // Has polyline data
-  const polylineData = parseRouteData(session.routeData);
+  const polylineData = parseRouteData(session.routeData || null);
   if (polylineData?.geometry && polylineData.geometry.length >= 2) {
     return true;
   }
@@ -199,13 +199,13 @@ export function hasValidRouteData(session: {
  * Get coordinate count from session (for backward compatibility)
  */
 export function getCoordinateCount(session: {
-  routeData?: string | null;
+  routeData?: string | null | undefined;
   startLat?: number | null;
   startLng?: number | null;
   endLat?: number | null;
   endLng?: number | null;
 }): number {
-  const polylineData = parseRouteData(session.routeData);
+  const polylineData = parseRouteData(session.routeData || null);
   if (polylineData?.geometry) {
     return polylineData.geometry.length;
   }

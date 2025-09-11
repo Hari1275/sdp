@@ -17,7 +17,7 @@ export interface RouteResponse {
 export async function POST(request: NextRequest) {
   try {
     const body: RouteRequest = await request.json();
-    const { waypoints, mode = 'driving' } = body;
+    const { waypoints } = body;
 
     // Validate input
     if (!waypoints || !Array.isArray(waypoints) || waypoints.length < 2) {
@@ -116,7 +116,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Google Polyline Algorithm Decoder
+// Google Polyline Algorithm Decoder (currently unused but kept for future use)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function decodePolyline(encoded: string): { lat: number; lng: number }[] {
   const poly = [];
   let index = 0;
