@@ -82,13 +82,10 @@ export async function GET(request: NextRequest) {
       where.regionId = regionId;
     }
 
-    const [total, pending, inProgress, completed, cancelled] =
+    const [total, pending, completed, cancelled] =
       await Promise.all([
         prisma.task.count({ where }),
         prisma.task.count({ where: { ...where, status: TaskStatus.PENDING } }),
-        prisma.task.count({
-          where: { ...where, status: TaskStatus.IN_PROGRESS },
-        }),
         prisma.task.count({
           where: { ...where, status: TaskStatus.COMPLETED },
         }),
@@ -145,7 +142,6 @@ export async function GET(request: NextRequest) {
       summary: {
         total,
         pending,
-        inProgress,
         completed,
         cancelled,
         completionRate,

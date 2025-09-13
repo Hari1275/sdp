@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { formatSessionTime } from "@/lib/session-date-utils";
 
 type TrailPoint = { lat: number; lng: number; timestamp: string | Date };
 
@@ -50,7 +51,7 @@ export default function LiveMovementChart({ trail }: { trail: TrailPoint[] }) {
       );
       const speed = distKm / dtHrs; // km/h
       rows.push({
-        t: new Date(curr.timestamp).toLocaleTimeString(),
+        t: formatSessionTime(curr.timestamp),
         speed: Math.round(speed * 10) / 10,
       });
     }

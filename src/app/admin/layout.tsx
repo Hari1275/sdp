@@ -122,7 +122,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         );
                       })}
                     </div>
-                    <Separator className="my-6" />
+                    {/* <Separator className="my-6" />
                     <div className="space-y-3">
                       <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Quick Access
@@ -156,7 +156,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           </Card>
                         );
                       })}
-                    </div>
+                    </div> */}
                   </div>
                 </ScrollArea>
               </SheetContent>
@@ -281,7 +281,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           </div>
 
-          {/* Navigation Cards */}
+          {/* Navigation Cards
           <div className="px-6 mt-8">
             <Separator className="mb-6" />
             <div className="space-y-3">
@@ -316,7 +316,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 );
               })}
             </div>
-          </div>
+          </div> */}
         </nav>
 
         {/* Main Content */}

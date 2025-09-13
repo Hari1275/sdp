@@ -10,6 +10,7 @@ import {
   MarkerClustererF,
 } from "@react-google-maps/api";
 import * as Sentry from "@sentry/nextjs";
+import { formatSessionDateTime } from "@/lib/session-date-utils";
 
 type TeamLocation = {
   userId: string;
@@ -321,7 +322,7 @@ export default function LiveMap({
                       <div className="text-sm">
                         <div className="font-medium">{loc.userName}</div>
                         <div className="text-xs text-gray-600">
-                          {new Date(loc.timestamp).toLocaleString()}
+                          {formatSessionDateTime(loc.timestamp, { dateFormat: 'medium' })}
                         </div>
                         <div className="text-xs">
                           {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}

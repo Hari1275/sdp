@@ -361,8 +361,8 @@ export async function POST(request: NextRequest) {
       data: {
         ...taskData,
         createdById: user.id,
-        // Default to IN_PROGRESS so no explicit start step is required
-        status: TaskStatus.IN_PROGRESS,
+        // Default to PENDING - tasks start as pending until worked on
+        status: TaskStatus.PENDING,
         dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
       },
       select: {

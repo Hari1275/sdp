@@ -34,6 +34,7 @@ import {
   Navigation
 } from "lucide-react";
 import { apiGet } from "@/lib/api-client";
+import { formatSessionTimeRange } from "@/lib/session-date-utils";
 import dynamic from "next/dynamic";
 
 // Dynamically import the map component to avoid SSR issues
@@ -66,7 +67,7 @@ interface Task {
   id: string;
   title: string;
   description?: string;
-  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  status: "PENDING" | "COMPLETED" | "CANCELLED";
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   dueDate?: string;
   completedAt?: string;
@@ -902,19 +903,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                                     )}
                                   </div>
                                   <div className="text-xs text-muted-foreground mt-1">
-                                    <DateDisplay 
-                                      date={new Date(session.checkIn)} 
-                                      format="h:mm a" 
-                                    />
-                                    {session.checkOut && (
-                                      <>
-                                        {' - '}
-                                        <DateDisplay 
-                                          date={new Date(session.checkOut)} 
-                                          format="h:mm a" 
-                                        />
-                                      </>
-                                    )}
+                                    {formatSessionTimeRange(session.checkIn, session.checkOut)}
                                   </div>
                                 </div>
                                 <div className="text-right text-xs">

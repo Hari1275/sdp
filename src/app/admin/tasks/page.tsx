@@ -45,7 +45,6 @@ import {
 type StatusFilter =
   | "ALL"
   | "PENDING"
-  | "IN_PROGRESS"
   | "COMPLETED"
   | "CANCELLED";
 type PriorityFilter = "ALL" | "LOW" | "MEDIUM" | "HIGH" | "URGENT";
@@ -130,10 +129,9 @@ export default function TasksAdminPage() {
   const stats = useMemo(() => {
     const total = tasks.length;
     const completed = tasks.filter((t) => t.status === "COMPLETED").length;
-    const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS").length;
     const pending = tasks.filter((t) => t.status === "PENDING").length;
     const overdue = tasks.filter((t) => t.isOverdue).length;
-    return { total, completed, inProgress, pending, overdue };
+    return { total, completed, pending, overdue };
   }, [tasks]);
 
   const applyFilters = () => {
@@ -149,7 +147,6 @@ export default function TasksAdminPage() {
       search: search || undefined,
       status: statusValue as
         | "PENDING"
-        | "IN_PROGRESS"
         | "COMPLETED"
         | "CANCELLED"
         | undefined,
@@ -203,12 +200,12 @@ export default function TasksAdminPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {stats.inProgress}
+            <div className="text-2xl font-bold text-yellow-600">
+              {stats.pending}
             </div>
           </CardContent>
         </Card>
@@ -253,7 +250,6 @@ export default function TasksAdminPage() {
               <SelectContent>
                 <SelectItem value="ALL">All Status</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
                 <SelectItem value="COMPLETED">Completed</SelectItem>
                 <SelectItem value="CANCELLED">Cancelled</SelectItem>
               </SelectContent>
@@ -473,7 +469,7 @@ export default function TasksAdminPage() {
                             variant={
                               task.status === "COMPLETED"
                                 ? "secondary"
-                                : task.status === "IN_PROGRESS"
+                                : task.status === "PENDING"
                                 ? "default"
                                 : "outline"
                             }

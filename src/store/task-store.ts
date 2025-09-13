@@ -4,7 +4,7 @@ import type { Task } from "@/types";
 
 export type TaskFilters = {
   search?: string;
-  status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  status?: "PENDING" | "COMPLETED" | "CANCELLED";
   priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   regionId?: string;
   areaId?: string;
@@ -51,7 +51,7 @@ interface TaskStore {
   ) => Promise<void>;
   updateStatus: (
     taskId: string,
-    status: "PENDING" | "IN_PROGRESS" | "CANCELLED"
+    status: "PENDING" | "CANCELLED"
   ) => Promise<void>;
   completeTask: (taskId: string, notes?: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;

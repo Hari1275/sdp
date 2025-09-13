@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { formatSessionDate, formatSessionTimeRange } from "@/lib/session-date-utils";
 
 // Sanitize text for CSV: strip non-ASCII and control chars, collapse whitespace
 function sanitizeText(input: string): string {
@@ -380,17 +381,21 @@ function ViewUserDialog({
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-muted-foreground">
-                        <th className="p-2">Date</th>
-                        <th className="p-2">Start</th>
-                        <th className="p-2">End</th>
-                        <th className="p-2">KM</th>
+                        <th className="p-2">Session Date</th>
+                        <th className="p-2">Check-in / Check-out</th>
+                        <th className="p-2">Start Location</th>
+                        <th className="p-2">End Location</th>
+                        <th className="p-2">Distance (KM)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sessions.map((s, i) => (
                         <tr key={s.id || i} className="border-t">
                           <td className="p-2">
-                            {new Date(s.checkIn).toISOString().slice(0, 10)}
+                            {formatSessionDate(s.checkIn)}
+                          </td>
+                          <td className="p-2">
+                            {formatSessionTimeRange(s.checkIn, s.checkOut)}
                           </td>
                           <td className="p-2">
                             {s.startLat && s.startLng

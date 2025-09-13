@@ -97,7 +97,10 @@ export async function GET(request: NextRequest) {
         (whereClause.createdAt as Record<string, Date>).gte = new Date(dateFrom);
       }
       if (dateTo) {
-        (whereClause.createdAt as Record<string, Date>).lte = new Date(dateTo);
+        // Add 23:59:59 to include the entire day
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        (whereClause.createdAt as Record<string, Date>).lte = endDate;
       }
     }
 
