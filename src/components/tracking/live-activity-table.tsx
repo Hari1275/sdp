@@ -42,7 +42,7 @@ const getActivityIcon = (type: ActivityType) => {
   }
 };
 
-const getActivityColor = (type: ActivityType) => {
+const getActivityColor = () => {
   return "border-l-muted";
 };
 
@@ -159,7 +159,7 @@ export default function LiveActivityTable({
                   key={activity.id}
                   className={`
                     flex items-start gap-3 p-3 border-l-2 cursor-pointer hover:bg-muted/50 transition-colors
-                    ${getActivityColor(activity.type)}
+                    ${getActivityColor()}
                     ${isFollowedUser ? 'bg-muted/30' : ''}
                   `}
                   onClick={() => onUserClick?.(activity.userId)}
@@ -193,15 +193,17 @@ export default function LiveActivityTable({
                       {activity.message}
                     </p>
                     
-                    {activity.meta && activity.type === "GPS_UPDATE" && activity.meta.lat && activity.meta.lng && (
+                    {activity.meta && activity.type === "GPS_UPDATE" && 
+                     typeof activity.meta.lat === 'number' && typeof activity.meta.lng === 'number' && (
                       <div className="text-xs text-muted-foreground font-mono">
-                        📍 {Number(activity.meta.lat).toFixed(4)}, {Number(activity.meta.lng).toFixed(4)}
+                        📍 {activity.meta.lat.toFixed(4)}, {activity.meta.lng.toFixed(4)}
                       </div>
                     )}
                     
-                    {activity.meta && activity.type === "BUSINESS_ENTRY" && activity.meta.amount && (
+                    {activity.meta && activity.type === "BUSINESS_ENTRY" && 
+                     typeof activity.meta.amount === 'number' && (
                       <div className="text-xs font-semibold">
-                        ₹{Number(activity.meta.amount).toFixed(2)}
+                        ₹{activity.meta.amount.toFixed(2)}
                       </div>
                     )}
                   </div>

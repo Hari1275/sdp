@@ -312,7 +312,7 @@ export async function seedDatabase() {
           areaId: areas[1].id,
           assigneeId: mrUsers[1].id,
           createdById: leadMrMumbai.id,
-          status: TaskStatus.IN_PROGRESS,
+          status: TaskStatus.PENDING,
           priority: Priority.MEDIUM,
           dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
         },
@@ -400,7 +400,7 @@ export async function seedDatabase() {
 
     // Mark one task as completed recently for activity feed
     await prisma.task.updateMany({
-      where: { assigneeId: mrUsers[1].id, status: TaskStatus.IN_PROGRESS },
+      where: { assigneeId: mrUsers[1].id, status: TaskStatus.PENDING },
       data: {
         status: TaskStatus.COMPLETED,
         completedAt: new Date(now.getTime() - 10 * 60 * 1000),

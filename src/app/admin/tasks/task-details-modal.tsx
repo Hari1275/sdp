@@ -45,7 +45,7 @@ export function TaskDetailsModal({
               variant={
                 task.status === "COMPLETED"
                   ? "secondary"
-                  : task.status === "IN_PROGRESS"
+                  : task.status === "PENDING"
                   ? "default"
                   : "outline"
               }

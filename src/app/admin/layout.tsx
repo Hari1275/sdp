@@ -19,8 +19,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {  LogOut, Menu } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { filterNavByRole, isPathAllowed, NavItem } from "./navigation-config";

@@ -95,7 +95,7 @@ export default function SimpleLiveMap({
       locations.forEach(loc => {
         bounds.extend({ lat: loc.latitude, lng: loc.longitude });
       });
-      mapRef.fitBounds(bounds, { padding: 50 });
+      mapRef.fitBounds(bounds, 50);
     }
   }, [isLoaded, mapRef, followedUserId, locations]);
 
