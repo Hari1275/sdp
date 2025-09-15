@@ -143,7 +143,8 @@ type TeamLocation = {
 type TrailPoint = { 
   lat: number; 
   lng: number; 
-  timestamp: string | Date; 
+  timestamp: string | Date;
+  isRoadBased?: boolean; // Mark if this is already a processed road route
 };
 
 type SessionTrail = { 
@@ -349,35 +350,50 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
   // State for road-based trail paths
   const [roadBasedTrails, setRoadBasedTrails] = useState<Map<string, { lat: number; lng: number }[]>>(new Map());
 
-  // Function to get road-based path for a GPS trail
+  // Enhanced function to get road-based path using intelligent routing
   const getRoadBasedPath = useCallback(async (sessionId: string, gpsLogs: { latitude: number; longitude: number; timestamp: string | Date; [key: string]: unknown }[]) => {
     if (gpsLogs.length < 2) return null;
     
     try {
-      // Simplify GPS points (take every 5th point to reduce API calls)
-      const waypoints = gpsLogs
-        .filter((_, index) => index % 5 === 0 || index === gpsLogs.length - 1)
-        .map(log => ({ latitude: log.latitude, longitude: log.longitude }));
+      // Convert GPS logs to coordinate format
+      const coordinates = gpsLogs.map(log => ({
+        latitude: log.latitude,
+        longitude: log.longitude,
+        timestamp: log.timestamp
+      }));
       
-      if (waypoints.length < 2) return null;
+      console.log(`🧠 [USER-DETAILS] Processing session ${sessionId} with ${coordinates.length} GPS points using intelligent routing...`);
       
-
-      
-      const response = await fetch('/api/google-maps/route', {
+      // Use enhanced Directions API for road-following routes
+      const response = await fetch('/api/google-maps/enhanced-directions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ waypoints, mode: 'driving' })
+        body: JSON.stringify({ coordinates })
       });
       
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.path) {
-          return data.path;
+        
+        if (data.success && data.decodedPath) {
+          // Convert decoded path to map format
+          const path = data.decodedPath.map((point: { lat: number; lng: number }) => ({
+            lat: point.lat,
+            lng: point.lng
+          }));
+          
+          if (data.debugInfo?.skippedDueToIntelligence) {
+            console.log(`⏭️ [USER-DETAILS] Session ${sessionId} routing skipped: ${data.debugInfo.reasonsSkipped?.join(', ')}`);
+            return null; // Return null to use original GPS trail
+          } else {
+            console.log(`✅ [USER-DETAILS] Session ${sessionId} road route: ${data.method}, ${path.length} points, ${data.totalDistance?.toFixed(2)}km`);
+            return path;
+          }
         }
       }
       
       return null;
-    } catch {
+    } catch (error) {
+      console.warn(`❌ [USER-DETAILS] Failed to process session ${sessionId}:`, error);
       return null;
     }
   }, []);
@@ -464,21 +480,23 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
           timestamp: latestLog.timestamp
         });
         
-        // Use road-based path if available, otherwise use simplified GPS trail
+        // Use road-based path if available, otherwise skip to let LiveMap handle routing
         const roadPath = sessionId ? roadBasedTrails.get(sessionId) : undefined;
         let trailPoints: TrailPoint[];
         
         if (roadPath && roadPath.length > 0) {
-          // Use road-based path from Google Directions API
+          // Use road-based path from Google Directions API - this is the final route
           trailPoints = roadPath.map(point => ({
             lat: point.lat,
             lng: point.lng,
-            timestamp: session.gpsLogs?.[0]?.timestamp || ''
+            timestamp: session.gpsLogs?.[0]?.timestamp || '',
+            // Mark as road-based to prevent further processing
+            isRoadBased: true
           }));
         } else {
-          // Fallback to simplified GPS trail (every 10th point for performance)
+          // Provide simplified GPS trail for LiveMap to process with enhanced Directions API
           trailPoints = session.gpsLogs
-            .filter((_, index) => index % 10 === 0)
+            .filter((_, index) => index % 5 === 0 || index === session.gpsLogs!.length - 1) // Take every 5th point + last
             .map(log => ({
               lat: log.latitude,
               lng: log.longitude,

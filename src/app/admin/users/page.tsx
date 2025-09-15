@@ -14,9 +14,11 @@ export default function UserManagementPage() {
   const {
     users,
     pagination,
+    filters,
     isLoading,
     error,
     fetchUsers,
+    setFilters,
     openUserSheet,
     isSheetOpen,
   } = useUserStore();
@@ -189,6 +191,8 @@ export default function UserManagementPage() {
                 data={users}
                 pagination={pagination}
                 onPaginationChange={(page, limit) => fetchUsers(page, limit)}
+                onFilterChange={(filterChanges) => setFilters(filterChanges)}
+                currentFilters={filters}
               />
             )}
           </ClientOnly>

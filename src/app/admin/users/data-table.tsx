@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Settings2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +54,12 @@ interface DataTableProps<TData, TValue> {
     hasPrev: boolean;
   };
   onPaginationChange?: (page: number, limit: number) => void;
+  onFilterChange?: (filters: { search?: string; role?: string; status?: string; }) => void;
+  currentFilters?: {
+    search: string;
+    role: string;
+    status: string;
+  };
 }
 
 export function DataTable<TData, TValue>({
@@ -61,12 +67,46 @@ export function DataTable<TData, TValue>({
   data,
   pagination,
   onPaginationChange,
+  onFilterChange,
+  currentFilters,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchValue, setSearchValue] = useState<string>(currentFilters?.search || "");
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState<string>(currentFilters?.search || "");
+  const [roleFilter, setRoleFilter] = useState<string>(currentFilters?.role || "all");
+  const [statusFilter, setStatusFilter] = useState<string>(currentFilters?.status || "all");
+  const onFilterChangeRef = useRef(onFilterChange);
+  const lastFiltersRef = useRef({ search: currentFilters?.search || "", role: currentFilters?.role || "all", status: currentFilters?.status || "all" });
+
+  // Keep ref updated
+  useEffect(() => {
+    onFilterChangeRef.current = onFilterChange;
+  });
+
+  // Debounce search input to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchValue(searchValue);
+    }, 300); // 300ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
+  // Trigger search when debounced value changes (but only if values actually changed)
+  useEffect(() => {
+    const currentFilters = { search: debouncedSearchValue, role: roleFilter, status: statusFilter };
+    const lastFilters = lastFiltersRef.current;
+    
+    if (onFilterChangeRef.current && 
+        (currentFilters.search !== lastFilters.search || 
+         currentFilters.role !== lastFilters.role || 
+         currentFilters.status !== lastFilters.status)) {
+      lastFiltersRef.current = currentFilters;
+      onFilterChangeRef.current(currentFilters);
+    }
+  }, [debouncedSearchValue, roleFilter, statusFilter]);
 
   const table = useReactTable({
     data,
@@ -77,7 +117,8 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
+    // Only use client-side filtering if no server-side filtering is provided
+    ...(!onFilterChange ? { getFilteredRowModel: getFilteredRowModel() } : {}),
     onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
@@ -90,25 +131,43 @@ export function DataTable<TData, TValue>({
       },
     },
     manualPagination: !!pagination, // Use server-side pagination when provided
+    manualFiltering: !!onFilterChange, // Use server-side filtering when provided
     pageCount: pagination?.totalPages || -1,
   });
 
+  const handleSearchChange = (search: string) => {
+    setSearchValue(search);
+    if (!onFilterChange) {
+      // Fall back to client-side filtering for immediate response
+      table.getColumn("name")?.setFilterValue(search);
+    }
+    // Server-side filtering is handled by the debounced useEffect
+  };
+
   const handleRoleFilter = (role: string) => {
     setRoleFilter(role);
-    if (role === "all") {
-      table.getColumn("role")?.setFilterValue("");
-    } else {
-      table.getColumn("role")?.setFilterValue(role);
+    if (!onFilterChange) {
+      // Fall back to client-side filtering
+      if (role === "all") {
+        table.getColumn("role")?.setFilterValue("");
+      } else {
+        table.getColumn("role")?.setFilterValue(role);
+      }
     }
+    // Server-side filtering is handled by the debounced useEffect
   };
 
   const handleStatusFilter = (status: string) => {
     setStatusFilter(status);
-    if (status === "all") {
-      table.getColumn("status")?.setFilterValue("");
-    } else {
-      table.getColumn("status")?.setFilterValue(status);
+    if (!onFilterChange) {
+      // Fall back to client-side filtering
+      if (status === "all") {
+        table.getColumn("status")?.setFilterValue("");
+      } else {
+        table.getColumn("status")?.setFilterValue(status);
+      }
     }
+    // Server-side filtering is handled by the debounced useEffect
   };
 
   const getResponsiveColumnClass = (columnId: string) => {
@@ -131,12 +190,8 @@ export function DataTable<TData, TValue>({
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search users..."
-              value={
-                (table.getColumn("name")?.getFilterValue() as string) ?? ""
-              }
-              onChange={(event) =>
-                table.getColumn("name")?.setFilterValue(event.target.value)
-              }
+              value={searchValue}
+              onChange={(event) => handleSearchChange(event.target.value)}
               className="pl-8 w-full sm:max-w-sm"
             />
           </div>

@@ -58,7 +58,7 @@ export default function AdvancedRouteMap({
     googleMapsApiKey: apiKey,
   });
 
-  // Calculate road routes using Google Directions API
+  // Enhanced road route calculation with intelligent routing decisions
   const calculateRoadRoute = useCallback(async (route: SessionRoute) => {
     if (!isLoaded || !map || route.coordinates.length < 2) return;
     
@@ -69,6 +69,37 @@ export default function AdvancedRouteMap({
     try {
       setLoadingRoutes(prev => new Set([...prev, route.sessionId]));
       
+      // First check with intelligent routing system
+      const coordinates = route.coordinates.map(coord => ({
+        latitude: coord.lat,
+        longitude: coord.lng,
+        timestamp: coord.timestamp
+      }));
+      
+      console.log(`🧠 [ADVANCED-ROUTE-MAP] Analyzing route complexity for session ${route.sessionId}...`);
+      
+      // Use enhanced Roads API for intelligent routing decision
+      const enhancedResponse = await fetch('/api/google-maps/enhanced-roads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coordinates })
+      });
+      
+      if (enhancedResponse.ok) {
+        const enhancedData = await enhancedResponse.json();
+        
+        // If intelligent routing says skip or use algorithmic
+        if (enhancedData.debugInfo?.skippedDueToIntelligence) {
+          console.log(`⏭️ [ADVANCED-ROUTE-MAP] Intelligent routing skipped Roads API for session ${route.sessionId}: ${enhancedData.debugInfo.reasonsSkipped?.join(', ')}`);
+          // Don't create a directions service result, let it use the GPS polyline
+          return;
+        }
+        
+        // If enhanced Roads API was successful, we could use its optimized route
+        // but for visual consistency with Google Directions, we'll continue with Directions API
+        console.log(`🔧 [ADVANCED-ROUTE-MAP] Proceeding with Directions API for session ${route.sessionId} (method: ${enhancedData.method})`);
+      }
+      
       const directionsService = new google.maps.DirectionsService();
       
       // Optimize waypoints - take start, end, and key intermediate points
@@ -76,11 +107,11 @@ export default function AdvancedRouteMap({
       const origin = coords[0];
       const destination = coords[coords.length - 1];
       
-      // Select intermediate waypoints (max 23 for Google API)
+      // Select intermediate waypoints (max 20 to be safe)
       const waypoints: google.maps.DirectionsWaypoint[] = [];
       if (coords.length > 2) {
-        const maxWaypoints = Math.min(20, coords.length - 2);
-        const step = Math.floor((coords.length - 2) / maxWaypoints);
+        const maxWaypoints = Math.min(15, coords.length - 2); // Reduced for better reliability
+        const step = Math.max(1, Math.floor((coords.length - 2) / maxWaypoints));
         
         for (let i = step; i < coords.length - 1; i += step) {
           if (waypoints.length < maxWaypoints) {
@@ -96,7 +127,7 @@ export default function AdvancedRouteMap({
         origin: new google.maps.LatLng(origin.lat, origin.lng),
         destination: new google.maps.LatLng(destination.lat, destination.lng),
         waypoints,
-        optimizeWaypoints: true,
+        optimizeWaypoints: false, // Disable to maintain chronological order
         travelMode: google.maps.TravelMode.DRIVING,
         unitSystem: google.maps.UnitSystem.METRIC,
         region: 'IN' // Optimize for India
@@ -113,10 +144,10 @@ export default function AdvancedRouteMap({
       });
 
       setDirectionsServices(prev => new Map([...prev, [route.sessionId, result]]));
-      console.log(`✅ Road route calculated for session ${route.sessionId}`);
+      console.log(`✅ [ADVANCED-ROUTE-MAP] Road route calculated for session ${route.sessionId} with ${waypoints.length} waypoints`);
       
     } catch (error) {
-      console.warn(`❌ Failed to calculate road route for session ${route.sessionId}:`, error);
+      console.warn(`❌ [ADVANCED-ROUTE-MAP] Failed to calculate road route for session ${route.sessionId}:`, error);
     } finally {
       setLoadingRoutes(prev => {
         const newSet = new Set(prev);

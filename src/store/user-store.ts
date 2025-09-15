@@ -67,12 +67,20 @@ interface UserStore {
     hasPrev: boolean;
   };
 
+  // Filter state
+  filters: {
+    search: string;
+    role: string;
+    status: string;
+  };
+
   // Sheet state
   isSheetOpen: boolean;
   selectedUser: User | null;
 
   // Actions
-  fetchUsers: (page?: number, limit?: number) => Promise<void>;
+  fetchUsers: (page?: number, limit?: number, filters?: Partial<{ search: string; role: string; status: string; }>) => Promise<void>;
+  setFilters: (filters: Partial<{ search: string; role: string; status: string; }>) => void;
   fetchRegions: () => Promise<void>;
   fetchLeadMrs: () => Promise<void>;
   createUser: (data: CreateUserData) => Promise<void>;
@@ -100,14 +108,45 @@ export const useUserStore = create<UserStore>((set, get) => ({
     hasNext: false,
     hasPrev: false,
   },
+  filters: {
+    search: '',
+    role: 'all',
+    status: 'all',
+  },
   isSheetOpen: false,
   selectedUser: null,
 
   // Fetch users
-  fetchUsers: async (page = 1, limit = 10) => {
+  fetchUsers: async (page = 1, limit = 10, filters?: Partial<{ search: string; role: string; status: string; }>) => {
     set({ isLoading: true, error: null });
     try {
-      const url = `/api/users?page=${page}&limit=${limit}`;
+      // Get current filters from state or use provided filters
+      const currentState = get();
+      const activeFilters = filters ? { ...currentState.filters, ...filters } : currentState.filters;
+      
+      // Update filters in state if new filters provided
+      if (filters) {
+        set({ filters: activeFilters });
+      }
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+
+      // Add filter parameters if they have values
+      if (activeFilters.search && activeFilters.search.trim()) {
+        params.append('search', activeFilters.search.trim());
+      }
+      if (activeFilters.role && activeFilters.role !== 'all') {
+        params.append('role', activeFilters.role);
+      }
+      if (activeFilters.status && activeFilters.status !== 'all') {
+        params.append('status', activeFilters.status);
+      }
+
+      const url = `/api/users?${params.toString()}`;
       const result = await fetch(url);
 
       if (!result.ok) {
@@ -241,5 +280,14 @@ export const useUserStore = create<UserStore>((set, get) => ({
   // Close user sheet
   closeUserSheet: () => {
     set({ isSheetOpen: false, selectedUser: null });
+  },
+
+  // Set filters
+  setFilters: (filters: Partial<{ search: string; role: string; status: string; }>) => {
+    const currentState = get();
+    const newFilters = { ...currentState.filters, ...filters };
+    set({ filters: newFilters });
+    // Automatically refetch with new filters
+    get().fetchUsers(1, currentState.pagination.limit, filters);
   },
 }));

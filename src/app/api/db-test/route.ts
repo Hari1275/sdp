@@ -77,7 +77,7 @@ export async function GET() {
           'UserRole (MR, LEAD_MR, ADMIN)',
           'UserStatus (ACTIVE, INACTIVE, SUSPENDED)',
           'BusinessType (CLINIC, MEDICAL_STORE, HOSPITAL, PHARMACY, HEALTHCARE_CENTER)',
-          'TaskStatus (PENDING, IN_PROGRESS, COMPLETED, CANCELLED)',
+          'TaskStatus (PENDING, COMPLETED, CANCELLED)',
           'Priority (LOW, MEDIUM, HIGH, URGENT)',
           'SessionStatus (ACTIVE, COMPLETED, INTERRUPTED)',
           'NotificationType (INFO, TASK_ASSIGNMENT, TASK_UPDATE, SYSTEM_ALERT, WARNING)'

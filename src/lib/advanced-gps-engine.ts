@@ -15,6 +15,7 @@
  */
 
 import { Coordinate } from './gps-utils';
+import { getIntelligentRoutingDecision, RouteAnalysis } from './intelligent-routing';
 
 // ===== ADVANCED DISTANCE CALCULATION ALGORITHMS =====
 
@@ -563,7 +564,7 @@ export async function calculateOSRMRoute(coordinates: Coordinate[]): Promise<{
 // ===== MASTER ROUTING FUNCTION =====
 
 /**
- * GOD-LEVEL route calculation that tries multiple methods for best results
+ * GOD-LEVEL route calculation with intelligent routing decisions
  */
 export async function calculateGodLevelRoute(coordinates: Coordinate[]): Promise<{
   distance: number;
@@ -579,29 +580,68 @@ export async function calculateGodLevelRoute(coordinates: Coordinate[]): Promise
     calculationTime: number;
     accuracy: 'sub_meter' | 'high' | 'standard';
   };
+  routingDecision?: RouteAnalysis;
   error?: string;
 }> {
   const startTime = Date.now();
   
   try {
-    // Method 1: Try OSRM for road-based routing (best for route visualization)
-    const osrmResult = await calculateOSRMRoute(coordinates);
+    // STEP 1: Analyze route with intelligent routing system
+    console.log(`🧠 [GOD-LEVEL] Starting intelligent route analysis for ${coordinates.length} coordinates...`);
+    const routingDecision = getIntelligentRoutingDecision(coordinates);
     
-    if (osrmResult.success && osrmResult.geometry.length > 0) {
+    // STEP 2: Handle different routing scenarios based on intelligence
+    if (routingDecision.recommendations.skipRouting) {
+      console.log(`⏭️  [GOD-LEVEL] Skipping route calculation - ${routingDecision.reasoning.join(', ')}`);
+      
+      // For static locations, return minimal route data
       return {
-        ...osrmResult,
+        distance: routingDecision.movementDistance,
+        duration: 0,
+        polyline: coordinates.length > 0 ? `${coordinates[0].latitude.toFixed(6)},${coordinates[0].longitude.toFixed(6)}` : '',
+        geometry: coordinates.length > 0 ? [coordinates[0]] : [],
+        method: 'static_location_detected',
+        success: true,
         optimizations: {
           originalPoints: coordinates.length,
-          processedPoints: osrmResult.geometry.length,
+          processedPoints: 1,
           cacheHit: false,
           calculationTime: Date.now() - startTime,
-          accuracy: 'high'
-        }
+          accuracy: 'sub_meter'
+        },
+        routingDecision
       };
     }
     
-    // Method 2: Use advanced local calculation engine
+    // STEP 3: Try OSRM for complex routes or when specifically recommended
+    if (routingDecision.recommendations.useRoadsAPI || routingDecision.routeComplexity === 'complex') {
+      console.log(`🛣️  [GOD-LEVEL] Using OSRM for complex/road-based routing (complexity: ${routingDecision.routeComplexity})`);
+      
+      const osrmResult = await calculateOSRMRoute(coordinates);
+      
+      if (osrmResult.success && osrmResult.geometry.length > 0) {
+        console.log(`✅ [GOD-LEVEL] OSRM routing successful: ${osrmResult.distance.toFixed(3)}km via ${osrmResult.method}`);
+        return {
+          ...osrmResult,
+          optimizations: {
+            originalPoints: coordinates.length,
+            processedPoints: osrmResult.geometry.length,
+            cacheHit: false,
+            calculationTime: Date.now() - startTime,
+            accuracy: 'high'
+          },
+          routingDecision
+        };
+      } else {
+        console.warn(`⚠️  [GOD-LEVEL] OSRM routing failed, falling back to algorithmic calculation`);
+      }
+    }
+    
+    // STEP 4: Use advanced local calculation engine for simple/moderate routes
+    console.log(`🔧 [GOD-LEVEL] Using advanced algorithmic calculation (complexity: ${routingDecision.routeComplexity})`);
     const engineResult = await routeEngine.calculateOptimalRoute(coordinates);
+    
+    console.log(`✅ [GOD-LEVEL] Algorithmic routing successful: ${engineResult.distance.toFixed(3)}km via ${engineResult.method}`);
     
     return {
       distance: engineResult.distance,
@@ -616,11 +656,12 @@ export async function calculateGodLevelRoute(coordinates: Coordinate[]): Promise
         cacheHit: engineResult.optimizations.cacheHit,
         calculationTime: engineResult.optimizations.calculationTime,
         accuracy: 'sub_meter'
-      }
+      },
+      routingDecision
     };
     
   } catch (error) {
-    console.error('God-level routing failed:', error);
+    console.error('❌ [GOD-LEVEL] All routing methods failed:', error);
     
     // Final fallback: High-precision Vincenty calculation
     let totalDistance = 0;
@@ -632,6 +673,8 @@ export async function calculateGodLevelRoute(coordinates: Coordinate[]): Promise
     const polyline = coordinates
       .map(c => `${c.latitude.toFixed(6)},${c.longitude.toFixed(6)}`)
       .join('|');
+    
+    console.log(`🔄 [GOD-LEVEL] Using Vincenty fallback: ${totalDistance.toFixed(3)}km`);
     
     return {
       distance: totalDistance,

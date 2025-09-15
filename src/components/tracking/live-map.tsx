@@ -19,71 +19,89 @@ type TeamLocation = {
   longitude: number;
   timestamp: string | Date;
 };
-type TrailPoint = { lat: number; lng: number; timestamp: string | Date };
-type SessionTrail = { userId: string; userName: string; trail: TrailPoint[] };
+type TrailPoint = { lat: number; lng: number; timestamp: string | Date; isRoadBased?: boolean };
+type SessionTrail = { userId: string; userName: string; trail: TrailPoint[]; isRoadBased?: boolean };
 
-// Google Roads API integration for efficient coordinate batching
-const processTrailWithGoogleRoads = async (trail: TrailPoint[]): Promise<TrailPoint[]> => {
-  if (trail.length < 2) return trail;
-  
-  // Google Roads API has a 100-point limit per request, but we'll use 25 for safety
-  const batchSize = 25;
-  const processedTrail: TrailPoint[] = [];
-  
-  for (let i = 0; i < trail.length; i += batchSize - 1) {
-    // Overlap by 1 point to ensure continuity
-    const batch = trail.slice(i, Math.min(i + batchSize, trail.length));
-    
-    try {
-      // Use our backend API to call Google Roads API
-      const response = await fetch('/api/google-maps/snap-to-roads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          path: batch.map(point => ({ lat: point.lat, lng: point.lng }))
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.snappedPoints) {
-          const snappedPoints = data.snappedPoints.map((point: { location: { latitude: number; longitude: number } }, index: number) => ({
-            lat: point.location.latitude,
-            lng: point.location.longitude,
-            timestamp: batch[Math.min(index, batch.length - 1)]?.timestamp || new Date()
-          }));
-          
-          // Avoid duplicates when merging batches
-          if (i > 0) {
-            snappedPoints.shift(); // Remove first point to avoid overlap
-          }
-          
-          processedTrail.push(...snappedPoints);
-        } else {
-          // Fallback to original batch if Roads API fails
-          if (i > 0) {
-            batch.shift(); // Remove first point to avoid overlap
-          }
-          processedTrail.push(...batch);
-        }
-      } else {
-        // Fallback to original batch if API request fails
-        if (i > 0) {
-          batch.shift(); // Remove first point to avoid overlap
-        }
-        processedTrail.push(...batch);
-      }
-    } catch (error) {
-      console.warn('Google Roads API error for batch:', error);
-      // Fallback to original batch
-      if (i > 0) {
-        batch.shift(); // Remove first point to avoid overlap
-      }
-      processedTrail.push(...batch);
-    }
+// Enhanced Google Directions API integration for road-following routes
+const processTrailWithEnhancedDirections = async (trail: TrailPoint[]): Promise<{
+  processedTrail: TrailPoint[];
+  routingMethod: string;
+  wasSkipped: boolean;
+  reasoning?: string[];
+  totalDistance?: number;
+  totalDuration?: number;
+}> => {
+  if (trail.length < 2) {
+    return {
+      processedTrail: trail,
+      routingMethod: 'insufficient_points',
+      wasSkipped: true
+    };
   }
   
-  return processedTrail;
+  try {
+    // Convert trail points to coordinate format for intelligent analysis
+    const coordinates = trail.map(point => ({
+      latitude: point.lat,
+      longitude: point.lng,
+      timestamp: point.timestamp
+    }));
+    
+    console.log(`🗺️ [LIVE-MAP] Processing trail with ${coordinates.length} points using enhanced Directions API...`);
+    
+    // Use the enhanced Directions API for proper road-following routes
+    const response = await fetch('/api/google-maps/enhanced-directions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coordinates })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      if (data.success) {
+        // Convert decoded path to TrailPoint format
+        const processedTrail = data.decodedPath?.map((point: { lat: number; lng: number }, index: number) => ({
+          lat: point.lat,
+          lng: point.lng,
+          timestamp: trail[Math.min(index, trail.length - 1)]?.timestamp || new Date()
+        })) || trail;
+        
+        const wasSkipped = data.debugInfo?.skippedDueToIntelligence || false;
+        
+        if (wasSkipped) {
+          console.log(`⏭️ [LIVE-MAP] Route skipped: ${data.debugInfo?.reasonsSkipped?.join(', ')}`);
+        } else {
+          console.log(`✅ [LIVE-MAP] Road route generated: ${data.method}, ${processedTrail.length} points, ${data.totalDistance?.toFixed(2)}km`);
+        }
+        
+        return {
+          processedTrail,
+          routingMethod: data.method,
+          wasSkipped,
+          reasoning: data.debugInfo?.reasonsSkipped,
+          totalDistance: data.totalDistance,
+          totalDuration: data.totalDuration
+        };
+      }
+    }
+    
+    // Fallback to original trail
+    console.warn(`⚠️ [LIVE-MAP] Directions API failed, using original trail`);
+    return {
+      processedTrail: trail,
+      routingMethod: 'api_fallback',
+      wasSkipped: false
+    };
+    
+  } catch (error) {
+    console.warn('❌ [LIVE-MAP] Enhanced Directions API error:', error);
+    return {
+      processedTrail: trail,
+      routingMethod: 'error_fallback',
+      wasSkipped: false
+    };
+  }
 };
 
 export default function LiveMap({
@@ -134,8 +152,8 @@ export default function LiveMap({
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-  // Process trails with Google Roads API for better route accuracy
-  const processTrailsWithGoogleRoads = useCallback(async () => {
+  // Process trails with enhanced Directions API for road-following routes
+  const processTrailsWithEnhancedDirections = useCallback(async () => {
     if (!trails || trails.length === 0) return;
     
     for (const trail of trails) {
@@ -143,6 +161,14 @@ export default function LiveMap({
       
       // Skip if already processed or currently processing
       if (processedTrails.has(trailKey) || processingTrails.has(trailKey)) {
+        continue;
+      }
+      
+      // Skip if this is already a road-based route from user-details modal
+      if (trail.trail.some(point => point.isRoadBased)) {
+        console.log(`⏭️ [LIVE-MAP] Skipping trail for user ${trail.userId} - already road-based`);
+        // Set it as processed with original trail to avoid further processing
+        setProcessedTrails(prev => new Map([...prev, [trailKey, trail.trail]]));
         continue;
       }
       
@@ -155,9 +181,14 @@ export default function LiveMap({
       setProcessingTrails(prev => new Set([...prev, trailKey]));
       
       try {
-        const roadSnappedTrail = await processTrailWithGoogleRoads(trail.trail);
-        setProcessedTrails(prev => new Map([...prev, [trailKey, roadSnappedTrail]]));
-        console.log(`✅ Processed trail for user ${trail.userId} with Google Roads API`);
+        const result = await processTrailWithEnhancedDirections(trail.trail);
+        setProcessedTrails(prev => new Map([...prev, [trailKey, result.processedTrail]]));
+        
+        if (result.wasSkipped) {
+          console.log(`⏭️ Skipped routing for user ${trail.userId}: ${result.reasoning?.join(', ') || 'Static location detected'}`);
+        } else {
+          console.log(`✅ Generated road route for user ${trail.userId}: ${result.routingMethod}, ${result.totalDistance?.toFixed(2)}km`);
+        }
       } catch (error) {
         console.warn(`❌ Failed to process trail for user ${trail.userId}:`, error);
       } finally {
@@ -173,8 +204,8 @@ export default function LiveMap({
   
   // Process trails when they change
   useEffect(() => {
-    processTrailsWithGoogleRoads();
-  }, [processTrailsWithGoogleRoads]);
+    processTrailsWithEnhancedDirections();
+  }, [processTrailsWithEnhancedDirections]);
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
@@ -243,55 +274,39 @@ export default function LiveMap({
           const isProcessing = processingTrails.has(trailKey);
           const processedTrail = processedTrails.get(trailKey);
           
-          // Use processed trail if available, otherwise use original
-          const trailPath = processedTrail || t.trail;
+          // Only show selected trail if one is selected, or show the best trail if none selected
+          const shouldShowTrail = !selectedUserId || t.userId === selectedUserId;
+          if (!shouldShowTrail) return null;
+          
+          const isSelected = t.userId === selectedUserId;
+          const hasRoadRoute = processedTrail && processedTrail.length > 0;
+          
+          // Skip rendering if we're still processing and don't have a route yet
+          if (isProcessing && !hasRoadRoute) {
+            return null;
+          }
+          
+          // Use processed (road-based) trail if available, otherwise use original GPS trail
+          const trailPath = hasRoadRoute ? processedTrail : t.trail;
+          
+          // Skip if we don't have enough points
+          if (!trailPath || trailPath.length < 2) return null;
           
           return (
             <GPolyline
               key={`trail-${t.userId}-${idx}`}
               path={trailPath.map((p) => ({ lat: p.lat, lng: p.lng }))}
               options={{
-                strokeColor: (() => {
-                  if (isProcessing) {
-                    return "#fbbf24"; // Orange while processing
-                  }
-                  if (!selectedUserId) {
-                    return processedTrail ? "#059669" : "#3b82f6"; // Green for road-snapped, blue for original
-                  }
-                  if (t.userId === selectedUserId) {
-                    return "#10b981"; // Bright green for selected session
-                  }
-                  return "#cbd5e1"; // Light gray for all unselected sessions
-                })(),
-                strokeOpacity: (() => {
-                  if (isProcessing) {
-                    return 0.6; // Lower opacity while processing
-                  }
-                  if (!selectedUserId) {
-                    return 0.8; // Default opacity when no selection
-                  }
-                  if (t.userId === selectedUserId) {
-                    return 0.9; // High opacity for selected session
-                  }
-                  return 0.3; // Low opacity for unselected sessions
-                })(),
-                strokeWeight: (() => {
-                  if (isProcessing) {
-                    return 2; // Thinner while processing
-                  }
-                  if (!selectedUserId) {
-                    return processedTrail ? 4 : 3; // Slightly thicker for road-snapped
-                  }
-                  if (t.userId === selectedUserId) {
-                    return 5; // Thick line for selected session
-                  }
-                  return 2; // Thin line for unselected sessions
-                })(),
-                zIndex: t.userId === selectedUserId ? 1000 : (processedTrail ? 500 : 1),
+                strokeColor: hasRoadRoute 
+                  ? (isSelected ? "#2563eb" : "#3b82f6") // Blue for road-following routes
+                  : (isSelected ? "#6b7280" : "#9ca3af"), // Gray for GPS fallback routes
+                strokeOpacity: isSelected ? 0.9 : 0.7,
+                strokeWeight: isSelected ? 5 : 3,
+                zIndex: isSelected ? 1000 : (hasRoadRoute ? 800 : 600),
               }}
             />
           );
-        })}
+        }).filter(Boolean)}
 
         {highlight && (
           <Marker
