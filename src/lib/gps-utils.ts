@@ -138,8 +138,8 @@ export interface GPSValidationResult {
 // Earth's radius in kilometers
 const EARTH_RADIUS_KM = 6371;
 
-// GPS accuracy threshold (from env or default 10 meters)
-const GPS_ACCURACY_THRESHOLD = parseFloat(process.env.GPS_ACCURACY_THRESHOLD || '10');
+// GPS accuracy threshold (from env or default 50 meters for production use)
+const GPS_ACCURACY_THRESHOLD = parseFloat(process.env.GPS_ACCURACY_THRESHOLD || '50');
 
 /**
  * Calculate distance between two coordinates using Haversine formula

@@ -256,13 +256,34 @@ async function processCoordinateChunk(
   // Filter by accuracy
   const filteredCoords = filterByAccuracy(sanitizedCoords);
   result.skipped += (sanitizedCoords.length - filteredCoords.length);
+  
+  console.log(`Batch coordinate filtering: ${sanitizedCoords.length} -> ${filteredCoords.length}`);
+  console.log(`Accuracy threshold: ${parseFloat(process.env.GPS_ACCURACY_THRESHOLD || '50')}m`);
 
-  if (filteredCoords.length === 0) {
+  // If accuracy filtering removes all coordinates, use the best available ones
+  let coordsToProcess = filteredCoords;
+  if (filteredCoords.length === 0 && sanitizedCoords.length > 0) {
+    console.warn('All coordinates filtered by accuracy, using best available coordinates');
+    // Sort by accuracy (ascending) and take the best ones
+    coordsToProcess = sanitizedCoords
+      .filter(coord => coord.accuracy !== undefined)
+      .sort((a, b) => (a.accuracy || 0) - (b.accuracy || 0))
+      .slice(0, Math.min(10, sanitizedCoords.length)); // Take up to 10 best coordinates for batch
+    
+    // If still no coordinates with accuracy, take all sanitized coordinates
+    if (coordsToProcess.length === 0) {
+      coordsToProcess = sanitizedCoords;
+    }
+    
+    result.warnings.push(`Used fallback coordinates due to accuracy filtering (${sanitizedCoords.length} -> ${coordsToProcess.length})`);
+  }
+
+  if (coordsToProcess.length === 0) {
     return result;
   }
 
   // Sort by timestamp to ensure proper ordering
-  filteredCoords.sort((a, b) => {
+  coordsToProcess.sort((a, b) => {
     const timeA = a.timestamp ? a.timestamp.getTime() : Date.now();
     const timeB = b.timestamp ? b.timestamp.getTime() : Date.now();
     return timeA - timeB;
@@ -270,16 +291,16 @@ async function processCoordinateChunk(
 
   // Calculate distance if we have a previous coordinate
   let cumulativeDistance = 0;
-  if (lastCoordinate && filteredCoords.length > 0) {
-    const coordsWithLast = [lastCoordinate, ...filteredCoords];
+  if (lastCoordinate && coordsToProcess.length > 0) {
+    const coordsWithLast = [lastCoordinate, ...coordsToProcess];
     cumulativeDistance = calculateTotalDistance(coordsWithLast) - 
       (lastCoordinate ? calculateTotalDistance([lastCoordinate]) : 0);
-  } else if (filteredCoords.length > 1) {
-    cumulativeDistance = calculateTotalDistance(filteredCoords);
+  } else if (coordsToProcess.length > 1) {
+    cumulativeDistance = calculateTotalDistance(coordsToProcess);
   }
 
   // Prepare GPS logs for batch insert
-  const gpsLogsToCreate = filteredCoords.map(coord => ({
+  const gpsLogsToCreate = coordsToProcess.map(coord => ({
     sessionId: sessionId,
     latitude: coord.latitude,
     longitude: coord.longitude,
@@ -299,12 +320,12 @@ async function processCoordinateChunk(
     result.distanceAdded = cumulativeDistance;
     
     // Update last coordinate
-    if (filteredCoords.length > 0) {
-      const lastFiltered = filteredCoords[filteredCoords.length - 1];
+    if (coordsToProcess.length > 0) {
+      const lastProcessed = coordsToProcess[coordsToProcess.length - 1];
       result.lastCoordinate = {
-        latitude: lastFiltered.latitude,
-        longitude: lastFiltered.longitude,
-        timestamp: lastFiltered.timestamp || new Date()
+        latitude: lastProcessed.latitude,
+        longitude: lastProcessed.longitude,
+        timestamp: lastProcessed.timestamp || new Date()
       };
     }
 
@@ -388,7 +409,7 @@ export async function GET(request: NextRequest) {
       recommendations: {
         nextSyncTime: new Date(Date.now() + 30 * 1000), // 30 seconds from now
         maxBatchSize: 1000,
-        minAccuracy: parseFloat(process.env.GPS_ACCURACY_THRESHOLD || '10')
+        minAccuracy: parseFloat(process.env.GPS_ACCURACY_THRESHOLD || '50')
       }
     });
 
