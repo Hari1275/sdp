@@ -46,8 +46,8 @@ export async function GET(request: NextRequest) {
     // Apply role-based data access
     switch (user.role) {
       case UserRole.MR:
-        // MR can only see their own business entries
-        whereClause.client = { mrId: user.id };
+        // MR can only see business entries for clients in their region
+        whereClause.client = { regionId: user.regionId };
         break;
       case UserRole.LEAD_MR:
         // Lead MR can see their region's entries and their team's entries
@@ -74,8 +74,8 @@ export async function GET(request: NextRequest) {
       }
 
       // Check access permissions
-      if (user.role === UserRole.MR && client.mrId !== user.id) {
-        return errorResponse('FORBIDDEN', 'You can only access your own clients', 403);
+      if (user.role === UserRole.MR && client.regionId !== user.regionId) {
+        return errorResponse('FORBIDDEN', 'You can only access clients in your region', 403);
       }
       if (user.role === UserRole.LEAD_MR && 
           client.regionId !== user.regionId && 
@@ -224,8 +224,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check access permissions
-    if (user.role === UserRole.MR && client.mrId !== user.id) {
-      return errorResponse('FORBIDDEN', 'You can only create entries for your own clients', 403);
+    if (user.role === UserRole.MR && client.regionId !== user.regionId) {
+      return errorResponse('FORBIDDEN', 'You can only create entries for clients in your region', 403);
     }
     if (user.role === UserRole.LEAD_MR && 
         client.regionId !== user.regionId && 
