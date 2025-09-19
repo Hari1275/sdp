@@ -200,7 +200,16 @@ export async function GET(request: NextRequest) {
       (response as Record<string, unknown>).warnings = validation.warnings;
     }
 
-    return NextResponse.json(response);
+    // Return with no-cache headers to ensure frontend gets fresh data
+    return new NextResponse(JSON.stringify(response), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
 
   } catch {
   // console.error('GPS sessions retrieval error:', error);

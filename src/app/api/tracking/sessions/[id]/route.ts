@@ -154,7 +154,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       responseData.analytics = analytics;
     }
 
-    return NextResponse.json(responseData);
+    // Return with no-cache headers to ensure frontend gets fresh data
+    return new NextResponse(JSON.stringify(responseData), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
 
   } catch (error) {
     console.error('GPS session details error:', error);
@@ -239,13 +248,23 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // Log the modification
     // console.log(`GPS session ${sessionId} modified by ${session.user.id}. Changes:`, updateData);
 
-    return NextResponse.json({
+    const response = {
       sessionId: updatedSession.id,
       updated: Object.keys(updateData),
       checkIn: updatedSession.checkIn,
       checkOut: updatedSession.checkOut,
       totalKm: updatedSession.totalKm,
       message: 'Session updated successfully'
+    };
+
+    return new NextResponse(JSON.stringify(response), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
     });
 
   } catch (error) {
