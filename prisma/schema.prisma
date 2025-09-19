@@ -106,17 +106,18 @@ model Client {
 
 // Business Entry Model for Transaction Recording
 model BusinessEntry {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  amount    Float
-  notes     String?
-  clientId  String   @db.ObjectId
-  client    Client   @relation(fields: [clientId], references: [id])
-  mrId      String   @db.ObjectId
-  mr        User     @relation(fields: [mrId], references: [id])
-  latitude  Float
-  longitude Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount        Float
+  notes         String?
+  clientId      String   @db.ObjectId
+  client        Client   @relation(fields: [clientId], references: [id])
+  mrId          String   @db.ObjectId
+  mr            User     @relation(fields: [mrId], references: [id])
+  latitude      Float
+  longitude     Float
+  documentLink  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   
   @@map("business_entries")
 }

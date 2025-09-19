@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { Badge } from "@/components/ui/badge";
 import { 
   DollarSign, 
@@ -64,6 +65,7 @@ type BusinessEntry = {
   notes: string | null;
   latitude: number | null;
   longitude: number | null;
+  documentLink: string | null;
   createdAt: string;
   client: {
     id: string;
@@ -126,10 +128,17 @@ function BusinessEntryDetailsDialog({
             <div className="font-medium">{entry.client.mr?.name || "Not assigned"}</div>
           </div>
           
-          {entry.notes && (
+            {entry.notes && (
             <div>
               <div className="text-sm text-muted-foreground">Notes</div>
               <div className="font-medium">{entry.notes}</div>
+            </div>
+          )}
+
+          {entry.documentLink && (
+            <div>
+              <div className="text-sm text-muted-foreground">Document</div>
+              <DocumentPreview documentLink={entry.documentLink} className="mt-2" />
             </div>
           )}
           
@@ -433,6 +442,7 @@ export default function BusinessEntriesReport() {
                     <th className="text-left p-4 font-medium">Date</th>
                     <th className="text-left p-4 font-medium">MR</th>
                     <th className="text-left p-4 font-medium">Location</th>
+                    <th className="text-left p-4 font-medium">Document</th>
                     <th className="text-left p-4 font-medium">Notes</th>
                     <th className="text-left p-4 font-medium">Actions</th>
                   </tr>
@@ -478,6 +488,9 @@ export default function BusinessEntriesReport() {
                         ) : (
                           <span className="text-muted-foreground text-sm">No location</span>
                         )}
+                      </td>
+                      <td className="p-4">
+                        <DocumentPreview documentLink={entry.documentLink} />
                       </td>
                       <td className="p-4">
                         {entry.notes ? (

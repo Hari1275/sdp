@@ -116,6 +116,7 @@ export async function GET(request: NextRequest) {
         notes: true,
         latitude: true,
         longitude: true,
+        documentLink: true,
         createdAt: true,
         updatedAt: true,
         client: {
@@ -170,6 +171,14 @@ export async function GET(request: NextRequest) {
 
 // POST /api/business - Create new business entry
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
+  const authHeader = request.headers.get('authorization');
+  const contentType = request.headers.get('content-type');
+  console.log('[BusinessPOST] Starting business entry creation', {
+    method: request.method,
+    contentType,
+    hasAuth: !!authHeader,
+  });
   let user;
 
   try {
@@ -187,6 +196,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return errorResponse('UNAUTHORIZED', 'Authentication required', 401);
     }
+    console.log('[BusinessPOST] Authenticated user:', user.name, '(', user.role, ')');
 
     // Authorization - MR, Lead MR, and Admin can create business entries
     if (!hasPermission(user.role, [UserRole.ADMIN, UserRole.LEAD_MR, UserRole.MR])) {
@@ -194,16 +204,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log('[BusinessPOST] Received request body:', body);
 
     // Validate input
+    console.log('[BusinessPOST] Starting validation with schema');
     const validation = validateRequest(createBusinessEntrySchema, body);
     if (!validation.success) {
+      console.log('[BusinessPOST] Validation failed:', validation.error);
       return errorResponse('VALIDATION_ERROR', validation.error);
     }
 
     const businessData = validation.data as CreateBusinessEntryInput;
+    console.log('[BusinessPOST] Payload after validation:', businessData);
 
     // Verify client exists and user has access
+    console.log('[BusinessPOST] Verifying client exists and access...');
     const client = await prisma.client.findUnique({
       where: { id: businessData.clientId },
       select: { 
@@ -220,20 +235,29 @@ export async function POST(request: NextRequest) {
     });
 
     if (!client) {
+      console.log('[BusinessPOST] Client not found:', businessData.clientId);
       return errorResponse('CLIENT_NOT_FOUND', 'Client not found', 404);
     }
 
     // Check access permissions
     if (user.role === UserRole.MR && client.regionId !== user.regionId) {
+      console.log('[BusinessPOST] Forbidden: MR not in region', { userRegion: user.regionId, clientRegion: client.regionId });
       return errorResponse('FORBIDDEN', 'You can only create entries for clients in your region', 403);
     }
     if (user.role === UserRole.LEAD_MR && 
         client.regionId !== user.regionId && 
         client.mr.leadMrId !== user.id) {
+      console.log('[BusinessPOST] Forbidden: Lead MR not region/team');
       return errorResponse('FORBIDDEN', 'You can only create entries for clients in your region or team', 403);
     }
 
     // Create business entry
+    console.log('[BusinessPOST] Creating business entry...');
+    const createData = {
+      ...businessData,
+      mrId: client.mrId
+    };
+    console.log('[BusinessPOST] Creating business entry with data:', createData);
     const newBusinessEntry = await prisma.businessEntry.create({
       data: {
         ...businessData,
@@ -245,6 +269,7 @@ export async function POST(request: NextRequest) {
         notes: true,
         latitude: true,
         longitude: true,
+        documentLink: true,
         createdAt: true,
         updatedAt: true,
         client: {
@@ -275,15 +300,30 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log('[BusinessPOST] Business entry created:', newBusinessEntry.id);
+
+    console.log('[BusinessPOST] Success! Total time ms:', Date.now() - startedAt);
+    const responsePayload = {
+      success: true,
+      message: 'Business entry created successfully',
+      data: newBusinessEntry
+    };
+    console.log('[BusinessPOST] Responding with:', {
+      id: newBusinessEntry.id,
+      hasDocumentLink: (newBusinessEntry as unknown as { documentLink?: string | null }).documentLink ? true : false
+    });
+
     return NextResponse.json(
-      {
-        success: true,
-        message: 'Business entry created successfully',
-        data: newBusinessEntry
-      },
+      responsePayload,
       { status: 201 }
     );
   } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error('[BusinessPOST] Error details:', {
+      message: err.message,
+      stack: err.stack,
+      userId: user?.id
+    });
     logError(error, 'POST /api/business', user?.id);
     return errorResponse('INTERNAL_ERROR', 'Failed to create business entry', 500);
   }

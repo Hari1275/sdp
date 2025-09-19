@@ -85,6 +85,7 @@ export const createBusinessEntrySchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   latitude: z.number().min(-90).max(90, "Invalid latitude"),
   longitude: z.number().min(-180).max(180, "Invalid longitude"),
+  documentLink: z.string().optional(),
 });
 
 // Task validation schemas
