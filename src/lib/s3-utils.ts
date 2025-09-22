@@ -23,7 +23,7 @@ const s3Client = new S3Client({
 const BUCKET_NAME = process.env.S3_BUCKET!;
 
 // Common domain for S3 URLs
-export const S3_BASE_URL = `https://${BUCKET_NAME}.s3.${process.env.AWS_DEFAULT_REGION}.amazonaws.com`;
+export const S3_BASE_URL = 'https://sdpmedia.s3.us-east-1.amazonaws.com';
 
 // Returns only the path part after the bucket name
 export function getRelativePath(fullPath: string): string {
@@ -97,7 +97,11 @@ export async function uploadToS3(
 
     console.log('[S3Utils] Sending PutObject', safeStringify(command.input));
     const result = await s3Client.send(command);
-    console.log('[S3Utils] PutObject result', safeStringify(result));
+    console.log('[S3Utils] Upload result:', {
+      statusCode: result.$metadata.httpStatusCode,
+      requestId: result.$metadata.requestId,
+      ETag: result.ETag
+    });
 
     // Return the relative path (without domain)
     return key;

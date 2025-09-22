@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Image from 'next/image';
 import { S3_BASE_URL } from '@/lib/s3-utils';
 
 interface DocumentPreviewProps {
@@ -17,8 +18,8 @@ export function DocumentPreview({ documentLink, className = '' }: DocumentPrevie
   }
 
   // Convert relative path to full URL if needed
-  const fullUrl = documentLink.startsWith('http') 
-    ? documentLink 
+  const fullUrl = documentLink.startsWith('http')
+    ? documentLink
     : `${S3_BASE_URL}/${documentLink}`;
   const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(documentLink);
   const isPDF = /\.pdf$/i.test(documentLink);
@@ -27,18 +28,20 @@ export function DocumentPreview({ documentLink, className = '' }: DocumentPrevie
   const renderPreview = () => {
     if (isImage) {
       return (
-        <img
-          src={fullUrl}
-          alt="Document preview"
-          className="h-10 w-10 object-cover cursor-pointer rounded"
-          onClick={() => setIsOpen(true)}
-        />
+        <div className="relative h-14 w-14 cursor-pointer" onClick={() => setIsOpen(true)}>
+          <Image
+            src={fullUrl}
+            alt="Document preview"
+            fill
+            className="object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
+          />
+        </div>
       );
     }
     if (isPDF) {
       return (
         <svg
-          className="h-10 w-10 text-gray-500 cursor-pointer"
+          className="h-14 w-14 text-gray-500 cursor-pointer hover:text-gray-700 transition-colors duration-200"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -60,18 +63,21 @@ export function DocumentPreview({ documentLink, className = '' }: DocumentPrevie
   const renderModalContent = () => {
     if (isImage) {
       return (
-        <img
-          src={fullUrl}
-          alt="Document preview"
-          className="max-w-full max-h-[80vh] object-contain"
-        />
+        <div className="relative w-full h-[600px]">
+          <Image
+            src={fullUrl}
+            alt="Document preview"
+            fill
+            className="object-contain rounded-lg shadow-lg"
+          />
+        </div>
       );
     }
     if (isPDF) {
       return (
         <iframe
           src={fullUrl}
-          className="w-full h-[80vh]"
+          className="w-full h-[600px] rounded-lg shadow-lg"
           title="PDF preview"
         />
       );
@@ -85,11 +91,11 @@ export function DocumentPreview({ documentLink, className = '' }: DocumentPrevie
 
       {/* Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-[900px] max-h-[90vh] flex flex-col">
             {/* Modal header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-medium">Document Preview</h3>
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h3 className="text-xl font-semibold">Document Preview</h3>
               <button
                 type="button"
                 className="text-gray-400 hover:text-gray-500"
@@ -113,23 +119,24 @@ export function DocumentPreview({ documentLink, className = '' }: DocumentPrevie
             </div>
 
             {/* Modal body */}
-            <div className="p-4">
+            <div className="px-6 py-8 flex-1 overflow-auto min-h-[400px] flex items-center justify-center bg-gray-50">
               {renderModalContent()}
             </div>
 
             {/* Modal footer */}
-            <div className="flex justify-end gap-2 p-4 border-t">
+            <div className="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50">
+              <span className="flex-1 text-sm text-gray-500 self-center">{documentLink.split('/').pop()}</span>
               <a
                 href={fullUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
               >
                 Download
               </a>
               <button
                 type="button"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2 transition-colors duration-200"
                 onClick={() => setIsOpen(false)}
               >
                 Close

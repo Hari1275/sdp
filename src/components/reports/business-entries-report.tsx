@@ -490,7 +490,11 @@ export default function BusinessEntriesReport() {
                         )}
                       </td>
                       <td className="p-4">
-                        <DocumentPreview documentLink={entry.documentLink} />
+                        {entry.documentLink ? (
+                          <DocumentPreview documentLink={entry.documentLink} />
+                        ) : (
+                          <span className="text-muted-foreground text-sm">No document</span>
+                        )}
                       </td>
                       <td className="p-4">
                         {entry.notes ? (
