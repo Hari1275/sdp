@@ -264,6 +264,7 @@ export default function SimplifiedMRPerformance() {
   const [mrData, setMrData] = useState<MRRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const datePresets = [
     { value: "today", label: "Today" },
@@ -310,9 +311,49 @@ export default function SimplifiedMRPerformance() {
     fetchData(dateFrom, dateTo);
   };
 
-  const handleExport = () => {
-    // Export functionality can be implemented here
-    console.log("Export data for period:", dateFrom, "to", dateTo);
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      
+      if (mrData.length === 0) {
+        alert("No data available for the selected period.");
+        return;
+      }
+      
+      const csvData = mrData.map(mr => ({
+        Name: mr.name,
+        Username: mr.username,
+        Region: mr.regionName || "Not assigned",
+        "Total KM": mr.totalKm.toFixed(1),
+        "GPS Sessions": mr.gpsSessions,
+        "Business Entries": mr.businessEntries,
+        "Business Amount": inr.format(mr.businessAmount),
+        "Clients Joined": mr.joinedClientsCount || 0,
+        "Tasks Completed": mr.tasksCompleted,
+        "Tasks Assigned": mr.tasksAssigned,
+        "Completion Rate": `${mr.completionRate}%`,
+      }));
+
+      const csv = [
+        Object.keys(csvData[0]).join(","),
+        ...csvData.map(row => Object.values(row).map(v => `"${v}"`).join(","))
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mr-performance-${dateFrom}-to-${dateTo}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Failed to export data. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   useEffect(() => {
@@ -462,9 +503,22 @@ export default function SimplifiedMRPerformance() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>MR Performance Details</CardTitle>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button 
+            variant="outline" 
+            onClick={handleExport} 
+            disabled={mrData.length === 0 || exporting}
+          >
+            {exporting ? (
+              <>
+                <span className="inline-block animate-spin mr-2">⟳</span>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </>
+            )}
           </Button>
         </CardHeader>
         <CardContent>

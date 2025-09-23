@@ -56,6 +56,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   // Filter navigation by role
   const allowedNav = filterNavByRole(session.user.role);
 
+  // Dynamic dashboard title by role
+  const dashboardTitle = session.user.role === "LEAD_MR" ? "Lead MR Dashboard" : "Admin Dashboard";
+
   // Route-level guard: if current path belongs to a disallowed item, redirect to first allowed
   if (!isPathAllowed(pathname || "/admin", session.user.role)) {
     redirect(allowedNav[0]?.href ?? "/unauthorized");
@@ -92,7 +95,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     priority
                   />
                   <div className="ml-3">
-                    <h2 className="text-base font-semibold">Admin Dashboard</h2>
+                    <h2 className="text-base font-semibold">{dashboardTitle}</h2>
                     <p className="text-xs text-muted-foreground">SDP Ayurveda</p>
                   </div>
                 </div>
@@ -172,7 +175,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 />
                 <div>
                   <h1 className="text-base sm:text-lg font-semibold text-gray-900">
-                    Admin Dashboard
+                    {dashboardTitle}
                   </h1>
                   <p className="hidden sm:block text-xs text-gray-500">SDP Ayurveda Management</p>
                 </div>

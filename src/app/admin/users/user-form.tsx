@@ -160,11 +160,11 @@ export function UserForm() {
         phone: data.phone || undefined,
         regionId:
           data.regionId === "none" || !data.regionId
-            ? undefined
+            ? (selectedUser ? null : undefined)
             : data.regionId,
         leadMrId:
           data.leadMrId === "none" || !data.leadMrId
-            ? undefined
+            ? (selectedUser ? null : undefined)
             : data.leadMrId,
         password:
           data.password && data.password.trim() !== ""
@@ -179,7 +179,28 @@ export function UserForm() {
           description: "User updated successfully",
         });
       } else {
-        await createUser(cleanedData);
+        const createData: {
+          username: string;
+          name: string;
+          email: string;
+          phone?: string;
+          password?: string;
+          role: "MR" | "LEAD_MR" | "ADMIN";
+          status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+          regionId?: string;
+          leadMrId?: string;
+        } = {
+          username: cleanedData.username,
+          name: cleanedData.name,
+          email: cleanedData.email,
+          phone: cleanedData.phone || undefined,
+          password: cleanedData.password || undefined,
+          role: cleanedData.role,
+          status: cleanedData.status,
+          regionId: cleanedData.regionId ?? undefined,
+          leadMrId: cleanedData.leadMrId ?? undefined,
+        };
+        await createUser(createData);
         toast({
           title: "Success",
           description: "User created successfully",

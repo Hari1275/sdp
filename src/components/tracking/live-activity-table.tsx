@@ -70,6 +70,11 @@ export default function LiveActivityTable({
 
   const limitedActivities = filteredActivities.slice(0, maxItems);
 
+  const compareActivityArrays = (a: Activity[], b: Activity[]) => {
+    if (a.length !== b.length) return false;
+    return !a.some((activity, index) => activity.id !== b[index]?.id);
+  };
+
   useEffect(() => {
     // Generate IDs for activities that don't have them
     const activitiesWithIds = limitedActivities.map((activity, index) => ({
@@ -77,18 +82,20 @@ export default function LiveActivityTable({
       id: activity.id || `${activity.timestamp}-${activity.userId}-${index}`,
     }));
 
-    setDisplayedActivities(prevDisplayed => {
-      const existingIds = new Set(prevDisplayed.map(a => a.id));
-      const newIds = new Set<string>();
+    // Only proceed if there are actual changes
+    if (!compareActivityArrays(activitiesWithIds, displayedActivities)) {
+      // Find new activities by comparing IDs
+      const previousIds = new Set(displayedActivities.map(a => a.id));
+      const newIds = new Set(
+        activitiesWithIds
+          .filter(activity => !previousIds.has(activity.id))
+          .map(activity => activity.id!)
+      );
 
-      // Find truly new activities
-      activitiesWithIds.forEach(activity => {
-        if (!existingIds.has(activity.id)) {
-          newIds.add(activity.id!);
-        }
-      });
+      // Update displayed activities
+      setDisplayedActivities(activitiesWithIds);
 
-      // Highlight new activities
+      // Handle highlighting for new activities
       if (newIds.size > 0) {
         setNewActivityIds(newIds);
         
@@ -102,10 +109,8 @@ export default function LiveActivityTable({
           setNewActivityIds(new Set());
         }, 2000);
       }
-
-      return activitiesWithIds;
-    });
-  }, [limitedActivities]);
+    }
+  }, [limitedActivities, displayedActivities]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

@@ -11,6 +11,7 @@ import {
   rateLimit,
   parseQueryParams
 } from '@/lib/api-utils';
+import { getBusinessFilter } from '@/lib/role-filters';
 import { createBusinessEntrySchema, CreateBusinessEntryInput } from '@/lib/validations';
 
 // GET /api/business - List business entries with role-based filtering
@@ -41,25 +42,7 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get('dateTo');
 
     // Build base query with role-based filtering
-    const whereClause: Record<string, unknown> = {};
-
-    // Apply role-based data access
-    switch (user.role) {
-      case UserRole.MR:
-        // MR can only see business entries for clients in their region
-        whereClause.client = { regionId: user.regionId };
-        break;
-      case UserRole.LEAD_MR:
-        // Lead MR can see their region's entries and their team's entries
-        whereClause.OR = [
-          { client: { regionId: user.regionId } },
-          { client: { mr: { leadMrId: user.id } } }
-        ];
-        break;
-      case UserRole.ADMIN:
-        // Admin can see all entries
-        break;
-    }
+    let whereClause = getBusinessFilter(user);
 
     // Apply filters
     if (clientId) {
@@ -105,6 +88,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get total count
+    console.log('[BusinessGET] whereClause:', whereClause);
     const total = await prisma.businessEntry.count({ where: whereClause });
 
     // Get business entries with related data

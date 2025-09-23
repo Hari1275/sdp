@@ -12,11 +12,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { apiGet } from "@/lib/api-client";
-import { useSession } from "next-auth/react";
 
-interface DashboardStats {
-  totalUsers: number;
-  activeUsers: number;
+interface LeadMRStats {
+  teamMRs: number;
+  activeMRs: number;
   totalClients: number;
   totalRegions: number;
   pendingTasks: number;
@@ -24,28 +23,16 @@ interface DashboardStats {
   totalAreas: number;
 }
 
-interface RecentActivity {
-  id: string;
-  type: "user_created" | "user_updated" | "task_completed" | "client_added";
-  description: string;
-  timestamp: Date;
-  user?: string;
-}
-
-export default function AdminDashboard() {
-  const { data: session } = useSession();
-  const isLeadMR = session?.user?.role === "LEAD_MR";
-  const [stats, setStats] = useState<DashboardStats>({
-    totalUsers: 0,
-    activeUsers: 0,
+export default function LeadMRDashboard() {
+  const [stats, setStats] = useState<LeadMRStats>({
+    teamMRs: 0,
+    activeMRs: 0,
     totalClients: 0,
     totalRegions: 0,
     pendingTasks: 0,
     completedTasks: 0,
     totalAreas: 0,
   });
-  // Recent activity removed; keep setter no-op to avoid unused var
-  const [, setRecentActivities] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,45 +42,28 @@ export default function AdminDashboard() {
       setError(null);
 
       try {
-        // Fetch stats concurrently
-        // Fetch based on role
+        // Fetch team-specific stats concurrently
         const [
-          usersResponse,
+          teamResponse,
           clientsResponse,
-          regionsResponse,
-          areasResponse,
           tasksResponse,
         ] = await Promise.allSettled([
-          apiGet<{ id: string; status: string }>(
-            isLeadMR ? "/api/users?role=MR" : "/api/users"
-          ),
+          apiGet<{ id: string; status: string }>("/api/users?role=MR"), // Only fetch MRs
           apiGet<{ id: string }>("/api/clients"),
-          apiGet<{ id: string }>("/api/regions"),
-          apiGet<{ id: string }>("/api/areas"),
           apiGet<{ id: string; status: string }>("/api/tasks"),
         ]);
 
-        let totalUsers = 0;
-        let activeUsers = 0;
-        if (usersResponse.status === "fulfilled") {
-          const users = usersResponse.value;
-          totalUsers = users.length;
-          activeUsers = users.filter((user) => user.status === "ACTIVE").length;
+        let teamMRs = 0;
+        let activeMRs = 0;
+        if (teamResponse.status === "fulfilled") {
+          const team = teamResponse.value;
+          teamMRs = team.length;
+          activeMRs = team.filter((mr) => mr.status === "ACTIVE").length;
         }
 
         let totalClients = 0;
         if (clientsResponse.status === "fulfilled") {
           totalClients = clientsResponse.value.length;
-        }
-
-        let totalRegions = 0;
-        if (regionsResponse.status === "fulfilled") {
-          totalRegions = regionsResponse.value.length;
-        }
-
-        let totalAreas = 0;
-        if (areasResponse.status === "fulfilled") {
-          totalAreas = areasResponse.value.length;
         }
 
         let pendingTasks = 0;
@@ -109,37 +79,21 @@ export default function AdminDashboard() {
         }
 
         setStats({
-          totalUsers,
-          activeUsers,
+          teamMRs,
+          activeMRs,
           totalClients,
-          // For Lead MR, only show their own region 
-          totalRegions: isLeadMR ? 1 : totalRegions,
-          // Areas will be updated when we implement area filtering
-          totalAreas: isLeadMR ? 0 : totalAreas,
+          totalRegions: 1, // Lead MR has access to their own region
+          totalAreas: 0,  // Will be updated when region info is available
           pendingTasks,
           completedTasks,
         });
 
-        // Remove hardcoded Recent Activity; leave empty until real data is wired
-        setRecentActivities([]);
       } catch (error) {
-        // console.error('Error fetching dashboard stats:', error);
         setError(
           error instanceof Error
             ? error.message
             : "Failed to load dashboard data"
         );
-
-        // Fallback to mock data
-        setStats({
-          totalUsers: 125,
-          activeUsers: 98,
-          totalClients: 450,
-          totalRegions: 12,
-          totalAreas: 35,
-          pendingTasks: 34,
-          completedTasks: 187,
-        });
       } finally {
         setIsLoading(false);
       }
@@ -149,11 +103,8 @@ export default function AdminDashboard() {
 
     // Set up periodic refresh every 5 minutes
     const interval = setInterval(fetchDashboardStats, 5 * 60 * 1000);
-
     return () => clearInterval(interval);
   }, []);
-
-  // Quick Actions removed to avoid duplication with sidebar Quick Access
 
   if (isLoading) {
     return (
@@ -180,10 +131,10 @@ export default function AdminDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-          {isLeadMR ? "Team Overview" : "Dashboard Overview"}
+          Team Overview
         </h1>
         <p className="text-gray-500 mt-2">
-          Welcome to the {isLeadMR ? "Team Dashboard" : "Admin Dashboard"}
+          Lead MR Dashboard - Team Performance and Status
         </p>
       </div>
 
@@ -191,34 +142,34 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{isLeadMR ? "Team Members" : "Total Users"}</CardTitle>
+            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            <div className="text-2xl font-bold">{stats.teamMRs}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">{stats.activeUsers}</span> active
-              {isLeadMR ? " MRs" : " users"}
+              <span className="text-green-600">{stats.activeMRs}</span> active
+              MRs
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{isLeadMR ? "Team Clients" : "Total Clients"}</CardTitle>
+            <CardTitle className="text-sm font-medium">Team Clients</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalClients}</div>
             <p className="text-xs text-muted-foreground">
-              Healthcare facilities
+              Healthcare facilities managed by team
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Regions</CardTitle>
+            <CardTitle className="text-sm font-medium">Coverage</CardTitle>
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -231,7 +182,7 @@ export default function AdminDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{isLeadMR ? "Team Tasks" : "Pending Tasks"}</CardTitle>
+            <CardTitle className="text-sm font-medium">Team Tasks</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -256,7 +207,7 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Completion Rate
+              Team Performance
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -269,51 +220,10 @@ export default function AdminDashboard() {
               )}
               %
             </div>
-            <p className="text-xs text-muted-foreground">Task completion</p>
+            <p className="text-xs text-muted-foreground">Task completion rate</p>
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions removed; use sidebar Quick Access */}
-
-      {/* System Status */}
-      {/* Recent Activity removed (placeholder until real data is wired) */}
-
-      {/* System Status */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            System Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">API Status</span>
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                Operational
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Database</span>
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                Connected
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">GPS Tracking</span>
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                Active
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Notifications</span>
-              <Badge variant="secondary">Pending Review</Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card> */}
 
       {/* Error Display */}
       {error && (

@@ -47,7 +47,11 @@ type CreateUserData = {
   leadMrId?: string;
 };
 
-type UpdateUserData = Partial<CreateUserData>;
+type UpdateUserData = Partial<Omit<CreateUserData, 'regionId' | 'leadMrId' | 'phone'>> & {
+  regionId?: string | null;
+  leadMrId?: string | null;
+  phone?: string | null;
+};
 
 interface UserStore {
   // State

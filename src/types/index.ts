@@ -107,20 +107,19 @@ export interface Client {
 export interface BusinessEntry {
   id: string
   amount: number
-  notes?: string
+  notes: string | null
+  latitude: number | null
+  longitude: number | null
+  documentLink: string | null
+  createdAt: string
   client: {
     id: string
     name: string
     businessType: string
+    region: { id: string; name: string } | null
+    area: { id: string; name: string } | null
+    mr: { id: string; name: string } | null
   }
-  mr: {
-    id: string
-    name: string
-  }
-  latitude: number
-  longitude: number
-  createdAt: string
-  updatedAt: string
 }
 
 // Task Types
