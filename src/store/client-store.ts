@@ -281,12 +281,24 @@ export const useClientStore = create<ClientStore>((set, get) => ({
         throw new Error(result.message || 'Search failed');
       }
 
-      // Update main clients list with search results when searching
-      set({ 
-        searchResults: result.data || [],
-        clients: result.data || [],  // Also update main clients list
+      // Update main clients list with search results and pagination
+      const data = result.data?.data || result.data || [];
+      const pagination = result.data?.pagination || result.pagination;
+
+      set({
+        searchResults: data,
+        clients: data,  // Also update main clients list
         searchQuery: search || '',
-        isSearching: false 
+        isSearching: false,
+        // Update pagination if available
+        ...(pagination && {
+          page: pagination.page,
+          limit: pagination.limit,
+          total: pagination.total,
+          totalPages: pagination.totalPages,
+          hasNext: pagination.hasNext,
+          hasPrev: pagination.hasPrev
+        })
       });
     } catch (error) {
       set({ 

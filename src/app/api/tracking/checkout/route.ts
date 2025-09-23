@@ -97,13 +97,37 @@ export async function POST(request: NextRequest) {
     let calculationMethod = 'simple_distance_matrix';
     let calculationError: string | undefined;
 
-    if (gpsSession.gpsLogs.length > 1) {
-      const coordinates = gpsSession.gpsLogs.map(log => ({
+    // Build coordinate list with timestamps
+    const coordinates: Array<{ latitude: number; longitude: number; timestamp?: Date }> = [];
+    
+    // Add start location if available
+    if (gpsSession.startLat !== null && gpsSession.startLng !== null) {
+      coordinates.push({
+        latitude: gpsSession.startLat,
+        longitude: gpsSession.startLng,
+        timestamp: gpsSession.checkIn
+      });
+    }
+
+    // Add GPS logs with timestamps
+    gpsSession.gpsLogs.forEach(log => {
+      coordinates.push({
         latitude: log.latitude,
         longitude: log.longitude,
         timestamp: log.timestamp
-      }));
-      
+      });
+    });
+
+    // Add end coordinate if available
+    if (endCoord) {
+      coordinates.push({
+        latitude: endCoord.latitude,
+        longitude: endCoord.longitude,
+        timestamp: checkOut
+      });
+    }
+
+    if (coordinates.length > 1) {
       try {
         console.log(`🗺️ Calculating distance using simple Google Distance Matrix API for ${coordinates.length} GPS points...`);
         
@@ -149,19 +173,6 @@ export async function POST(request: NextRequest) {
           altitude: endCoord.altitude
         }
       });
-
-      // Add final distance from last GPS point to checkout location
-      if (gpsSession.gpsLogs.length > 0) {
-        const lastCoord = {
-          latitude: gpsSession.gpsLogs[gpsSession.gpsLogs.length - 1].latitude,
-          longitude: gpsSession.gpsLogs[gpsSession.gpsLogs.length - 1].longitude
-        };
-        
-        const finalDistance = calculateTotalDistance([lastCoord, endCoord]);
-        totalKm += finalDistance;
-        
-        console.log(`🏁 Final segment distance: ${finalDistance.toFixed(3)}km`);
-      }
     }
 
     // Update the session with distance and checkout data
@@ -172,10 +183,10 @@ export async function POST(request: NextRequest) {
         endLat: endCoord?.latitude,
         endLng: endCoord?.longitude,
         totalKm,
-        calculationMethod
+        calculationMethod,
+        routeAccuracy: calculationMethod.includes('google') ? 'high' : 'standard'
       }
     });
-
 
     // Calculate session stats
     const sessionDuration = (checkOut.getTime() - gpsSession.checkIn.getTime()) / (1000 * 60 * 60); // hours
@@ -225,7 +236,7 @@ export async function POST(request: NextRequest) {
       totalKm: Math.round(totalKm * 1000) / 1000,
       duration: Math.round(sessionDuration * 100) / 100, // hours
       avgSpeed: Math.round(avgSpeed * 100) / 100, // km/h
-      coordinateCount: gpsSession.gpsLogs.length + (endCoord ? 1 : 0),
+      coordinateCount: coordinates.length,
       distanceCalculationMethod: calculationMethod,
       status: 'completed',
       message: 'Check-out successful'
@@ -320,12 +331,41 @@ export async function PATCH(request: NextRequest) {
 
     // Calculate distance from existing logs
     let totalKm = 0;
-    if (gpsSession.gpsLogs.length > 1) {
-      const coordinates = gpsSession.gpsLogs.map(log => ({
+    
+    // Build coordinate list
+    const coordinates: Array<{ latitude: number; longitude: number; timestamp?: Date }> = [];
+    
+    // Add start location if available
+    if (gpsSession.startLat !== null && gpsSession.startLng !== null) {
+      coordinates.push({
+        latitude: gpsSession.startLat,
+        longitude: gpsSession.startLng,
+        timestamp: gpsSession.checkIn
+      });
+    }
+
+    // Add GPS logs
+    gpsSession.gpsLogs.forEach(log => {
+      coordinates.push({
         latitude: log.latitude,
-        longitude: log.longitude
-      }));
-      totalKm = calculateTotalDistance(coordinates);
+        longitude: log.longitude,
+        timestamp: log.timestamp
+      });
+    });
+
+    if (coordinates.length > 1) {
+      try {
+        // Try using Distance Matrix API first
+        const distanceResult = await calculateSimpleDistance(coordinates, {
+          apiKey: process.env.GOOGLE_MAPS_API_KEY,
+          mode: 'driving',
+          segmentSize: 50
+        });
+        totalKm = distanceResult.distance;
+      } catch {
+        // Fallback to Haversine
+        totalKm = calculateTotalDistance(coordinates);
+      }
     }
 
     // Force close the session
@@ -334,7 +374,8 @@ export async function PATCH(request: NextRequest) {
       where: { id: sessionId },
       data: {
         checkOut,
-        totalKm
+        totalKm,
+        calculationMethod: 'force_close'
       }
     });
 

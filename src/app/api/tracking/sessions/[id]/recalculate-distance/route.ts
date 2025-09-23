@@ -131,20 +131,34 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     console.log(`   Old distance: ${gpsSession.totalKm}km`);
     console.log(`   New distance: ${totalDistance}km`);
     
-    // Update the session directly using Prisma
-    const updatedSession = await prisma.gPSSession.update({
+    // Update the session directly using Prisma with explicit round trip
+    console.log(`🔄 [RECALCULATE-DISTANCE] Preparing to update session ${sessionId}:`);
+    console.log(`   Old distance: ${gpsSession.totalKm || 0}km`);
+    console.log(`   New distance: ${totalDistance}km`);
+
+    // Write directly via Prisma to avoid any request-layer caching/auth issues
+    const roundedKm = Math.round(Number(totalDistance) * 1000) / 1000;
+    const updatedSessionDirect = await prisma.gPSSession.update({
       where: { id: sessionId },
       data: {
-        totalKm: totalDistance,
+        totalKm: roundedKm,
         calculationMethod: `simple_${calculationMethod}`,
         routeAccuracy: distanceResult.apiCallsMade > 0 ? 'high' : 'standard'
-      }
+      },
+      select: { id: true, totalKm: true, calculationMethod: true, routeAccuracy: true }
     });
 
+    if (!updatedSessionDirect || updatedSessionDirect.totalKm !== roundedKm) {
+      throw new Error(`Failed to persist recalculated distance for session ${sessionId}`);
+    }
+
+    // Fetch the updated session to verify changes
+    // Log success
     console.log(`✅ [RECALCULATE-DISTANCE] Database updated successfully!`);
-    console.log(`   Session ID: ${updatedSession.id}`);
-    console.log(`   Updated totalKm: ${totalDistance}km`);
-    console.log(`   Calculation method: ${updatedSession.calculationMethod}`);
+    console.log(`   Session ID: ${updatedSessionDirect.id}`);
+    console.log(`   Updated totalKm: ${updatedSessionDirect.totalKm}km`);
+    console.log(`   Calculation method: ${updatedSessionDirect.calculationMethod}`);
+    console.log(`   Route accuracy: ${updatedSessionDirect.routeAccuracy}`);
     console.log(`   📊 API calls: ${distanceResult.apiCallsMade}, Segments: ${distanceResult.segmentsProcessed}`);
     
     // Verify the update by reading back from database
@@ -194,30 +208,32 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Force clear any potential caches and refresh the session data
     console.log(`🔄 [RECALCULATE-DISTANCE] Force refreshing session data...`);
     
-    // Fetch the updated session one more time to ensure we return the latest data
+    // Final sanity check to ensure data consistency
     const refreshedSession = await prisma.gPSSession.findUnique({
       where: { id: sessionId },
-      select: {
-        id: true,
-        totalKm: true,
-        calculationMethod: true,
-        routeAccuracy: true,
-        checkIn: true,
-        checkOut: true
-      }
+      select: { id: true, totalKm: true, calculationMethod: true }
     });
     
     if (refreshedSession) {
-      console.log(`✅ [RECALCULATE-DISTANCE] Final verification - Fresh from DB:`);
-      console.log(`   totalKm: ${refreshedSession.totalKm}km`);
-      console.log(`   method: ${refreshedSession.calculationMethod}`);
+      console.log(`✅ [RECALCULATE-DISTANCE] Final verification:`);
+      console.log(`   Initial value: ${gpsSession.totalKm || 0}km`);
+      console.log(`   After update: ${updatedSessionDirect.totalKm}km`);
+      console.log(`   Final check: ${refreshedSession.totalKm}km`);
+      console.log(`   All match: ${gpsSession.totalKm !== refreshedSession.totalKm && updatedSessionDirect.totalKm === refreshedSession.totalKm}`);
+    }
+    
+    if (refreshedSession?.totalKm !== (Math.round(Number(totalDistance) * 1000) / 1000)) {
+      console.warn(`⚠️ [RECALCULATE-DISTANCE] Distance mismatch in final check:`);
+      console.warn(`   Expected: ${totalDistance}km`);
+      console.warn(`   Actual: ${refreshedSession?.totalKm}km`);
     }
 
-    // Return response with aggressive no-cache headers
+    // Return response with aggressive no-cache headers and updated distance
     return new NextResponse(JSON.stringify({
       ...response,
       _debug: {
         freshFromDB: refreshedSession?.totalKm,
+        verificationDB: updatedSessionDirect?.totalKm,
         timestamp: new Date().toISOString(),
         cacheCleared: true
       }

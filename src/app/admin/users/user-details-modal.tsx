@@ -299,7 +299,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     
     try {
       // Fetch GPS sessions for this user (last 10 sessions)
-      const response = await fetch(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`);
+      const response = await fetch(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`, { cache: 'no-store' });
       
       console.log('=== GPS Sessions Debug ===');
       console.log('Fetch response status:', response.status);
@@ -366,21 +366,8 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
         
         setRecalcMessage(`Distance updated: ${originalKm}km → ${newKm}km (${coordCount} points)`);
         
-        // Refresh sessions list to get updated data
+        // Always refetch the sessions list to ensure UI reflects the persisted value
         await fetchGPSSessions();
-        
-        // Also update local state immediately for a snappy UI
-        setGpsSessions(currentSessions => 
-          currentSessions.map(session => {
-            if ((session.sessionId === sessionId || session.id === sessionId) && result.recalculatedDistance) {
-              return {
-                ...session,
-                totalKm: result.recalculatedDistance
-              };
-            }
-            return session;
-          })
-        );
       } else {
         const errorMsg = result.message || result.error || 'Failed to recalculate distance';
         setRecalcMessage(`Error: ${errorMsg}`);
@@ -413,8 +400,11 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     if (gpsLogs.length < 2) return null;
     
     try {
+      // Downsample: take 1 point out of every 10, always include the last point
+      const sampledLogs = gpsLogs.filter((_, idx) => idx % 10 === 0 || idx === gpsLogs.length - 1);
+
       // Convert GPS logs to coordinate format
-      const coordinates = gpsLogs.map(log => ({
+      const coordinates = sampledLogs.map(log => ({
         latitude: log.latitude,
         longitude: log.longitude,
         timestamp: log.timestamp
@@ -879,14 +869,14 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                     >
                       Overview
                     </Button>
-                    <Button
+                    {/* { !selectedSessionId && <Button
                       variant={mapView === 'session' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setMapView('session')}
                       disabled={!selectedSessionId}
                     >
                       {selectedSessionId ? 'Focus Selected' : 'Session Details'}
-                    </Button>
+                    </Button>} */}
                     {selectedSessionId && (
                       <Button
                         variant="ghost"

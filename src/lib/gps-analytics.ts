@@ -362,10 +362,10 @@ export function generateSessionSummary(session: {
   const avgSpeed = speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
   const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
 
-  // Compute distance from GPS logs if available; fallback to stored totalKm
-  const computedKm = session.gpsLogs && session.gpsLogs.length > 1
+  // Use stored totalKm from recalculation; only compute if not available
+  const computedKm = session.totalKm || (session.gpsLogs && session.gpsLogs.length > 1
     ? calculateTotalDistance(session.gpsLogs.map(l => ({ latitude: l.latitude, longitude: l.longitude })))
-    : session.totalKm || 0;
+    : 0);
 
   return {
     sessionId: session.id,

@@ -363,6 +363,24 @@ export function analyzeRouteComplexity(coordinates: Coordinate[], movementPatter
 export function getIntelligentRoutingDecision(coordinates: Coordinate[]): RouteAnalysis {
   console.log(`🧠 [INTELLIGENT-ROUTING] Analyzing ${coordinates.length} GPS coordinates...`);
   
+  // Exit early if no valid route possible
+  if (coordinates.length < 2) {
+    return {
+      shouldUseRoadsAPI: false,
+      isStaticLocation: true,
+      movementDistance: 0,
+      movementVariance: 0,
+      routeComplexity: 'simple',
+      confidenceLevel: 100,
+      reasoning: ['Insufficient points for route analysis'],
+      recommendations: {
+        useAlgorithmic: false,
+        useRoadsAPI: false,
+        skipRouting: true,
+      },
+    };
+  }
+  
   const movementPattern = analyzeMovementPattern(coordinates);
   const routeAnalysis = analyzeRouteComplexity(coordinates, movementPattern);
 

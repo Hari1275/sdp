@@ -108,6 +108,16 @@ export async function GET(request: NextRequest) {
     const total = await prisma.businessEntry.count({ where: whereClause });
 
     // Get business entries with related data
+    // Debug log for criteria
+    console.log('[BusinessGET] Fetching business entries with criteria:', {
+      user: { id: user.id, role: user.role },
+      whereClause,
+      pagination: { page, limit },
+      clientId,
+      mrId,
+      dateRange: { dateFrom, dateTo }
+    });
+
     const businessEntries = await prisma.businessEntry.findMany({
       where: whereClause,
       select: {
@@ -161,6 +171,18 @@ export async function GET(request: NextRequest) {
         hasPrev: page > 1
       }
     };
+
+    console.log('[BusinessGET] Fetched business entries:', {
+      total,
+      fetchedCount: businessEntries.length,
+      entries: businessEntries.map(entry => ({
+        id: entry.id,
+        amount: entry.amount,
+        clientId: entry.client.id,
+        clientMrId: entry.client.mr?.id,
+        createdAt: entry.createdAt
+      }))
+    });
 
     return successResponse(response);
   } catch (error) {
@@ -255,13 +277,13 @@ export async function POST(request: NextRequest) {
     console.log('[BusinessPOST] Creating business entry...');
     const createData = {
       ...businessData,
-      mrId: client.mrId
+      mrId: user.id // The MR who is creating the entry
     };
     console.log('[BusinessPOST] Creating business entry with data:', createData);
     const newBusinessEntry = await prisma.businessEntry.create({
       data: {
         ...businessData,
-        mrId: client.mrId
+        mrId: user.id // Attribute the entry to the creating MR, not the client's MR
       },
       select: {
         id: true,
