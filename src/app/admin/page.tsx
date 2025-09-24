@@ -12,7 +12,7 @@ import {
   Activity,
   AlertCircle,
 } from "lucide-react";
-import { apiGet } from "@/lib/api-client";
+import { safeApiCall } from "@/lib/api-client";
 // import Link from 'next/link';
 // import { format, formatDistance } from 'date-fns';
 
@@ -24,6 +24,7 @@ interface DashboardStats {
   pendingTasks: number;
   completedTasks: number;
   totalAreas: number;
+  totalKm: number;
 }
 
 interface RecentActivity {
@@ -43,6 +44,7 @@ export default function AdminDashboard() {
     pendingTasks: 0,
     completedTasks: 0,
     totalAreas: 0,
+    totalKm: 0,
   });
   // Recent activity removed; keep setter no-op to avoid unused var
   const [, setRecentActivities] = useState<RecentActivity[]>([]);
@@ -55,85 +57,65 @@ export default function AdminDashboard() {
       setError(null);
 
       try {
-        // Fetch stats concurrently
-        const [
-          usersResponse,
-          clientsResponse,
-          regionsResponse,
-          areasResponse,
-          tasksResponse,
-        ] = await Promise.allSettled([
-          apiGet<{ id: string; status: string }>("/api/users"),
-          apiGet<{ id: string }>("/api/clients"),
-          apiGet<{ id: string }>("/api/regions"),
-          apiGet<{ id: string }>("/api/areas"),
-          apiGet<{ id: string; status: string }>("/api/tasks"),
-        ]);
+        // Use the specialized overview report API that provides role-based filtered data
+        const overviewResult = await safeApiCall<{
+          kpis: {
+            totalUsers: number;
+            activeUsers: number;
+            totalClients: number;
+            pendingTasks: number;
+            completedTasks: number;
+            totalKm: number;
+          };
+          trends: Array<{ date: string; tasksCreated: number }>;
+          dateRange: { from: string; to: string };
+        }>("/api/reports/overview");
 
-        let totalUsers = 0;
-        let activeUsers = 0;
-        if (usersResponse.status === "fulfilled") {
-          const users = usersResponse.value;
-          totalUsers = users.length;
-          activeUsers = users.filter((user) => user.status === "ACTIVE").length;
+        // Debug logging to understand the response structure
+        console.log("Overview API Response:", overviewResult);
+
+        if (overviewResult.success && overviewResult.data?.kpis) {
+          const kpis = overviewResult.data.kpis;
+          setStats({
+            totalUsers: kpis.totalUsers,
+            activeUsers: kpis.activeUsers,
+            totalClients: kpis.totalClients,
+            totalRegions: 0, // Not provided by overview API
+            totalAreas: 0, // Not provided by overview API
+            pendingTasks: kpis.pendingTasks,
+            completedTasks: kpis.completedTasks,
+            totalKm: kpis.totalKm,
+          });
+        } else {
+          console.error("Invalid response format:", {
+            success: overviewResult.success,
+            hasData: !!overviewResult.data,
+            hasKpis: !!overviewResult.data?.kpis,
+            response: overviewResult
+          });
+          throw new Error(`Invalid response format from overview API. Success: ${overviewResult.success}, Has Data: ${!!overviewResult.data}, Has KPIs: ${!!overviewResult.data?.kpis}, Error: ${overviewResult.error || 'Unknown error'}`);
         }
-
-        let totalClients = 0;
-        if (clientsResponse.status === "fulfilled") {
-          totalClients = clientsResponse.value.length;
-        }
-
-        let totalRegions = 0;
-        if (regionsResponse.status === "fulfilled") {
-          totalRegions = regionsResponse.value.length;
-        }
-
-        let totalAreas = 0;
-        if (areasResponse.status === "fulfilled") {
-          totalAreas = areasResponse.value.length;
-        }
-
-        let pendingTasks = 0;
-        let completedTasks = 0;
-        if (tasksResponse.status === "fulfilled") {
-          const tasks = tasksResponse.value;
-          pendingTasks = tasks.filter(
-            (task) => task.status === "PENDING"
-          ).length;
-          completedTasks = tasks.filter(
-            (task) => task.status === "COMPLETED"
-          ).length;
-        }
-
-        setStats({
-          totalUsers,
-          activeUsers,
-          totalClients,
-          totalRegions,
-          totalAreas,
-          pendingTasks,
-          completedTasks,
-        });
 
         // Remove hardcoded Recent Activity; leave empty until real data is wired
         setRecentActivities([]);
       } catch (error) {
-        // console.error('Error fetching dashboard stats:', error);
+        console.error('Error fetching dashboard stats:', error);
         setError(
           error instanceof Error
             ? error.message
             : "Failed to load dashboard data"
         );
 
-        // Fallback to mock data
+        // Set stats to zero on error - no fallback data
         setStats({
-          totalUsers: 125,
-          activeUsers: 98,
-          totalClients: 450,
-          totalRegions: 12,
-          totalAreas: 35,
-          pendingTasks: 34,
-          completedTasks: 187,
+          totalUsers: 0,
+          activeUsers: 0,
+          totalClients: 0,
+          totalRegions: 0,
+          totalAreas: 0,
+          pendingTasks: 0,
+          completedTasks: 0,
+          totalKm: 0,
         });
       } finally {
         setIsLoading(false);
@@ -180,10 +162,13 @@ export default function AdminDashboard() {
         <p className="text-gray-500 mt-2">
           Welcome to the SDP Ayurveda Admin Dashboard
         </p>
+        <p className="text-sm text-gray-400 mt-1">
+          Showing data based on your role and permissions
+        </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -257,14 +242,27 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Math.round(
+              {stats.completedTasks + stats.pendingTasks > 0
+                ? Math.round(
                 (stats.completedTasks /
                   (stats.completedTasks + stats.pendingTasks)) *
                   100
-              )}
+                  )
+                : 0}
               %
             </div>
             <p className="text-xs text-muted-foreground">Task completion</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">GPS Tracking</CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalKm.toFixed(1)} km</div>
+            <p className="text-xs text-muted-foreground">Total distance covered</p>
           </CardContent>
         </Card>
       </div>

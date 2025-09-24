@@ -59,10 +59,13 @@ export async function GET(request: NextRequest) {
           { id: user.id },
         ];
       } else {
-        // Default list: self + direct team only
+        // Default list: self + direct team only (exclude null/empty leadMrId)
         whereClause.OR = [
           { id: user.id },
-          { leadMrId: user.id },
+          { 
+            leadMrId: user.id,
+            leadMrId: { not: null } // Ensure leadMrId is not null
+          },
         ];
       }
     }

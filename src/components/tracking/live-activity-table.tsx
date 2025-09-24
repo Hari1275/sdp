@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, LogIn, LogOut, Briefcase, Plus, CheckCircle } from "lucide-react";
@@ -64,11 +64,15 @@ export default function LiveActivityTable({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filter activities for followed user if specified
-  const filteredActivities = followedUserId 
-    ? activities.filter(activity => activity.userId === followedUserId)
-    : activities;
+  const filteredActivities = useMemo(() => {
+    return followedUserId 
+      ? activities.filter(activity => activity.userId === followedUserId)
+      : activities;
+  }, [activities, followedUserId]);
 
-  const limitedActivities = filteredActivities.slice(0, maxItems);
+  const limitedActivities = useMemo(() => {
+    return filteredActivities.slice(0, maxItems);
+  }, [filteredActivities, maxItems]);
 
   useEffect(() => {
     // Generate IDs for activities that don't have them
@@ -77,20 +81,29 @@ export default function LiveActivityTable({
       id: activity.id || `${activity.timestamp}-${activity.userId}-${index}`,
     }));
 
+    // Only update if the activities have actually changed
     setDisplayedActivities(prevDisplayed => {
+      // Check if activities are actually different
+      const prevIds = prevDisplayed.map(a => a.id).join(',');
+      const newIds = activitiesWithIds.map(a => a.id).join(',');
+      
+      if (prevIds === newIds) {
+        return prevDisplayed; // No change, return previous state
+      }
+
       const existingIds = new Set(prevDisplayed.map(a => a.id));
-      const newIds = new Set<string>();
+      const newActivityIds = new Set<string>();
 
       // Find truly new activities
       activitiesWithIds.forEach(activity => {
         if (!existingIds.has(activity.id)) {
-          newIds.add(activity.id!);
+          newActivityIds.add(activity.id!);
         }
       });
 
       // Highlight new activities
-      if (newIds.size > 0) {
-        setNewActivityIds(newIds);
+      if (newActivityIds.size > 0) {
+        setNewActivityIds(newActivityIds);
         
         // Clear existing timeout
         if (timeoutRef.current) {

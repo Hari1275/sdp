@@ -71,12 +71,12 @@ function getTaskWhereByRole(user: {
     case UserRole.MR:
       return { assigneeId: user.id };
     case UserRole.LEAD_MR:
-      // Tasks for self + team (assignee/creator) only
+      // Tasks for self + team only (exclude tasks with null leadMr)
       return {
         OR: [
           { assignee: { leadMrId: user.id } },
           { assigneeId: user.id },
-          { createdById: user.id },
+          // Removed { createdById: user.id } to prevent seeing tasks with null leadMr
         ],
       } as Record<string, unknown>;
     case UserRole.ADMIN:

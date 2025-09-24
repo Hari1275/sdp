@@ -57,11 +57,16 @@ export async function GET(request: NextRequest) {
         whereClause.assigneeId = user.id;
         break;
       case UserRole.LEAD_MR:
-        // Lead MR can see tasks assigned to their team or themselves, and tasks they created
+        // Lead MR can see tasks assigned to their team or themselves
+        // Exclude tasks where assignee has null leadMrId
         whereClause.OR = [
-          { assignee: { leadMrId: user.id } },
+          { 
+            assignee: { 
+              leadMrId: user.id
+            } 
+          },
           { assigneeId: user.id },
-          { createdById: user.id },
+          // Removed { createdById: user.id } to prevent seeing tasks with null leadMr
         ];
         break;
       case UserRole.ADMIN:
