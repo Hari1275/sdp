@@ -65,7 +65,7 @@ describe("Admin Overview Report API", () => {
 
     expect(prisma.user.findMany).toHaveBeenCalledWith({
       where: { OR: [{ id: "lead-1" }, { leadMrId: "lead-1" }] },
-      select: { id: true, name: true, username: true, role: true },
+      select: { id: true, name: true, username: true, role: true, leadMrId: true },
     });
   });
 

@@ -63,8 +63,7 @@ export async function GET(request: NextRequest) {
         whereClause.OR = [
           { id: user.id },
           { 
-            leadMrId: user.id,
-            leadMrId: { not: null } // Ensure leadMrId is not null
+            leadMrId: user.id
           },
         ];
       }

@@ -89,11 +89,11 @@ export default function AdminDashboard() {
         } else {
           console.error("Invalid response format:", {
             success: overviewResult.success,
-            hasData: !!overviewResult.data,
-            hasKpis: !!overviewResult.data?.kpis,
+            hasData: overviewResult.success ? !!overviewResult.data : false,
+            hasKpis: overviewResult.success ? !!overviewResult.data?.kpis : false,
             response: overviewResult
           });
-          throw new Error(`Invalid response format from overview API. Success: ${overviewResult.success}, Has Data: ${!!overviewResult.data}, Has KPIs: ${!!overviewResult.data?.kpis}, Error: ${overviewResult.error || 'Unknown error'}`);
+          throw new Error(`Invalid response format from overview API. Success: ${overviewResult.success}, Has Data: ${overviewResult.success ? !!overviewResult.data : false}, Has KPIs: ${overviewResult.success ? !!overviewResult.data?.kpis : false}, Error: ${!overviewResult.success ? overviewResult.error : 'Unknown error'}`);
         }
 
         // Remove hardcoded Recent Activity; leave empty until real data is wired
