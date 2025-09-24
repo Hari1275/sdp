@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { BusinessEntry } from "@/types";
 import { Button } from "@/components/ui/button";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { Badge } from "@/components/ui/badge";
 import { 
   DollarSign, 
@@ -58,22 +60,6 @@ function getDatePreset(preset: string): { from: string; to: string } {
   }
 }
 
-type BusinessEntry = {
-  id: string;
-  amount: number;
-  notes: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  createdAt: string;
-  client: {
-    id: string;
-    name: string;
-    businessType: string;
-    region: { id: string; name: string } | null;
-    area: { id: string; name: string } | null;
-    mr: { id: string; name: string } | null;
-  };
-};
 
 const inr = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -126,10 +112,17 @@ function BusinessEntryDetailsDialog({
             <div className="font-medium">{entry.client.mr?.name || "Not assigned"}</div>
           </div>
           
-          {entry.notes && (
+            {entry.notes && (
             <div>
               <div className="text-sm text-muted-foreground">Notes</div>
               <div className="font-medium">{entry.notes}</div>
+            </div>
+          )}
+
+          {entry.documentLink && (
+            <div>
+              <div className="text-sm text-muted-foreground">Document</div>
+              <DocumentPreview documentLink={entry.documentLink} className="mt-2" />
             </div>
           )}
           
@@ -194,19 +187,27 @@ export default function BusinessEntriesReport() {
     fetchData(dateFrom, dateTo);
   };
 
+  const [exporting, setExporting] = useState(false);
+
   const exportData = async () => {
     try {
+      setExporting(true);
       // Fetch ALL data for export without pagination limits
       const result = await safeApiCall<{ data: BusinessEntry[]; pagination: { page: number; limit: number; total: number } }>(
         `/api/business?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=10000` // High limit to get all data
       );
       
-      if (!result.success || !result.data.data) {
-        alert("Failed to fetch data for export");
+      if (!result.success) {
+        alert(result.error || "Failed to fetch data for export");
         return;
       }
-
-      const allEntries = result.data.data;
+      
+      const allEntries = result.data?.data || [];
+      
+      if (allEntries.length === 0) {
+        alert("No data available for the selected period.");
+        return;
+      }
       
       const csvData = allEntries.map(entry => ({
         Date: new Date(entry.createdAt).toLocaleDateString(),
@@ -243,6 +244,8 @@ export default function BusinessEntriesReport() {
     } catch (error) {
       console.error("Export failed:", error);
       alert("Failed to export data. Please try again.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -409,9 +412,22 @@ export default function BusinessEntriesReport() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Business Entries</CardTitle>
-          <Button variant="outline" onClick={exportData} disabled={entries.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button 
+            variant="outline" 
+            onClick={exportData} 
+            disabled={entries.length === 0 || exporting}
+          >
+            {exporting ? (
+              <>
+                <span className="inline-block animate-spin mr-2">⟳</span>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </>
+            )}
           </Button>
         </CardHeader>
         <CardContent>
@@ -433,6 +449,7 @@ export default function BusinessEntriesReport() {
                     <th className="text-left p-4 font-medium">Date</th>
                     <th className="text-left p-4 font-medium">MR</th>
                     <th className="text-left p-4 font-medium">Location</th>
+                    <th className="text-left p-4 font-medium">Document</th>
                     <th className="text-left p-4 font-medium">Notes</th>
                     <th className="text-left p-4 font-medium">Actions</th>
                   </tr>
@@ -477,6 +494,13 @@ export default function BusinessEntriesReport() {
                           </button>
                         ) : (
                           <span className="text-muted-foreground text-sm">No location</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {entry.documentLink ? (
+                          <DocumentPreview documentLink={entry.documentLink} />
+                        ) : (
+                          <span className="text-muted-foreground text-sm">No document</span>
                         )}
                       </td>
                       <td className="p-4">

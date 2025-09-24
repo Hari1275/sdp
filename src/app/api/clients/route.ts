@@ -12,6 +12,7 @@ import {
   parseQueryParams,
 } from "@/lib/api-utils";
 import { createClientSchema, CreateClientInput } from "@/lib/validations";
+import { getClientsFilter } from "@/lib/role-filters";
 
 // GET /api/clients - List clients with role-based filtering
 export async function GET(request: NextRequest) {
@@ -42,30 +43,7 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo");
 
     // Build base query with role-based filtering
-    const whereClause: Record<string, unknown> = {};
-
-    // Apply role-based data access
-    switch (user.role) {
-      case UserRole.MR:
-        // MR can see all clients in their region
-        if (user.regionId) {
-          whereClause.regionId = user.regionId;
-        } else {
-          // If MR has no region assigned, they can't see any clients
-          whereClause.id = "non-existent-id";
-        }
-        break;
-      case UserRole.LEAD_MR:
-        // Lead MR can see their region's clients and their team's clients
-        whereClause.OR = [
-          { regionId: user.regionId },
-          { mr: { leadMrId: user.id } },
-        ];
-        break;
-      case UserRole.ADMIN:
-        // Admin can see all clients - no additional filters
-        break;
-    }
+    const whereClause: Record<string, unknown> = getClientsFilter(user);
 
     // Apply search filter
     if (search) {
@@ -110,6 +88,8 @@ export async function GET(request: NextRequest) {
 
     // Get total count
     const total = await prisma.client.count({ where: whereClause });
+
+    console.log('[ClientsGET] whereClause:', whereClause);
 
     // Get clients with related data
     const clients = await prisma.client.findMany({

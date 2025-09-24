@@ -27,7 +27,7 @@ import {
   Activity,
   BarChart3
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow, format, isValid } from 'date-fns';
 
 interface ClientDetailsModalProps {
   client: Client | null;
@@ -66,6 +66,27 @@ const getBusinessTypeColor = (businessType: string) => {
 };
 
 export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModalProps) {
+  const safeFormatDate = (value: unknown, fmt: string) => {
+    if (value === null || value === undefined) return 'N/A';
+    const d = value instanceof Date ? value : new Date(String(value));
+    if (!isValid(d)) return 'N/A';
+    try {
+      return format(d, fmt);
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  const safeFormatDistanceToNow = (value: unknown) => {
+    if (value === null || value === undefined) return 'N/A';
+    const d = value instanceof Date ? value : new Date(String(value));
+    if (!isValid(d)) return 'N/A';
+    try {
+      return formatDistanceToNow(d, { addSuffix: true });
+    } catch {
+      return 'N/A';
+    }
+  };
   const { fetchBusinessHistory, businessHistory, isBusinessLoading } = useClientStore();
   
   useEffect(() => {
@@ -179,7 +200,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                       <div>
                         <div className="text-sm font-medium">Created</div>
                         <div className="text-sm text-muted-foreground">
-                          {format(new Date(client.createdAt), 'PPP')}
+{safeFormatDate(client.createdAt, 'PPP')}
                         </div>
                       </div>
                     </div>
@@ -189,7 +210,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                       <div>
                         <div className="text-sm font-medium">Last Updated</div>
                         <div className="text-sm text-muted-foreground">
-                          {formatDistanceToNow(new Date(client.updatedAt), { addSuffix: true })}
+{safeFormatDistanceToNow(client.updatedAt)}
                         </div>
                       </div>
                     </div>
@@ -332,7 +353,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                             <div>
                               <div className="font-medium">₹{entry.amount.toLocaleString()}</div>
                               <div className="text-sm text-muted-foreground">
-                                {format(new Date(entry.createdAt), 'PPP')}
+{safeFormatDate(entry.createdAt, 'PPP')}
                               </div>
                               {entry.notes && (
                                 <div className="text-xs text-muted-foreground mt-1">
@@ -343,7 +364,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                             <div className="text-right">
                               <div className="text-sm font-medium">{entry.mr.name}</div>
                               <div className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
+{safeFormatDistanceToNow(entry.createdAt)}
                               </div>
                             </div>
                           </div>

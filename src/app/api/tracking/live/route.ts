@@ -10,6 +10,7 @@ import {
   successResponse,
 } from "@/lib/api-utils";
 import type { AuthenticatedUser } from "@/types/api";
+import { getGPSSessionFilter } from "@/lib/role-filters";
 
 export async function GET(request: NextRequest) {
   let user: AuthenticatedUser | null = null;
@@ -27,45 +28,14 @@ export async function GET(request: NextRequest) {
       return errorResponse("UNAUTHORIZED", "Authentication required", 401);
     }
 
-    let allowedUserWhere: Record<string, unknown> = {};
-    switch (user.role) {
-      case UserRole.MR:
-        allowedUserWhere = { id: user.id };
-        break;
-      case UserRole.LEAD_MR:
-        // Restrict to self + direct team only (no full region)
-        allowedUserWhere = { OR: [{ id: user.id }, { leadMrId: user.id }] };
-        break;
-      case UserRole.ADMIN:
-      default:
-        allowedUserWhere = {};
-        break;
-    }
-
-    // Determine allowed users (IDs) based on role
-    let userWhere: Record<string, unknown> = {};
-    switch (user.role) {
-      case UserRole.MR:
-        userWhere = { id: user.id };
-        break;
-      case UserRole.LEAD_MR:
-        userWhere = { OR: [{ id: user.id }, { leadMrId: user.id }] };
-        break;
-      case UserRole.ADMIN:
-      default:
-        userWhere = {};
-        break;
-    }
-
-    const allowedUsers = await prisma.user.findMany({
-      where: allowedUserWhere,
-      select: { id: true, name: true, username: true },
-    });
-    const allowedIds = allowedUsers.map((u) => u.id);
+    // Get session filters based on role
+    const sessionWhere = getGPSSessionFilter(user);
 
     // Query recent sessions for allowed users; filter active in memory
+    console.log('[TrackingLive] sessionWhere:', sessionWhere);
+
     const sessions = await prisma.gPSSession.findMany({
-      where: { userId: { in: allowedIds } },
+      where: sessionWhere,
       select: {
         id: true,
         userId: true,
@@ -146,7 +116,7 @@ export async function GET(request: NextRequest) {
         extra: {
           userId: user.id,
           userRole: user.role,
-          userWhere,
+          sessionWhere: sessionWhere,
         },
       });
     }

@@ -48,7 +48,12 @@ export async function GET(request: NextRequest) {
     const completedTo = searchParams.get("completedTo") || undefined;
 
     // Build base query with role-based filtering
-    const whereClause: Record<string, unknown> = {};
+    const whereClause: Record<string, unknown> = {}; 
+    console.log('[TasksGET] incoming params:', {
+      status, assignedTo, regionId, areaId, priority, createdById, search,
+      dueDateFrom, dueDateTo, completedFrom, completedTo, page, limit, sortBy, sortOrder,
+      user: { id: user.id, role: user.role }
+    });
 
     // Apply role-based data access
     switch (user.role) {
@@ -166,6 +171,8 @@ export async function GET(request: NextRequest) {
         whereClause as { completedAt?: { gte?: Date; lte?: Date } }
       ).completedAt = completedFilter;
     }
+
+    console.log('[TasksGET] whereClause:', whereClause);
 
     // Get total count
     const total = await prisma.task.count({ where: whereClause });

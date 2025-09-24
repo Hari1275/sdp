@@ -213,6 +213,7 @@ export default function ClientsReport() {
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const datePresets = [
     { value: "today", label: "Today" },
@@ -275,17 +276,23 @@ export default function ClientsReport() {
 
   const exportData = async () => {
     try {
+      setExporting(true);
       // Fetch ALL data for export without pagination limits
       const result = await safeApiCall<{ data: Client[]; pagination: { page: number; limit: number; total: number } }>(
         `/api/clients?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=10000` // High limit to get all data
       );
       
-      if (!result.success || !result.data.data) {
-        alert("Failed to fetch data for export");
+      if (!result.success) {
+        alert(result.error || "Failed to fetch data for export");
         return;
       }
-
-      const allClients = result.data.data;
+      
+      const allClients = result.data?.data || [];
+      
+      if (allClients.length === 0) {
+        alert("No data available for the selected period.");
+        return;
+      }
       
       const csvData = allClients.map(client => ({
         Name: client.name,
@@ -324,6 +331,8 @@ export default function ClientsReport() {
     } catch (error) {
       console.error("Export failed:", error);
       alert("Failed to export data. Please try again.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -522,9 +531,22 @@ export default function ClientsReport() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Clients</CardTitle>
-          <Button variant="outline" onClick={exportData} disabled={clients.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button 
+            variant="outline" 
+            onClick={exportData} 
+            disabled={clients.length === 0 || exporting}
+          >
+            {exporting ? (
+              <>
+                <span className="inline-block animate-spin mr-2">⟳</span>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </>
+            )}
           </Button>
         </CardHeader>
         <CardContent>

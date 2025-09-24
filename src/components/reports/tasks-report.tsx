@@ -214,6 +214,7 @@ export default function TasksReport() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const datePresets = [
     { value: "today", label: "Today" },
@@ -260,8 +261,17 @@ export default function TasksReport() {
     fetchData(dateFrom, dateTo);
   };
 
-  const exportData = () => {
-    const csvData = tasks.map(task => ({
+  const exportData = async () => {
+    try {
+      setExporting(true);
+      
+      // Make sure we have data
+      if (tasks.length === 0) {
+        alert("No data available for the selected period.");
+        return;
+      }
+      
+      const csvData = tasks.map(task => ({
       Title: task.title,
       Description: task.description || "",
       Status: task.status,
@@ -291,6 +301,12 @@ export default function TasksReport() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Failed to export data. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   useEffect(() => {
@@ -512,9 +528,22 @@ export default function TasksReport() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Tasks</CardTitle>
-          <Button variant="outline" onClick={exportData} disabled={tasks.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button 
+            variant="outline" 
+            onClick={exportData} 
+            disabled={tasks.length === 0 || exporting}
+          >
+            {exporting ? (
+              <>
+                <span className="inline-block animate-spin mr-2">⟳</span>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </>
+            )}
           </Button>
         </CardHeader>
         <CardContent>

@@ -74,6 +74,11 @@ export default function LiveActivityTable({
     return filteredActivities.slice(0, maxItems);
   }, [filteredActivities, maxItems]);
 
+  const compareActivityArrays = (a: Activity[], b: Activity[]) => {
+    if (a.length !== b.length) return false;
+    return !a.some((activity, index) => activity.id !== b[index]?.id);
+  };
+
   useEffect(() => {
     // Generate IDs for activities that don't have them
     const activitiesWithIds = limitedActivities.map((activity, index) => ({
@@ -81,29 +86,22 @@ export default function LiveActivityTable({
       id: activity.id || `${activity.timestamp}-${activity.userId}-${index}`,
     }));
 
-    // Only update if the activities have actually changed
-    setDisplayedActivities(prevDisplayed => {
-      // Check if activities are actually different
-      const prevIds = prevDisplayed.map(a => a.id).join(',');
-      const newIds = activitiesWithIds.map(a => a.id).join(',');
-      
-      if (prevIds === newIds) {
-        return prevDisplayed; // No change, return previous state
-      }
+    // Only proceed if there are actual changes
+    if (!compareActivityArrays(activitiesWithIds, displayedActivities)) {
+      // Find new activities by comparing IDs
+      const previousIds = new Set(displayedActivities.map(a => a.id));
+      const newIds = new Set(
+        activitiesWithIds
+          .filter(activity => !previousIds.has(activity.id))
+          .map(activity => activity.id!)
+      );
 
-      const existingIds = new Set(prevDisplayed.map(a => a.id));
-      const newActivityIds = new Set<string>();
+      // Update displayed activities
+      setDisplayedActivities(activitiesWithIds);
 
-      // Find truly new activities
-      activitiesWithIds.forEach(activity => {
-        if (!existingIds.has(activity.id)) {
-          newActivityIds.add(activity.id!);
-        }
-      });
-
-      // Highlight new activities
-      if (newActivityIds.size > 0) {
-        setNewActivityIds(newActivityIds);
+      // Handle highlighting for new activities
+      if (newIds.size > 0) {
+        setNewActivityIds(newIds);
         
         // Clear existing timeout
         if (timeoutRef.current) {
@@ -115,10 +113,8 @@ export default function LiveActivityTable({
           setNewActivityIds(new Set());
         }, 2000);
       }
-
-      return activitiesWithIds;
-    });
-  }, [limitedActivities]);
+    }
+  }, [limitedActivities, displayedActivities]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

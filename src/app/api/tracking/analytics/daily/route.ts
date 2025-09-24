@@ -193,9 +193,10 @@ export async function GET(request: NextRequest) {
     });
 
     // Get business entries added that day
+    // Get all business entries created by the MR today
     const businessEntriesAddedToday = await prisma.businessEntry.findMany({
       where: {
-        mrId: targetUserId,
+        mrId: targetUserId,  // MR who created the entry
         createdAt: {
           gte: dayStart,
           lte: dayEnd

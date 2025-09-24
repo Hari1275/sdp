@@ -116,6 +116,7 @@ export async function GET(
         notes: true,
         latitude: true,
         longitude: true,
+        documentLink: true,
         createdAt: true,
         updatedAt: true,
         mr: {

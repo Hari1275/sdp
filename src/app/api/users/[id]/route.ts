@@ -301,13 +301,39 @@ export async function DELETE(
       );
     }
 
-    // Soft delete - set status to INACTIVE instead of hard delete
-    await prisma.user.update({
+    // Check if user has any dependencies
+    const dependencies = await prisma.user.findUnique({
       where: { id },
-      data: {
-        status: UserStatus.INACTIVE,
-        updatedAt: new Date(),
-      },
+      select: {
+        _count: {
+          select: {
+            clients: true,
+            assignedTasks: true,
+            createdTasks: true,
+            teamMembers: true
+          }
+        }
+      }
+    });
+
+    if (Number(dependencies?._count?.clients) > 0 || 
+        Number(dependencies?._count?.assignedTasks) > 0 || 
+        Number(dependencies?._count?.createdTasks) > 0 || 
+        Number(dependencies?._count?.teamMembers) > 0) {
+      // If user has dependencies, perform soft delete
+      await prisma.user.update({
+        where: { id },
+        data: {
+          status: UserStatus.INACTIVE,
+          updatedAt: new Date(),
+        },
+      });
+      return successResponse({ success: true }, "User deactivated due to existing dependencies");
+    }
+
+    // If no dependencies, perform hard delete
+    await prisma.user.delete({
+      where: { id }
     });
 
     return successResponse({ success: true }, "User deactivated successfully");

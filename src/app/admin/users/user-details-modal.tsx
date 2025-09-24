@@ -31,7 +31,9 @@ import {
   Building2,
   Activity,
   Route,
-  Navigation
+  Navigation,
+  RefreshCw,
+  Calculator
 } from "lucide-react";
 import { apiGet } from "@/lib/api-client";
 import { formatSessionTimeRange } from "@/lib/session-date-utils";
@@ -248,6 +250,8 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [mapView, setMapView] = useState<'overview' | 'session'>('overview');
+  const [recalculatingSessionId, setRecalculatingSessionId] = useState<string | null>(null);
+  const [recalcMessage, setRecalcMessage] = useState<string | null>(null);
 
   const fetchPendingTasks = useCallback(async () => {
     if (!user) return;
@@ -295,7 +299,7 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     
     try {
       // Fetch GPS sessions for this user (last 10 sessions)
-      const response = await fetch(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`);
+      const response = await fetch(`/api/tracking/sessions?userId=${user.id}&limit=10&includeLogs=true`, { cache: 'no-store' });
       
       console.log('=== GPS Sessions Debug ===');
       console.log('Fetch response status:', response.status);
@@ -338,6 +342,47 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     }
   }, [user]);
 
+  // Function to recalculate session distance
+  const recalculateDistance = useCallback(async (sessionId: string) => {
+    setRecalculatingSessionId(sessionId);
+    setRecalcMessage(null);
+    
+    try {
+      const response = await fetch(`/api/tracking/sessions/${sessionId}/recalculate-distance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Ensure we don't get cached response
+        cache: 'no-store'
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        const originalKm = result.originalDistance?.toFixed(2) || '0.00';
+        const newKm = result.recalculatedDistance?.toFixed(2) || '0.00';
+        const coordCount = result.coordinatesUsed || 0;
+        
+        setRecalcMessage(`Distance updated: ${originalKm}km → ${newKm}km (${coordCount} points)`);
+        
+        // Always refetch the sessions list to ensure UI reflects the persisted value
+        await fetchGPSSessions();
+      } else {
+        const errorMsg = result.message || result.error || 'Failed to recalculate distance';
+        setRecalcMessage(`Error: ${errorMsg}`);
+      }
+    } catch (error) {
+      console.error('Recalculation error:', error);
+      setRecalcMessage('Network error: Failed to recalculate distance');
+    } finally {
+      setRecalculatingSessionId(null);
+      
+      // Clear message after 5 seconds
+      setTimeout(() => setRecalcMessage(null), 5000);
+    }
+  }, [fetchGPSSessions]);
+
   // Fetch data when modal opens
   useEffect(() => {
     if (open && user) {
@@ -355,8 +400,11 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
     if (gpsLogs.length < 2) return null;
     
     try {
+      // Downsample: take 1 point out of every 10, always include the last point
+      const sampledLogs = gpsLogs.filter((_, idx) => idx % 10 === 0 || idx === gpsLogs.length - 1);
+
       // Convert GPS logs to coordinate format
-      const coordinates = gpsLogs.map(log => ({
+      const coordinates = sampledLogs.map(log => ({
         latitude: log.latitude,
         longitude: log.longitude,
         timestamp: log.timestamp
@@ -821,14 +869,14 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                     >
                       Overview
                     </Button>
-                    <Button
+                    {/* { !selectedSessionId && <Button
                       variant={mapView === 'session' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setMapView('session')}
                       disabled={!selectedSessionId}
                     >
                       {selectedSessionId ? 'Focus Selected' : 'Session Details'}
-                    </Button>
+                    </Button>} */}
                     {selectedSessionId && (
                       <Button
                         variant="ghost"
@@ -881,10 +929,17 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                       
                       {/* GPS Sessions List */}
                       <div className="space-y-2">
-                        <h4 className="font-medium text-sm flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Recent Sessions ({gpsSessions.length})
-                        </h4>
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-sm flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Recent Sessions ({gpsSessions.length})
+                          </h4>
+                          {recalcMessage && (
+                            <div className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded border border-green-200">
+                              {recalcMessage}
+                            </div>
+                          )}
+                        </div>
                         <div className="max-h-60 overflow-y-auto space-y-2">
                           {gpsSessions.map((session) => (
                             <div 
@@ -924,13 +979,39 @@ export function UserDetailsModal({ user, open, onClose }: UserDetailsProps) {
                                     {formatSessionTimeRange(session.checkIn, session.checkOut)}
                                   </div>
                                 </div>
-                                <div className="text-right text-xs">
-                                  <div className="font-medium">{session.totalKm.toFixed(1)} km</div>
-                                  <div className="text-muted-foreground">
-                                    {Math.round(session.duration * 10) / 10}h
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right text-xs">
+                                    <div className="font-medium">{session.totalKm.toFixed(1)} km</div>
+                                    <div className="text-muted-foreground">
+                                      {Math.round(session.duration * 10) / 10}h
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      {session.coordinateCount} points
+                                    </div>
                                   </div>
-                                  <div className="text-muted-foreground">
-                                    {session.coordinateCount} points
+                                  <div className="flex flex-col gap-1">
+                                    {session.checkOut && session.coordinateCount > 1 && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const sessionId = session.sessionId || session.id;
+                                          if (sessionId) {
+                                            recalculateDistance(sessionId);
+                                          }
+                                        }}
+                                        disabled={recalculatingSessionId === (session.sessionId || session.id)}
+                                      >
+                                        {recalculatingSessionId === (session.sessionId || session.id) ? (
+                                          <RefreshCw className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <Calculator className="h-3 w-3" />
+                                        )}
+                                        <span className="ml-1">ReCalc</span>
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
                               </div>

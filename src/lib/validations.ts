@@ -23,13 +23,23 @@ export const createUserSchema = z.object({
   leadMrId: z.string().optional(),
 });
 
-export const updateUserSchema = createUserSchema.partial().extend({
-  status: z.nativeEnum(UserStatus).optional(),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .optional(),
-});
+export const updateUserSchema = createUserSchema
+  .partial()
+  .extend({
+    status: z.nativeEnum(UserStatus).optional(),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .optional(),
+    // Allow clearing these fields by sending null
+    regionId: z.string().nullable().optional(),
+    leadMrId: z.string().nullable().optional(),
+    phone: z
+      .string()
+      .regex(/^[0-9]{10}$/, "Phone number must be 10 digits")
+      .nullable()
+      .optional(),
+  });
 
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -85,6 +95,7 @@ export const createBusinessEntrySchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   latitude: z.number().min(-90).max(90, "Invalid latitude"),
   longitude: z.number().min(-180).max(180, "Invalid longitude"),
+  documentLink: z.string().optional(),
 });
 
 // Task validation schemas

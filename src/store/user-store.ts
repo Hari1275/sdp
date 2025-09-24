@@ -47,7 +47,11 @@ type CreateUserData = {
   leadMrId?: string;
 };
 
-type UpdateUserData = Partial<CreateUserData>;
+type UpdateUserData = Partial<Omit<CreateUserData, 'regionId' | 'leadMrId' | 'phone'>> & {
+  regionId?: string | null;
+  leadMrId?: string | null;
+  phone?: string | null;
+};
 
 interface UserStore {
   // State
@@ -241,24 +245,26 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
   // Delete user
   deleteUser: async (id: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this user? This action cannot be undone."
-      )
-    ) {
-      return;
+    if (!confirm('Are you sure you want to delete this user?')) return;
+
+    try {
+      set({ isLoading: true });
+      const result = await apiDelete(`/api/users/${id}`);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      // Remove user from local state
+      set((state) => ({
+        users: state.users.filter((user) => user.id !== id),
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      set({ isLoading: false });
+      throw error;
     }
-
-    const result = await apiDelete(`/api/users/${id}`);
-
-    if (!result.success) {
-      throw new Error(result.error);
-    }
-
-    // Remove user from local state
-    set((state) => ({
-      users: state.users.filter((user) => user.id !== id),
-    }));
   },
 
   // Toggle user status
@@ -271,6 +277,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
       throw error;
     }
   },
+
 
   // Open user sheet
   openUserSheet: (user?: User) => {

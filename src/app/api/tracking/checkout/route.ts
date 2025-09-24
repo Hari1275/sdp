@@ -3,45 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { sanitizeCoordinate, validateSessionData } from '@/lib/gps-validation';
 import { calculateTotalDistance } from '@/lib/gps-utils';
 import { getAuthenticatedUser, errorResponse } from '@/lib/api-utils';
-
-// Efficient distance calculation using Google Directions API with batching
-async function calculateDistanceWithDirections(coordinates: Array<{ latitude: number; longitude: number; timestamp?: Date }>): Promise<number> {
-  if (coordinates.length < 2) return 0;
-  
-  let totalDistance = 0;
-  const batchSize = 23; // Google Directions allows max 25 waypoints (origin + 23 waypoints + destination)
-  
-  for (let i = 0; i < coordinates.length - 1; i += batchSize) {
-    const batch = coordinates.slice(i, Math.min(i + batchSize + 1, coordinates.length));
-    
-    if (batch.length < 2) continue;
-    
-    try {
-      // Use Google Directions API for accurate road-based distance
-      const response = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${batch[0].latitude},${batch[0].longitude}&destination=${batch[batch.length - 1].latitude},${batch[batch.length - 1].longitude}${batch.length > 2 ? '&waypoints=' + batch.slice(1, -1).map(c => `${c.latitude},${c.longitude}`).join('|') : ''}&key=${process.env.GOOGLE_MAPS_API_KEY}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status === 'OK' && data.routes.length > 0) {
-          const route = data.routes[0];
-          const distanceInMeters = route.legs.reduce((sum: number, leg: { distance: { value: number } }) => sum + leg.distance.value, 0);
-          totalDistance += distanceInMeters / 1000; // Convert to kilometers
-          continue;
-        }
-      }
-      
-      // Fallback to Haversine calculation for this batch
-      console.warn('Google Directions failed for batch, using Haversine fallback');
-      totalDistance += calculateTotalDistance(batch);
-      
-    } catch (error) {
-      console.warn('Error in Google Directions batch, using Haversine fallback:', error);
-      totalDistance += calculateTotalDistance(batch);
-    }
-  }
-  
-  return totalDistance;
-}
+import { calculateSimpleDistance } from '@/lib/simple-distance-calculation';
 
 export async function POST(request: NextRequest) {
   try {
@@ -130,28 +92,64 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate total distance using efficient Google Directions API batching
+    // Calculate total distance using simple Google Distance Matrix API
     let totalKm = 0;
-    let calculationMethod = 'google_directions';
+    let calculationMethod = 'simple_distance_matrix';
     let calculationError: string | undefined;
 
-    if (gpsSession.gpsLogs.length > 1) {
-      const coordinates = gpsSession.gpsLogs.map(log => ({
+    // Build coordinate list with timestamps
+    const coordinates: Array<{ latitude: number; longitude: number; timestamp?: Date }> = [];
+    
+    // Add start location if available
+    if (gpsSession.startLat !== null && gpsSession.startLng !== null) {
+      coordinates.push({
+        latitude: gpsSession.startLat,
+        longitude: gpsSession.startLng,
+        timestamp: gpsSession.checkIn
+      });
+    }
+
+    // Add GPS logs with timestamps
+    gpsSession.gpsLogs.forEach(log => {
+      coordinates.push({
         latitude: log.latitude,
         longitude: log.longitude,
         timestamp: log.timestamp
-      }));
-      
+      });
+    });
+
+    // Add end coordinate if available
+    if (endCoord) {
+      coordinates.push({
+        latitude: endCoord.latitude,
+        longitude: endCoord.longitude,
+        timestamp: checkOut
+      });
+    }
+
+    if (coordinates.length > 1) {
       try {
-        console.log(`🗺️ Calculating distance using Google Directions API for ${coordinates.length} GPS points...`);
+        console.log(`🗺️ Calculating distance using simple Google Distance Matrix API for ${coordinates.length} GPS points...`);
         
-        // Use efficient batching for Google Directions API (max 25 waypoints per request)
-        totalKm = await calculateDistanceWithDirections(coordinates);
+        // Use simple segment-based distance calculation
+        const distanceResult = await calculateSimpleDistance(coordinates, {
+          apiKey: process.env.GOOGLE_MAPS_API_KEY,
+          mode: 'driving',
+          segmentSize: 50 // Process every 50 coordinates as one segment
+        });
+        
+        totalKm = distanceResult.distance;
+        calculationMethod = `simple_${distanceResult.method}`;
+        
+        if (distanceResult.error) {
+          calculationError = distanceResult.error;
+        }
         
         console.log(`✅ Distance calculated: ${totalKm.toFixed(3)}km using ${calculationMethod}`);
+        console.log(`   📊 Processed ${distanceResult.segmentsProcessed} segments with ${distanceResult.apiCallsMade} API calls`);
         
       } catch (error) {
-        console.warn('🔄 Google Directions failed, using Haversine fallback:', error);
+        console.warn('🔄 Simple distance calculation failed, using Haversine fallback:', error);
         
         // Fallback to Haversine calculation
         totalKm = calculateTotalDistance(coordinates);
@@ -175,19 +173,6 @@ export async function POST(request: NextRequest) {
           altitude: endCoord.altitude
         }
       });
-
-      // Add final distance from last GPS point to checkout location
-      if (gpsSession.gpsLogs.length > 0) {
-        const lastCoord = {
-          latitude: gpsSession.gpsLogs[gpsSession.gpsLogs.length - 1].latitude,
-          longitude: gpsSession.gpsLogs[gpsSession.gpsLogs.length - 1].longitude
-        };
-        
-        const finalDistance = calculateTotalDistance([lastCoord, endCoord]);
-        totalKm += finalDistance;
-        
-        console.log(`🏁 Final segment distance: ${finalDistance.toFixed(3)}km`);
-      }
     }
 
     // Update the session with distance and checkout data
@@ -198,10 +183,10 @@ export async function POST(request: NextRequest) {
         endLat: endCoord?.latitude,
         endLng: endCoord?.longitude,
         totalKm,
-        calculationMethod
+        calculationMethod,
+        routeAccuracy: calculationMethod.includes('google') ? 'high' : 'standard'
       }
     });
-
 
     // Calculate session stats
     const sessionDuration = (checkOut.getTime() - gpsSession.checkIn.getTime()) / (1000 * 60 * 60); // hours
@@ -251,7 +236,7 @@ export async function POST(request: NextRequest) {
       totalKm: Math.round(totalKm * 1000) / 1000,
       duration: Math.round(sessionDuration * 100) / 100, // hours
       avgSpeed: Math.round(avgSpeed * 100) / 100, // km/h
-      coordinateCount: gpsSession.gpsLogs.length + (endCoord ? 1 : 0),
+      coordinateCount: coordinates.length,
       distanceCalculationMethod: calculationMethod,
       status: 'completed',
       message: 'Check-out successful'
@@ -346,12 +331,41 @@ export async function PATCH(request: NextRequest) {
 
     // Calculate distance from existing logs
     let totalKm = 0;
-    if (gpsSession.gpsLogs.length > 1) {
-      const coordinates = gpsSession.gpsLogs.map(log => ({
+    
+    // Build coordinate list
+    const coordinates: Array<{ latitude: number; longitude: number; timestamp?: Date }> = [];
+    
+    // Add start location if available
+    if (gpsSession.startLat !== null && gpsSession.startLng !== null) {
+      coordinates.push({
+        latitude: gpsSession.startLat,
+        longitude: gpsSession.startLng,
+        timestamp: gpsSession.checkIn
+      });
+    }
+
+    // Add GPS logs
+    gpsSession.gpsLogs.forEach(log => {
+      coordinates.push({
         latitude: log.latitude,
-        longitude: log.longitude
-      }));
-      totalKm = calculateTotalDistance(coordinates);
+        longitude: log.longitude,
+        timestamp: log.timestamp
+      });
+    });
+
+    if (coordinates.length > 1) {
+      try {
+        // Try using Distance Matrix API first
+        const distanceResult = await calculateSimpleDistance(coordinates, {
+          apiKey: process.env.GOOGLE_MAPS_API_KEY,
+          mode: 'driving',
+          segmentSize: 50
+        });
+        totalKm = distanceResult.distance;
+      } catch {
+        // Fallback to Haversine
+        totalKm = calculateTotalDistance(coordinates);
+      }
     }
 
     // Force close the session
@@ -360,7 +374,8 @@ export async function PATCH(request: NextRequest) {
       where: { id: sessionId },
       data: {
         checkOut,
-        totalKm
+        totalKm,
+        calculationMethod: 'force_close'
       }
     });
 

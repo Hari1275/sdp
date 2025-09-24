@@ -57,6 +57,7 @@ export default function ClientManagementPage() {
     fetchClients,
     fetchStatistics,
     openClientSheet,
+    searchClients,
     setSearchQuery,
     setFilters,
     clearFilters,
@@ -81,111 +82,30 @@ export default function ClientManagementPage() {
     }
   }, [fetchClients, page, limit, filters, isSearching, searchInput]);
 
-  // Debounced search (client-side filtering like Users page)
+  // Debounced search with API query
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchInput !== searchQuery) {
-        setSearchQuery(searchInput);
-        if (!searchInput.trim()) {
-          // On clearing search, refetch to ensure list is fresh
+        const searchInputTrimmed = searchInput.trim();
+        setSearchQuery(searchInputTrimmed);
+        if (searchInputTrimmed) {
+          // If we have a search term, use the search API
+          searchClients({ search: searchInputTrimmed, filters });
+        } else {
+          // If search is cleared, fetch regular client list
           fetchClients();
         }
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchInput, searchQuery, fetchClients, setSearchQuery]);
+  }, [searchInput, searchQuery, filters, fetchClients, searchClients, setSearchQuery]);
 
-  // Filter clients based on applied filters with enhanced safety
+  // Use server-filtered clients directly
   const filteredClients = useMemo(() => {
-    // Enhanced safety checks with debugging
-    // console.log('[ClientsPage] Filtering clients:', {
-    //   clientsType: typeof clients,
-    //   clientsArray: Array.isArray(clients),
-    //   clientsLength: Array.isArray(clients) ? clients.length : 'N/A',
-    //   clientsRaw: clients,
-    //   isLoading,
-    //   error,
-    //   searchQuery,
-    //   filters
-    // });
-
     const safeClients = Array.isArray(clients) ? clients : [];
-    let result = safeClients;
-
-    // Log raw client data
-    if (safeClients.length > 0) {
-      // console.log('[ClientsPage] Sample client data:', safeClients[0]);
-    }
-
-    if (filters.businessType) {
-      result = result.filter(
-        (client) => client?.businessType === filters.businessType
-      );
-      // console.log('[ClientsPage] After businessType filter:', result.length);
-    }
-    if (filters.regionId) {
-      result = result.filter(
-        (client) => client?.region?.id === filters.regionId
-      );
-      // console.log('[ClientsPage] After regionId filter:', result.length);
-    }
-    if (filters.areaId) {
-      result = result.filter((client) => client?.area?.id === filters.areaId);
-      // console.log('[ClientsPage] After areaId filter:', result.length);
-    }
-    if (filters.mrId) {
-      result = result.filter((client) => client?.mr?.id === filters.mrId);
-      // console.log('[ClientsPage] After mrId filter:', result.length);
-    }
-
-    // Apply date filters
-    if (filters.dateFrom) {
-      const fromDate = new Date(filters.dateFrom);
-      result = result.filter((client) => {
-        const clientDate = new Date(client?.createdAt);
-        return clientDate >= fromDate;
-      });
-      // console.log('[ClientsPage] After dateFrom filter:', result.length);
-    }
-    if (filters.dateTo) {
-      const toDate = new Date(filters.dateTo);
-      toDate.setHours(23, 59, 59, 999); // Include the entire day
-      result = result.filter((client) => {
-        const clientDate = new Date(client?.createdAt);
-        return clientDate <= toDate;
-      });
-      // console.log('[ClientsPage] After dateTo filter:', result.length);
-    }
-
-    // Apply client-side search across key fields (aligns with Users table client-side search)
-    const term = searchInput.trim().toLowerCase();
-    if (term) {
-      result = result.filter((client) => {
-        const haystack = [
-          client?.name,
-          client?.phone,
-          client?.address,
-          client?.businessType,
-          client?.mr?.name,
-          client?.area?.name,
-          client?.region?.name,
-        ]
-          .filter(Boolean)
-          .map((v) => String(v).toLowerCase());
-        return haystack.some((v) => v.includes(term));
-      });
-      // console.log('[ClientsPage] After search filter:', result.length);
-    }
-
-    // console.log('[ClientsPage] Final filtered result:', {
-    //   originalLength: safeClients.length,
-    //   filteredLength: result.length,
-    //   filters: filters
-    // });
-
-    return result;
-  }, [clients, filters, searchInput]);
+    return safeClients;
+  }, [clients]);
 
   const handleExport = async (format: "csv" | "excel") => {
     try {

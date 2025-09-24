@@ -95,6 +95,32 @@ export async function POST(request: NextRequest) {
 
     // Filter by accuracy threshold
     const filteredCoords = filterByAccuracy(sanitizedCoords);
+    
+    console.log(`Coordinate filtering: ${coordinates.length} -> ${sanitizedCoords.length} -> ${filteredCoords.length}`);
+    console.log(`Accuracy threshold: ${parseFloat(process.env.GPS_ACCURACY_THRESHOLD || '50')}m`);
+
+    // If accuracy filtering removes all coordinates, use the best available ones
+    let coordsToProcess = filteredCoords;
+    if (filteredCoords.length === 0 && sanitizedCoords.length > 0) {
+      console.warn('All coordinates filtered by accuracy, using best available coordinates');
+      // Sort by accuracy (ascending) and take the best ones
+      coordsToProcess = sanitizedCoords
+        .filter(coord => coord.accuracy !== undefined)
+        .sort((a, b) => (a.accuracy || 0) - (b.accuracy || 0))
+        .slice(0, Math.min(5, sanitizedCoords.length)); // Take up to 5 best coordinates
+      
+      // If still no coordinates with accuracy, take all sanitized coordinates
+      if (coordsToProcess.length === 0) {
+        coordsToProcess = sanitizedCoords;
+      }
+    }
+
+    if (coordsToProcess.length === 0) {
+      return NextResponse.json(
+        { error: 'No valid coordinates after filtering and sanitization' },
+        { status: 400 }
+      );
+    }
 
     let processedCount = 0;
     let totalDistance = 0;
@@ -102,7 +128,7 @@ export async function POST(request: NextRequest) {
     const errors: string[] = [];
 
     // Create GPS logs in batch
-    const gpsLogsToCreate = filteredCoords.map(coord => {
+    const gpsLogsToCreate = coordsToProcess.map(coord => {
       const logData: {
         sessionId: string;
         latitude: number;
@@ -149,7 +175,7 @@ export async function POST(request: NextRequest) {
 
       // Calculate distance increment using Google Routes API with fallback
 
-      if (gpsSession.gpsLogs.length > 0 && filteredCoords.length > 0) {
+      if (gpsSession.gpsLogs.length > 0 && coordsToProcess.length > 0) {
         const lastKnownCoord = {
           latitude: gpsSession.gpsLogs[0].latitude,
           longitude: gpsSession.gpsLogs[0].longitude
@@ -157,7 +183,7 @@ export async function POST(request: NextRequest) {
 
         try {
           // Use GOD-LEVEL routing engine for coordinate distance calculation
-          const coordsToCalculate = [lastKnownCoord, ...filteredCoords];
+          const coordsToCalculate = [lastKnownCoord, ...coordsToProcess];
           console.log(`🧠 [COORDS-GOD-LEVEL] Calculating distance for ${coordsToCalculate.length} coordinates...`);
           
           const result = await calculateGodLevelRoute(coordsToCalculate);
@@ -177,18 +203,18 @@ export async function POST(request: NextRequest) {
           console.warn('❌ [COORDS-GOD-LEVEL] God-level routing failed, using Haversine fallback:', error);
           
           // Final fallback to Haversine calculation
-          const firstNewCoord = filteredCoords[0];
+          const firstNewCoord = coordsToProcess[0];
           const distanceToFirst = calculateTotalDistance([lastKnownCoord, firstNewCoord]);
-          const distanceBetweenNew = calculateTotalDistance(filteredCoords);
+          const distanceBetweenNew = calculateTotalDistance(coordsToProcess);
           totalDistance = distanceToFirst + distanceBetweenNew;
           calculationMethod = 'haversine_fallback';
         }
-      } else if (filteredCoords.length > 1) {
+      } else if (coordsToProcess.length > 1) {
         try {
           // First coordinates for this session - use GOD-LEVEL routing engine
-          console.log(`🧠 [COORDS-GOD-LEVEL-INIT] Calculating initial route for ${filteredCoords.length} coordinates...`);
+          console.log(`🧠 [COORDS-GOD-LEVEL-INIT] Calculating initial route for ${coordsToProcess.length} coordinates...`);
           
-          const result = await calculateGodLevelRoute(filteredCoords);
+          const result = await calculateGodLevelRoute(coordsToProcess);
           
           if (result.success) {
             totalDistance = result.distance;
@@ -203,7 +229,7 @@ export async function POST(request: NextRequest) {
           }
         } catch (error) {
           console.warn('❌ [COORDS-GOD-LEVEL-INIT] God-level routing failed, using Haversine fallback:', error);
-          totalDistance = calculateTotalDistance(filteredCoords);
+          totalDistance = calculateTotalDistance(coordsToProcess);
           calculationMethod = 'haversine_fallback';
           console.log(`✅ [COORDS-GOD-LEVEL-INIT] Haversine fallback distance: ${totalDistance.toFixed(3)}km`);
         }
@@ -275,7 +301,7 @@ export async function POST(request: NextRequest) {
       success: true,
       processed: processedCount,
       filtered: coordinates.length - sanitizedCoords.length, // Invalid coordinates filtered out
-      accuracyFiltered: sanitizedCoords.length - filteredCoords.length, // Filtered by accuracy threshold
+      accuracyFiltered: sanitizedCoords.length - coordsToProcess.length, // Filtered by accuracy threshold
       distanceAdded: Math.round(totalDistance * 1000) / 1000,
       distanceCalculationMethod: calculationMethod,
       sessionId: sessionId
@@ -291,12 +317,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Add filtering info if coordinates were filtered
-    if (coordinates.length > filteredCoords.length) {
+    if (coordinates.length > coordsToProcess.length) {
       (response as Record<string, unknown>).filteringInfo = {
         originalCount: coordinates.length,
         validCount: sanitizedCoords.length,
-        processedCount: filteredCoords.length,
-        accuracyThreshold: parseFloat(process.env.GPS_ACCURACY_THRESHOLD || '10')
+        processedCount: coordsToProcess.length,
+        accuracyThreshold: parseFloat(process.env.GPS_ACCURACY_THRESHOLD || '50'),
+        fallbackUsed: filteredCoords.length === 0 && coordsToProcess.length > 0
       };
     }
 
