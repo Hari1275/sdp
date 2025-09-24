@@ -42,9 +42,11 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get('dateTo');
 
     // Build base query with role-based filtering
-    let whereClause = getBusinessFilter(user);
+    const baseWhereClause = getBusinessFilter(user);
 
     // Apply filters
+    const whereClause: Record<string, unknown> = { ...baseWhereClause };
+    
     if (clientId) {
       // Verify user has access to this client
       const client = await prisma.client.findUnique({

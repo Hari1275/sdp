@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import * as Sentry from "@sentry/nextjs";
 import {
   errorResponse,

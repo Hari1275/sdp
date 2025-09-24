@@ -154,7 +154,7 @@ export default function AdminDashboard() {
     const interval = setInterval(fetchDashboardStats, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isLeadMR]);
 
   // Quick Actions removed to avoid duplication with sidebar Quick Access
 

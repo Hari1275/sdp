@@ -2,9 +2,10 @@ import { NextRequest } from "next/server";
 import { UserRole } from "@prisma/client";
 import { prisma } from "./prisma";
 import { getAuthenticatedUser, errorResponse } from "./api-utils";
+import { AuthenticatedUser } from "@/types/api";
 
 export function withRoleAccess(
-  handler: (request: NextRequest, user: any) => Promise<Response>,
+  handler: (request: NextRequest, user: AuthenticatedUser) => Promise<Response>,
   allowedRoles: UserRole[] = []
 ) {
   return async function (request: NextRequest): Promise<Response> {
@@ -30,7 +31,7 @@ export function withRoleAccess(
 }
 
 export function withLeadMRTeamAccess(
-  handler: (request: NextRequest, user: any) => Promise<Response>
+  handler: (request: NextRequest, user: AuthenticatedUser) => Promise<Response>
 ) {
   return async function (request: NextRequest): Promise<Response> {
     try {
@@ -56,7 +57,7 @@ export function withLeadMRTeamAccess(
             if (!memberMr || memberMr.leadMrId !== user.id) {
               return errorResponse("FORBIDDEN", "Cannot access data outside your team", 403);
             }
-          } catch (error) {
+          } catch {
             return errorResponse("INTERNAL_SERVER_ERROR", "Error verifying team access", 500);
           }
         }

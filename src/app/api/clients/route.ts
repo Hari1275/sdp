@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo");
 
     // Build base query with role-based filtering
-    const whereClause: Record<string, unknown> = getClientsFilter(user);
+    const baseWhereClause = getClientsFilter(user);
+    const whereClause: Record<string, unknown> = { ...baseWhereClause };
 
     // Apply search filter
     if (search) {

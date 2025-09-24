@@ -117,11 +117,11 @@ export default function LiveMap({
   selectedUserId?: string | null;
   follow?: boolean;
 }) {
-  // Default center point for initial load only
-  const defaultCenter = { lat: 20.5937, lng: 78.9629 } as google.maps.LatLngLiteral;
-  
   // Compute bounds from trails to get proper center point
   const center = useMemo(() => {
+    // Default center point for initial load only
+    const defaultCenter = { lat: 20.5937, lng: 78.9629 } as google.maps.LatLngLiteral;
+    
     if (trails?.length) {
       const allPoints = trails.flatMap(t => t.trail);
       if (allPoints.length) {
